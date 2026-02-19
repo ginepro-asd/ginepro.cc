@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      registrations: {
+        Row: {
+          birth_date: string | null
+          birth_place: string | null
+          codice_fiscale: string | null
+          cognome: string
+          created_at: string
+          email: string
+          id: string
+          identification_type: string
+          nome: string
+          payment_id: string | null
+          payment_method: string
+          payment_status: string
+          telefono: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_place?: string | null
+          codice_fiscale?: string | null
+          cognome: string
+          created_at?: string
+          email: string
+          id?: string
+          identification_type: string
+          nome: string
+          payment_id?: string | null
+          payment_method: string
+          payment_status?: string
+          telefono: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          birth_place?: string | null
+          codice_fiscale?: string | null
+          cognome?: string
+          created_at?: string
+          email?: string
+          id?: string
+          identification_type?: string
+          nome?: string
+          payment_id?: string | null
+          payment_method?: string
+          payment_status?: string
+          telefono?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
