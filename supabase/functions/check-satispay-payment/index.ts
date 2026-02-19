@@ -36,18 +36,69 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+function wrapPkcs1InPkcs8(pkcs1Der: ArrayBuffer): ArrayBuffer {
+  const pkcs1Bytes = new Uint8Array(pkcs1Der);
+  const oid = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00
+  ]);
+  const octetString = encodeAsn1Length(0x04, pkcs1Bytes.length, pkcs1Bytes);
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const seqContent = new Uint8Array(version.length + oid.length + octetString.length);
+  seqContent.set(version, 0);
+  seqContent.set(oid, version.length);
+  seqContent.set(octetString, version.length + oid.length);
+  return encodeAsn1Length(0x30, seqContent.length, seqContent).buffer;
+}
+
+function encodeAsn1Length(tag: number, contentLen: number, content: Uint8Array): Uint8Array {
+  let lenBytes: Uint8Array;
+  if (contentLen < 0x80) {
+    lenBytes = new Uint8Array([contentLen]);
+  } else if (contentLen < 0x100) {
+    lenBytes = new Uint8Array([0x81, contentLen]);
+  } else if (contentLen < 0x10000) {
+    lenBytes = new Uint8Array([0x82, (contentLen >> 8) & 0xff, contentLen & 0xff]);
+  } else {
+    lenBytes = new Uint8Array([0x83, (contentLen >> 16) & 0xff, (contentLen >> 8) & 0xff, contentLen & 0xff]);
+  }
+  const result = new Uint8Array(1 + lenBytes.length + content.length);
+  result[0] = tag;
+  result.set(lenBytes, 1);
+  result.set(content, 1 + lenBytes.length);
+  return result;
+}
+
 async function signMessage(message: string, privateKeyPem: string): Promise<string> {
-  const keyData = pemToArrayBuffer(privateKeyPem);
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    keyData,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const encoder = new TextEncoder();
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(message));
-  return base64Encode(new Uint8Array(signature));
+  let keyData = pemToArrayBuffer(privateKeyPem);
+
+  if (privateKeyPem.includes("RSA PRIVATE KEY")) {
+    keyData = wrapPkcs1InPkcs8(keyData);
+  }
+
+  try {
+    const key = await crypto.subtle.importKey(
+      "pkcs8",
+      keyData,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const encoder = new TextEncoder();
+    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(message));
+    return base64Encode(new Uint8Array(signature));
+  } catch (_e) {
+    const wrappedKeyData = wrapPkcs1InPkcs8(pemToArrayBuffer(privateKeyPem));
+    const key = await crypto.subtle.importKey(
+      "pkcs8",
+      wrappedKeyData,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const encoder = new TextEncoder();
+    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(message));
+    return base64Encode(new Uint8Array(signature));
+  }
 }
 
 serve(async (req) => {
