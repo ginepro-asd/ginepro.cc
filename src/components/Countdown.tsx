@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const DEADLINE = new Date("2025-03-29T23:59:59+01:00"); // CET
+const DEADLINE = new Date("2026-03-29T23:59:59+02:00"); // CEST
 
 interface TimeLeft {
   days: number;

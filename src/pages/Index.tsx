@@ -95,7 +95,7 @@ const Index = () => {
           </p>
           <div className="inline-block bg-secondary/10 border border-secondary/25 rounded-lg px-5 py-3">
             <p className="text-sm font-medium text-secondary">
-              ⏰ Offerta early-bird valida fino al <strong>29 Marzo 2025 alle 23:59</strong>
+              ⏰ Offerta early-bird valida fino al <strong>29 Marzo 2026 alle 23:59</strong>
             </p>
           </div>
         </div>
