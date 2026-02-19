@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.check-satispay-payment]
 verify_jwt = false
+
+[functions.create-paypal-order]
+verify_jwt = false
+
+[functions.capture-paypal-order]
+verify_jwt = false

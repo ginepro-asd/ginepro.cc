@@ -48,6 +48,31 @@ const Conferma = () => {
       return;
     }
 
+    // PayPal flow — capture the order after redirect
+    if (provider === "paypal") {
+      const token = searchParams.get("token"); // PayPal passes order ID as token
+      const orderId = token || searchParams.get("order_id");
+      
+      const capturePaypal = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke("capture-paypal-order", {
+            body: { order_id: orderId, registration_id: registrationId },
+          });
+          if (error) throw error;
+          if (data.status === "paid") {
+            setStatus("paid");
+            setRegistration(data.registration);
+          } else {
+            setStatus("error");
+          }
+        } catch {
+          setStatus("error");
+        }
+      };
+      capturePaypal();
+      return;
+    }
+
     // Stripe flow
     if (!sessionId) {
       setStatus("error");
