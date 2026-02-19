@@ -40,9 +40,21 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+const COUNTRY_CODES = [
+  { code: "+39", country: "🇮🇹 IT", label: "Italia" },
+  { code: "+41", country: "🇨🇭 CH", label: "Svizzera" },
+  { code: "+43", country: "🇦🇹 AT", label: "Austria" },
+  { code: "+33", country: "🇫🇷 FR", label: "Francia" },
+  { code: "+49", country: "🇩🇪 DE", label: "Germania" },
+  { code: "+44", country: "🇬🇧 GB", label: "Regno Unito" },
+  { code: "+34", country: "🇪🇸 ES", label: "Spagna" },
+  { code: "+1", country: "🇺🇸 US", label: "USA" },
+];
+
 const RegistrationForm = () => {
   const expired = useIsExpired();
-  const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("fiscal");
+  const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
+  const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
@@ -54,7 +66,7 @@ const RegistrationForm = () => {
       cognome: "",
       email: "",
       telefono: "",
-      identificationType: "fiscal",
+      identificationType: "birth",
       birthDate: "",
       birthPlace: "",
       codiceFiscale: "",
@@ -68,7 +80,7 @@ const RegistrationForm = () => {
       nome: data.nome,
       cognome: data.cognome,
       email: data.email,
-      telefono: data.telefono,
+      telefono: `${countryCode} ${data.telefono}`,
       identificationType: data.identificationType,
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
@@ -198,7 +210,22 @@ const RegistrationForm = () => {
                 <FormField control={form.control} name="telefono" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Telefono *</FormLabel>
-                    <FormControl><Input type="tel" placeholder="+39 333 1234567" {...field} /></FormControl>
+                    <div className="flex gap-2">
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.country} {c.code}
+                          </option>
+                        ))}
+                      </select>
+                      <FormControl>
+                        <Input type="tel" placeholder="333 1234567" {...field} />
+                      </FormControl>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -215,12 +242,12 @@ const RegistrationForm = () => {
                     className="flex gap-4"
                   >
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="fiscal" id="fiscal" />
-                      <Label htmlFor="fiscal" className="cursor-pointer">Codice Fiscale</Label>
+                     <RadioGroupItem value="birth" id="birth" />
+                      <Label htmlFor="birth" className="cursor-pointer">Data/Luogo di nascita</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="birth" id="birth" />
-                      <Label htmlFor="birth" className="cursor-pointer">Data/Luogo di nascita</Label>
+                      <RadioGroupItem value="fiscal" id="fiscal" />
+                      <Label htmlFor="fiscal" className="cursor-pointer">Codice Fiscale</Label>
                     </div>
                   </RadioGroup>
 
