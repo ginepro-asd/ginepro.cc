@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
@@ -116,7 +117,8 @@ const Index = () => {
           >
             GINEPRO
           </a>{" "}
-          — Tredozio Trail
+          — Tredozio Trail ·{" "}
+          <Link to="/admin" className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">⚙</Link>
         </p>
       </footer>
     </div>
