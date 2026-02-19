@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock } from "lucide-react";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -40,6 +42,8 @@ type FormData = z.infer<typeof formSchema>;
 const RegistrationForm = () => {
   const expired = useIsExpired();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("fiscal");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -56,9 +60,45 @@ const RegistrationForm = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
-    console.log("Registration data:", data);
-    // TODO: connect to backend
+  const onSubmit = async (data: FormData) => {
+    if (data.paymentMethod !== "stripe") {
+      toast({
+        title: "Non disponibile",
+        description: "Al momento solo il pagamento con carta è attivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          nome: data.nome,
+          cognome: data.cognome,
+          email: data.email,
+          telefono: data.telefono,
+          identificationType: data.identificationType,
+          birthDate: data.birthDate || null,
+          birthPlace: data.birthPlace || null,
+          codiceFiscale: data.codiceFiscale || null,
+        },
+      });
+
+      if (error) throw error;
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        throw new Error("Nessun URL di pagamento ricevuto");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Errore",
+        description: err.message || "Errore durante la creazione del pagamento.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   if (expired) {
@@ -208,8 +248,15 @@ const RegistrationForm = () => {
                   )} />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12">
-                  Iscriviti e Paga — 14,99€
+                <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Elaborazione...
+                    </>
+                  ) : (
+                    "Iscriviti e Paga — 14,99€"
+                  )}
                 </Button>
               </form>
             </Form>
