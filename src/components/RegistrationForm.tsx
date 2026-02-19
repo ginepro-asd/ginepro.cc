@@ -69,7 +69,7 @@ const RegistrationForm = () => {
             <Lock className="h-5 w-5 text-secondary" />
             <AlertTitle className="font-display text-lg">Iscrizioni chiuse</AlertTitle>
             <AlertDescription>
-              Le iscrizioni early-bird sono terminate il 29 Marzo 2025 alle 23:59.
+              Le iscrizioni early-bird sono terminate il 29 Marzo 2026 alle 23:59.
             </AlertDescription>
           </Alert>
         </div>
