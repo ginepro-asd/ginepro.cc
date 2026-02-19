@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SatispayWaiting from "@/components/SatispayWaiting";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -43,6 +44,7 @@ const RegistrationForm = () => {
   const expired = useIsExpired();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("fiscal");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -61,35 +63,51 @@ const RegistrationForm = () => {
   });
 
   const onSubmit = async (data: FormData) => {
-    if (data.paymentMethod !== "stripe") {
+    if (data.paymentMethod === "paypal") {
       toast({
         title: "Non disponibile",
-        description: "Al momento solo il pagamento con carta è attivo.",
+        description: "Il pagamento PayPal non è ancora attivo.",
         variant: "destructive",
       });
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      const { data: result, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          nome: data.nome,
-          cognome: data.cognome,
-          email: data.email,
-          telefono: data.telefono,
-          identificationType: data.identificationType,
-          birthDate: data.birthDate || null,
-          birthPlace: data.birthPlace || null,
-          codiceFiscale: data.codiceFiscale || null,
-        },
-      });
+    const payload = {
+      nome: data.nome,
+      cognome: data.cognome,
+      email: data.email,
+      telefono: data.telefono,
+      identificationType: data.identificationType,
+      birthDate: data.birthDate || null,
+      birthPlace: data.birthPlace || null,
+      codiceFiscale: data.codiceFiscale || null,
+    };
 
-      if (error) throw error;
-      if (result?.url) {
-        window.location.href = result.url;
-      } else {
-        throw new Error("Nessun URL di pagamento ricevuto");
+    try {
+      if (data.paymentMethod === "stripe") {
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", {
+          body: payload,
+        });
+        if (error) throw error;
+        if (result?.url) {
+          window.location.href = result.url;
+        } else {
+          throw new Error("Nessun URL di pagamento ricevuto");
+        }
+      } else if (data.paymentMethod === "satispay") {
+        const { data: result, error } = await supabase.functions.invoke("create-satispay-payment", {
+          body: payload,
+        });
+        if (error) throw error;
+        if (result?.payment_id && result?.registration_id) {
+          setSatispayState({
+            paymentId: result.payment_id,
+            registrationId: result.registration_id,
+          });
+        } else {
+          throw new Error("Errore nella creazione del pagamento Satispay");
+        }
       }
     } catch (err: any) {
       toast({
@@ -97,6 +115,7 @@ const RegistrationForm = () => {
         description: err.message || "Errore durante la creazione del pagamento.",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -112,6 +131,20 @@ const RegistrationForm = () => {
               Le iscrizioni early-bird sono terminate il 29 Marzo 2026 alle 23:59.
             </AlertDescription>
           </Alert>
+        </div>
+      </section>
+    );
+  }
+
+  if (satispayState) {
+    return (
+      <section id="iscrizione" className="py-16 sm:py-24 px-4">
+        <div className="max-w-xl mx-auto">
+          <SatispayWaiting
+            paymentId={satispayState.paymentId}
+            registrationId={satispayState.registrationId}
+            onCancel={() => setSatispayState(null)}
+          />
         </div>
       </section>
     );

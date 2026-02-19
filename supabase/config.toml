@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.verify-payment]
 verify_jwt = false
+
+[functions.create-satispay-payment]
+verify_jwt = false
+
+[functions.check-satispay-payment]
+verify_jwt = false

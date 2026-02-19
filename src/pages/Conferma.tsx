@@ -21,8 +21,35 @@ const Conferma = () => {
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
     const registrationId = searchParams.get("registration_id");
+    const provider = searchParams.get("provider");
 
-    if (!sessionId || !registrationId) {
+    if (!registrationId) {
+      setStatus("error");
+      return;
+    }
+
+    // Satispay flow — payment already verified by polling
+    if (provider === "satispay") {
+      const fetchRegistration = async () => {
+        try {
+          const { data, error } = await supabase
+            .from("registrations")
+            .select("nome, cognome, email, payment_method")
+            .eq("id", registrationId)
+            .single();
+          if (error) throw error;
+          setRegistration(data);
+          setStatus("paid");
+        } catch {
+          setStatus("error");
+        }
+      };
+      fetchRegistration();
+      return;
+    }
+
+    // Stripe flow
+    if (!sessionId) {
       setStatus("error");
       return;
     }
