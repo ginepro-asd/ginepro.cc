@@ -63,15 +63,6 @@ const RegistrationForm = () => {
   });
 
   const onSubmit = async (data: FormData) => {
-    if (data.paymentMethod === "paypal") {
-      toast({
-        title: "Non disponibile",
-        description: "Il pagamento PayPal non è ancora attivo.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     const payload = {
       nome: data.nome,
@@ -107,6 +98,16 @@ const RegistrationForm = () => {
           });
         } else {
           throw new Error("Errore nella creazione del pagamento Satispay");
+        }
+      } else if (data.paymentMethod === "paypal") {
+        const { data: result, error } = await supabase.functions.invoke("create-paypal-order", {
+          body: payload,
+        });
+        if (error) throw error;
+        if (result?.url) {
+          window.location.href = result.url;
+        } else {
+          throw new Error("Nessun URL PayPal ricevuto");
         }
       }
     } catch (err: any) {
