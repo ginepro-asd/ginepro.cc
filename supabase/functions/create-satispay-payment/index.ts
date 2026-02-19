@@ -18,11 +18,18 @@ async function createDigest(body: string): Promise<string> {
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const lines = pem
-    .replace(/-----BEGIN .*-----/, "")
-    .replace(/-----END .*-----/, "")
+  // Normalize: handle literal \n strings, escaped newlines, and missing line breaks
+  const normalized = pem
+    .replace(/\\n/g, "\n")
+    .replace(/-----BEGIN [A-Z ]+-----/, "")
+    .replace(/-----END [A-Z ]+-----/, "")
     .replace(/\s/g, "");
-  const binary = atob(lines);
+  
+  if (!normalized || normalized.length === 0) {
+    throw new Error("RSA private key is empty or malformed");
+  }
+
+  const binary = atob(normalized);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
