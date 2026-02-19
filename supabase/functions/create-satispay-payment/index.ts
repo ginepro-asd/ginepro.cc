@@ -200,10 +200,23 @@ serve(async (req) => {
     const keyId = Deno.env.get("SATISPAY_KEY_ID")!;
     const privateKey = Deno.env.get("SATISPAY_RSA_PRIVATE_KEY")!;
 
+    // Normalize phone number: remove spaces, dashes, country code prefix
+    let phoneClean = telefono.replace(/[\s\-()]/g, "");
+    // Remove leading + and country code if present (e.g. +39, +41)
+    if (phoneClean.startsWith("+")) {
+      // Remove the + and country code (assume 2-3 digits)
+      phoneClean = phoneClean.replace(/^\+\d{1,3}/, "");
+    }
+    // Ensure it starts with country code for Satispay (Italian +39 default)
+    const phoneForSatispay = telefono.replace(/[\s\-()]/g, "");
+
     const paymentBody = JSON.stringify({
-      flow: "MATCH_CODE",
+      flow: "MATCH_USER",
       amount_unit: 1499,
       currency: "EUR",
+      consumer: {
+        phone_number: phoneForSatispay,
+      },
       external_code: registration.id,
       metadata: {
         registration_id: registration.id,
