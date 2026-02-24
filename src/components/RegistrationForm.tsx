@@ -107,10 +107,14 @@ const RegistrationForm = () => {
           body: payload,
         });
         if (error) throw error;
-        if (result?.payment_id && result?.registration_id) {
+        if (result?.redirect_url) {
+          window.location.href = result.redirect_url;
+        } else if (result?.payment_id && result?.registration_id) {
+          // Fallback to polling if no redirect_url
           setSatispayState({
             paymentId: result.payment_id,
             registrationId: result.registration_id,
+          });
           });
         } else {
           throw new Error("Errore nella creazione del pagamento Satispay");
