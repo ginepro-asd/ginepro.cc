@@ -34,7 +34,7 @@ serve(async (req) => {
     if (session.payment_status === "paid") {
       await supabaseAdmin
         .from("registrations")
-        .update({ payment_status: "paid", payment_id: session_id })
+        .update({ payment_status: "completed", payment_id: session_id })
         .eq("id", registration_id);
 
       // Fetch registration data for confirmation
@@ -45,7 +45,7 @@ serve(async (req) => {
         .single();
 
       return new Response(
-        JSON.stringify({ status: "paid", registration }),
+        JSON.stringify({ status: "completed", registration }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
