@@ -115,7 +115,6 @@ const RegistrationForm = () => {
             paymentId: result.payment_id,
             registrationId: result.registration_id,
           });
-          });
         } else {
           throw new Error("Errore nella creazione del pagamento Satispay");
         }
