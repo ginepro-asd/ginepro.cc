@@ -210,6 +210,8 @@ serve(async (req) => {
     // Ensure it starts with country code for Satispay (Italian +39 default)
     const phoneForSatispay = telefono.replace(/[\s\-()]/g, "");
 
+    console.log("Phone for Satispay:", phoneForSatispay);
+
     const paymentBody = JSON.stringify({
       flow: "MATCH_USER",
       amount_unit: 100,
@@ -223,6 +225,8 @@ serve(async (req) => {
       },
     });
 
+    console.log("Satispay request body:", paymentBody);
+
     const res = await satispayRequest(
       "POST",
       "/g_business/v1/payments",
@@ -234,7 +238,8 @@ serve(async (req) => {
     if (!res.ok) {
       const errText = await res.text();
       console.error("Satispay API error:", res.status, errText);
-      throw new Error(`Satispay error: ${res.status}`);
+      // Return detailed error to help debugging
+      throw new Error(`Satispay error: ${res.status} - ${errText}`);
     }
 
     const payment = await res.json();
