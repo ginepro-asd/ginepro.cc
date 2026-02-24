@@ -213,13 +213,11 @@ serve(async (req) => {
     console.log("Phone for Satispay:", phoneForSatispay);
 
     const paymentBody = JSON.stringify({
-      flow: "MATCH_USER",
+      flow: "MATCH_CODE",
       amount_unit: 100,
       currency: "EUR",
-      consumer: {
-        phone_number: phoneForSatispay,
-      },
       external_code: registration.id,
+      callback_url: `https://tredoziotrail.lovable.app/conferma?registration_id=${registration.id}&provider=satispay`,
       metadata: {
         registration_id: registration.id,
       },
