@@ -25,7 +25,7 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
 
         if (error) throw error;
 
-        if (data.status === "paid") {
+        if (data.status === "completed") {
           setStatus("paid");
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTimeout(() => {
