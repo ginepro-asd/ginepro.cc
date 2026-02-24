@@ -59,7 +59,7 @@ const Conferma = () => {
             body: { order_id: orderId, registration_id: registrationId },
           });
           if (error) throw error;
-          if (data.status === "paid") {
+          if (data.status === "completed") {
             setStatus("paid");
             setRegistration(data.registration);
           } else {
