@@ -98,7 +98,7 @@ serve(async (req) => {
             description: "Tredozio Trail 2027 - Early Bird",
             amount: {
               currency_code: "EUR",
-              value: "14.99",
+              value: "0.01",
             },
           },
         ],
