@@ -76,11 +76,15 @@ const RegistrationForm = () => {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    // Strip any leading +/country code the user may have typed, then prepend the selected one
+    const rawPhone = data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "");
+    const fullPhone = `${countryCode}${rawPhone}`;
+
     const payload = {
       nome: data.nome,
       cognome: data.cognome,
       email: data.email,
-      telefono: `${countryCode} ${data.telefono}`,
+      telefono: fullPhone,
       identificationType: data.identificationType,
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
