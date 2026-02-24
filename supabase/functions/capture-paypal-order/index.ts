@@ -82,6 +82,35 @@ serve(async (req) => {
         .eq("id", registration_id)
         .single();
 
+      // Send confirmation email (fire-and-forget)
+      if (registration) {
+        try {
+          const emailRes = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-confirmation-email`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                nome: registration.nome,
+                cognome: registration.cognome,
+                email: registration.email,
+                payment_method: registration.payment_method,
+                registration_id,
+              }),
+            }
+          );
+          if (!emailRes.ok) {
+            const errText = await emailRes.text();
+            console.error("Email send failed:", errText);
+          }
+        } catch (emailErr) {
+          console.error("Email send error:", emailErr.message);
+        }
+      }
+
       return new Response(
         JSON.stringify({ status: "completed", registration }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
