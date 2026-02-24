@@ -8,75 +8,36 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SATISPAY_API_URL = "https://authservices.satispay.com";
+const SATISPAY_HOST = "authservices.satispay.com";
+const SATISPAY_BASE = `https://${SATISPAY_HOST}/g_business/v1`;
 
-async function createDigest(body: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(body);
-  const hash = await crypto.subtle.digest("SHA-256", data);
+// ── Crypto helpers ──────────────────────────────────────────────────────
+
+async function sha256Digest(body: string): Promise<string> {
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
   return `SHA-256=${base64Encode(new Uint8Array(hash))}`;
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const normalized = pem
+  const b64 = pem
     .replace(/\\n/g, "\n")
     .replace(/-----BEGIN [A-Z ]+-----/, "")
     .replace(/-----END [A-Z ]+-----/, "")
     .replace(/\s/g, "");
-  
-  if (!normalized || normalized.length === 0) {
-    throw new Error("RSA private key is empty or malformed");
-  }
-
-  const binary = atob(normalized);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  if (!b64) throw new Error("RSA private key is empty or malformed");
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes.buffer;
 }
 
-function isPkcs1(pem: string): boolean {
-  return pem.includes("BEGIN RSA PRIVATE KEY") || 
-    // Check DER: PKCS#1 starts with SEQUENCE > INTEGER (tag 0x02), PKCS#8 starts with SEQUENCE > INTEGER > ...
-    // At byte 4-7 in PKCS#1 you get INTEGER tag (0x02), in PKCS#8 you get INTEGER too but different structure
-    // Simplest check: if the PEM header says RSA PRIVATE KEY
-    false;
-}
-
-function wrapPkcs1InPkcs8(pkcs1Der: ArrayBuffer): ArrayBuffer {
-  // PKCS#8 wraps PKCS#1 with an AlgorithmIdentifier for RSA
-  const pkcs1Bytes = new Uint8Array(pkcs1Der);
-  // OID 1.2.840.113549.1.1.1 (rsaEncryption) + NULL
-  const oid = new Uint8Array([
-    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00
-  ]);
-  
-  // Wrap PKCS#1 in OCTET STRING
-  const octetStringLen = pkcs1Bytes.length;
-  const octetString = encodeAsn1Length(0x04, octetStringLen, pkcs1Bytes);
-  
-  // Build SEQUENCE: version(0) + AlgorithmIdentifier + OCTET STRING
-  const version = new Uint8Array([0x02, 0x01, 0x00]); // INTEGER 0
-  const seqContent = new Uint8Array(version.length + oid.length + octetString.length);
-  seqContent.set(version, 0);
-  seqContent.set(oid, version.length);
-  seqContent.set(octetString, version.length + oid.length);
-  
-  return encodeAsn1Length(0x30, seqContent.length, seqContent).buffer;
-}
-
-function encodeAsn1Length(tag: number, contentLen: number, content: Uint8Array): Uint8Array {
+function encodeAsn1Length(tag: number, content: Uint8Array): Uint8Array {
+  const len = content.length;
   let lenBytes: Uint8Array;
-  if (contentLen < 0x80) {
-    lenBytes = new Uint8Array([contentLen]);
-  } else if (contentLen < 0x100) {
-    lenBytes = new Uint8Array([0x81, contentLen]);
-  } else if (contentLen < 0x10000) {
-    lenBytes = new Uint8Array([0x82, (contentLen >> 8) & 0xff, contentLen & 0xff]);
-  } else {
-    lenBytes = new Uint8Array([0x83, (contentLen >> 16) & 0xff, (contentLen >> 8) & 0xff, contentLen & 0xff]);
-  }
+  if (len < 0x80) lenBytes = new Uint8Array([len]);
+  else if (len < 0x100) lenBytes = new Uint8Array([0x81, len]);
+  else if (len < 0x10000) lenBytes = new Uint8Array([0x82, (len >> 8) & 0xff, len & 0xff]);
+  else lenBytes = new Uint8Array([0x83, (len >> 16) & 0xff, (len >> 8) & 0xff, len & 0xff]);
   const result = new Uint8Array(1 + lenBytes.length + content.length);
   result[0] = tag;
   result.set(lenBytes, 1);
@@ -84,71 +45,107 @@ function encodeAsn1Length(tag: number, contentLen: number, content: Uint8Array):
   return result;
 }
 
-async function signMessage(message: string, privateKeyPem: string): Promise<string> {
-  let keyData = pemToArrayBuffer(privateKeyPem);
-  
-  // If key is PKCS#1 (BEGIN RSA PRIVATE KEY), wrap in PKCS#8
-  if (privateKeyPem.includes("RSA PRIVATE KEY") || 
-      // Auto-detect: try PKCS#8 first, fallback to PKCS#1 wrapping
-      false) {
-    keyData = wrapPkcs1InPkcs8(keyData);
-  }
+function wrapPkcs1InPkcs8(pkcs1Der: ArrayBuffer): ArrayBuffer {
+  const pkcs1 = new Uint8Array(pkcs1Der);
+  const oid = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+    0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
+  ]);
+  const octet = encodeAsn1Length(0x04, pkcs1);
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const seqContent = new Uint8Array(version.length + oid.length + octet.length);
+  seqContent.set(version, 0);
+  seqContent.set(oid, version.length);
+  seqContent.set(octet, version.length + oid.length);
+  return encodeAsn1Length(0x30, seqContent).buffer;
+}
 
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+  let keyData = pemToArrayBuffer(pem);
+
+  // Try PKCS#8 first, fall back to wrapping PKCS#1
   try {
-    const key = await crypto.subtle.importKey(
-      "pkcs8",
-      keyData,
+    return await crypto.subtle.importKey(
+      "pkcs8", keyData,
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
+      false, ["sign"],
     );
-    const encoder = new TextEncoder();
-    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(message));
-    return base64Encode(new Uint8Array(signature));
-  } catch (e) {
-    // If PKCS#8 import failed, try wrapping as PKCS#1
-    const wrappedKeyData = wrapPkcs1InPkcs8(pemToArrayBuffer(privateKeyPem));
-    const key = await crypto.subtle.importKey(
-      "pkcs8",
-      wrappedKeyData,
+  } catch {
+    return await crypto.subtle.importKey(
+      "pkcs8", wrapPkcs1InPkcs8(pemToArrayBuffer(pem)),
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["sign"]
+      false, ["sign"],
     );
-    const encoder = new TextEncoder();
-    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(message));
-    return base64Encode(new Uint8Array(signature));
   }
 }
 
-async function satispayRequest(
-  method: string,
+async function sign(message: string, pem: string): Promise<string> {
+  const key = await importPrivateKey(pem);
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(message),
+  );
+  return base64Encode(new Uint8Array(sig));
+}
+
+// ── Satispay HTTP request builder (matches the working repo exactly) ────
+
+async function satispayFetch(
+  method: "GET" | "POST",
   path: string,
   body: string,
   keyId: string,
-  privateKey: string
+  privateKey: string,
 ): Promise<Response> {
   const date = new Date().toUTCString();
-  const host = "authservices.satispay.com";
-  const digest = await createDigest(body);
+  const digest = await sha256Digest(body);
 
-  const message = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${host}\ndate: ${date}\ndigest: ${digest}`;
-  const signature = await signMessage(message, privateKey);
+  // Signature string – must match exactly what Satispay expects
+  const sigString = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${SATISPAY_HOST}\ndate: ${date}\ndigest: ${digest}`;
+  const signature = await sign(sigString, privateKey);
 
   const authHeader = `Signature keyId="${keyId}", algorithm="rsa-sha256", headers="(request-target) host date digest", signature="${signature}"`;
 
-  return fetch(`${SATISPAY_API_URL}${path}`, {
-    method: method.toUpperCase(),
-    headers: {
-      "Host": host,
-      "Date": date,
-      "Content-Type": "application/json",
-      "Digest": digest,
-      "Authorization": authHeader,
-    },
-    body,
+  const headers: Record<string, string> = {
+    "Host": SATISPAY_HOST,
+    "Date": date,
+    "Digest": digest,
+    "Authorization": authHeader,
+    "Accept": "application/json",
+  };
+
+  if (method === "POST") {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return fetch(`https://${SATISPAY_HOST}${path}`, {
+    method,
+    headers,
+    ...(method === "POST" ? { body } : {}),
   });
 }
+
+// ── Step 1: Look up consumer_uid by phone number ────────────────────────
+
+async function getConsumerUid(
+  phone: string,
+  keyId: string,
+  privateKey: string,
+): Promise<string> {
+  const path = `/g_business/v1/consumers/${encodeURIComponent(phone)}`;
+  const res = await satispayFetch("GET", path, "", keyId, privateKey);
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Consumer lookup error:", res.status, errText);
+    throw new Error(`Consumer lookup failed: ${res.status} - ${errText}`);
+  }
+
+  const data = await res.json();
+  console.log("Consumer found:", data.id);
+  return data.id;
+}
+
+// ── Main handler ────────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -157,14 +154,8 @@ serve(async (req) => {
 
   try {
     const {
-      nome,
-      cognome,
-      email,
-      telefono,
-      identificationType,
-      birthDate,
-      birthPlace,
-      codiceFiscale,
+      nome, cognome, email, telefono,
+      identificationType, birthDate, birthPlace, codiceFiscale,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType) {
@@ -173,17 +164,14 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     // Save registration
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
-        nome,
-        cognome,
-        email,
-        telefono,
+        nome, cognome, email, telefono,
         identification_type: identificationType,
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
@@ -196,26 +184,19 @@ serve(async (req) => {
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // Create Satispay payment
     const keyId = Deno.env.get("SATISPAY_KEY_ID")!;
     const privateKey = Deno.env.get("SATISPAY_RSA_PRIVATE_KEY")!;
 
-    // Normalize phone number: remove spaces, dashes, country code prefix
-    let phoneClean = telefono.replace(/[\s\-()]/g, "");
-    // Remove leading + and country code if present (e.g. +39, +41)
-    if (phoneClean.startsWith("+")) {
-      // Remove the + and country code (assume 2-3 digits)
-      phoneClean = phoneClean.replace(/^\+\d{1,3}/, "");
-    }
-    // Ensure it starts with country code for Satispay (Italian +39 default)
-    const phoneForSatispay = telefono.replace(/[\s\-()]/g, "");
+    // Step 1: Look up consumer by phone number (like the working repo)
+    console.log("Looking up consumer for phone:", telefono);
+    const consumerUid = await getConsumerUid(telefono, keyId, privateKey);
 
-    console.log("Phone for Satispay:", phoneForSatispay);
-
+    // Step 2: Create MATCH_USER payment with consumer_uid
     const paymentBody = JSON.stringify({
-      flow: "MATCH_CODE",
+      flow: "MATCH_USER",
       amount_unit: 100,
       currency: "EUR",
+      consumer_uid: consumerUid,
       external_code: registration.id,
       callback_url: `https://tredoziotrail.lovable.app/conferma?registration_id=${registration.id}&provider=satispay`,
       metadata: {
@@ -223,20 +204,19 @@ serve(async (req) => {
       },
     });
 
-    console.log("Satispay request body:", paymentBody);
+    console.log("Creating MATCH_USER payment:", paymentBody);
 
-    const res = await satispayRequest(
+    const res = await satispayFetch(
       "POST",
       "/g_business/v1/payments",
       paymentBody,
       keyId,
-      privateKey
+      privateKey,
     );
 
     if (!res.ok) {
       const errText = await res.text();
       console.error("Satispay API error:", res.status, errText);
-      // Return detailed error to help debugging
       throw new Error(`Satispay error: ${res.status} - ${errText}`);
     }
 
@@ -252,9 +232,8 @@ serve(async (req) => {
       JSON.stringify({
         payment_id: payment.id,
         registration_id: registration.id,
-        redirect_url: payment.redirect_url,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
     console.error("Error:", error.message);
