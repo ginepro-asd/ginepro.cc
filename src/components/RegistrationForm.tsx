@@ -107,10 +107,7 @@ const RegistrationForm = () => {
           body: payload,
         });
         if (error) throw error;
-        if (result?.redirect_url) {
-          window.location.href = result.redirect_url;
-        } else if (result?.payment_id && result?.registration_id) {
-          // Fallback to polling if no redirect_url
+        if (result?.payment_id && result?.registration_id) {
           setSatispayState({
             paymentId: result.payment_id,
             registrationId: result.registration_id,
