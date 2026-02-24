@@ -165,7 +165,7 @@ serve(async (req) => {
         .single();
 
       return new Response(
-        JSON.stringify({ status: "paid", registration }),
+        JSON.stringify({ status: "completed", registration }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
