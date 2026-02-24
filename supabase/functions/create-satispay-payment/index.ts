@@ -212,7 +212,7 @@ serve(async (req) => {
 
     const paymentBody = JSON.stringify({
       flow: "MATCH_USER",
-      amount_unit: 1,
+      amount_unit: 100,
       currency: "EUR",
       consumer: {
         phone_number: phoneForSatispay,
