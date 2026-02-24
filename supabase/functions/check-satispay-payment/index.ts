@@ -155,7 +155,7 @@ serve(async (req) => {
     if (payment.status === "ACCEPTED") {
       await supabaseAdmin
         .from("registrations")
-        .update({ payment_status: "paid" })
+        .update({ payment_status: "completed" })
         .eq("id", registration_id);
 
       const { data: registration } = await supabaseAdmin
