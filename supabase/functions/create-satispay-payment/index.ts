@@ -187,6 +187,11 @@ serve(async (req) => {
     const keyId = Deno.env.get("SATISPAY_KEY_ID")!;
     const privateKey = Deno.env.get("SATISPAY_RSA_PRIVATE_KEY")!;
 
+    // Debug: verify credentials are loaded
+    console.log("Key ID:", keyId);
+    console.log("Private key starts with:", privateKey?.substring(0, 40));
+    console.log("Private key length:", privateKey?.length);
+
     // Step 1: Look up consumer by phone number (like the working repo)
     console.log("Looking up consumer for phone:", telefono);
     const consumerUid = await getConsumerUid(telefono, keyId, privateKey);
