@@ -293,7 +293,6 @@ const RegistrationForm = () => {
                                 emptyMessage="Nessun risultato trovato."
                                 loading={!bornAbroad && comuniLoading}
                               />
-                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
