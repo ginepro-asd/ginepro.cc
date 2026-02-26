@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
 import SearchableSelect from "@/components/SearchableSelect";
-import { ITALIAN_CITIES } from "@/data/italian-cities";
+import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
 
 const formSchema = z.object({
@@ -57,6 +57,7 @@ const COUNTRY_CODES = [
 
 const RegistrationForm = () => {
   const expired = useIsExpired();
+  const { comuni, loading: comuniLoading } = useItalianComuni();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -284,12 +285,13 @@ const RegistrationForm = () => {
                             <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
                             <FormControl>
                               <SearchableSelect
-                                options={bornAbroad ? COUNTRIES : ITALIAN_CITIES}
+                                options={bornAbroad ? COUNTRIES : comuni}
                                 value={field.value || ""}
                                 onChange={(v) => field.onChange(v)}
                                 placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
                                 searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
                                 emptyMessage="Nessun risultato trovato."
+                                loading={!bornAbroad && comuniLoading}
                               />
                             </FormControl>
                             <FormMessage />
