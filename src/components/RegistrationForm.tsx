@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
+import SearchableSelect from "@/components/SearchableSelect";
+import { ITALIAN_CITIES } from "@/data/italian-cities";
+import { COUNTRIES } from "@/data/countries";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -56,6 +60,7 @@ const RegistrationForm = () => {
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
@@ -265,21 +270,45 @@ const RegistrationForm = () => {
                       </FormItem>
                     )} />
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="birthDate" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data di nascita</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="birthPlace" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Luogo di nascita</FormLabel>
-                          <FormControl><Input placeholder="Roma" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="birthDate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data di nascita</FormLabel>
+                            <FormControl><Input type="date" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="birthPlace" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
+                            <FormControl>
+                              <SearchableSelect
+                                options={bornAbroad ? COUNTRIES : ITALIAN_CITIES}
+                                value={field.value || ""}
+                                onChange={(v) => field.onChange(v)}
+                                placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
+                                searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
+                                emptyMessage="Nessun risultato trovato."
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="born-abroad"
+                          checked={bornAbroad}
+                          onCheckedChange={(checked) => {
+                            setBornAbroad(!!checked);
+                            form.setValue("birthPlace", "");
+                          }}
+                        />
+                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
+                          Nato/a all'estero
+                        </Label>
+                      </div>
                     </div>
                   )}
                 </div>
