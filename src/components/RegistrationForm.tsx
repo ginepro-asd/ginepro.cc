@@ -180,7 +180,7 @@ const RegistrationForm = () => {
           Iscriviti ora
         </h2>
         <p className="text-center text-muted-foreground mb-8">
-          Assicurati il posto al prezzo early-bird di <span className="font-bold text-secondary">14,99€</span>
+          Assicurati il posto al prezzo early-bird di <span className="font-bold text-secondary">0,01€</span>
         </p>
 
         <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
@@ -351,7 +351,7 @@ const RegistrationForm = () => {
                       Elaborazione...
                     </>
                   ) : (
-                    "Iscriviti e Paga — 14,99€"
+                    "Iscriviti e Paga — 0,01€"
                   )}
                 </Button>
               </form>

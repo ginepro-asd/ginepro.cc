@@ -54,7 +54,7 @@ serve(async (req) => {
       body: JSON.stringify({
         orderId,
         phoneNumber: telefono,
-        price: 1499,
+        price: 1,
       }),
     });
 
