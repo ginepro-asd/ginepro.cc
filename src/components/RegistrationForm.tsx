@@ -272,6 +272,19 @@ const RegistrationForm = () => {
                     )} />
                   ) : (
                     <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="born-abroad"
+                          checked={bornAbroad}
+                          onCheckedChange={(checked) => {
+                            setBornAbroad(!!checked);
+                            form.setValue("birthPlace", "");
+                          }}
+                        />
+                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
+                          Nato/a all'estero
+                        </Label>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={form.control} name="birthDate" render={({ field }) => (
                           <FormItem>
@@ -297,19 +310,6 @@ const RegistrationForm = () => {
                             <FormMessage />
                           </FormItem>
                         )} />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="born-abroad"
-                          checked={bornAbroad}
-                          onCheckedChange={(checked) => {
-                            setBornAbroad(!!checked);
-                            form.setValue("birthPlace", "");
-                          }}
-                        />
-                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
-                          Nato/a all'estero
-                        </Label>
                       </div>
                     </div>
                   )}
