@@ -60,6 +60,7 @@ const RegistrationForm = () => {
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
