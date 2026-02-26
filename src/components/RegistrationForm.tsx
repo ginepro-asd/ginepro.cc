@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
 import SearchableSelect from "@/components/SearchableSelect";
-import { ITALIAN_CITIES } from "@/data/italian-cities";
+import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
 
 const formSchema = z.object({
