@@ -285,12 +285,14 @@ const RegistrationForm = () => {
                             <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
                             <FormControl>
                               <SearchableSelect
-                                options={bornAbroad ? COUNTRIES : ITALIAN_CITIES}
+                                options={bornAbroad ? COUNTRIES : comuni}
                                 value={field.value || ""}
                                 onChange={(v) => field.onChange(v)}
                                 placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
                                 searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
                                 emptyMessage="Nessun risultato trovato."
+                                loading={!bornAbroad && comuniLoading}
+                              />
                               />
                             </FormControl>
                             <FormMessage />
