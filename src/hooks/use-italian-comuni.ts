@@ -11,8 +11,8 @@ export function useItalianComuni() {
 
     fetch("https://comuni-ita.nicolorebaioli.dev/comuni")
       .then((res) => res.json())
-      .then((data: Array<{ nome: string }>) => {
-        const names = data.map((c) => c.nome).sort();
+      .then((data: Array<{ nome: string; provincia: { sigla: string } }>) => {
+        const names = data.map((c) => `${c.nome} (${c.provincia.sigla})`).sort();
         cachedComuni = names;
         setComuni(names);
       })
