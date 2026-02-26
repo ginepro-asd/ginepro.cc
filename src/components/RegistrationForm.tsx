@@ -57,6 +57,7 @@ const COUNTRY_CODES = [
 
 const RegistrationForm = () => {
   const expired = useIsExpired();
+  const { comuni, loading: comuniLoading } = useItalianComuni();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
