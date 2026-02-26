@@ -47,11 +47,12 @@ serve(async (req) => {
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
     // Call external xpay service
+    const orderId = `Tredozio 2027 ${cognome} ${nome}`;
     const res = await fetch(`${XPAY_BASE}/payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        orderId: registration.id,
+        orderId,
         phoneNumber: telefono,
         price: 1499,
       }),
