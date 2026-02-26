@@ -351,7 +351,7 @@ const RegistrationForm = () => {
                       Elaborazione...
                     </>
                   ) : (
-                    "Iscriviti e Paga — 14,99€"
+                    "Iscriviti e Paga — 0,01€"
                   )}
                 </Button>
               </form>
