@@ -270,21 +270,45 @@ const RegistrationForm = () => {
                       </FormItem>
                     )} />
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="birthDate" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data di nascita</FormLabel>
-                          <FormControl><Input type="date" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="birthPlace" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Luogo di nascita</FormLabel>
-                          <FormControl><Input placeholder="Roma" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="birthDate" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data di nascita</FormLabel>
+                            <FormControl><Input type="date" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="birthPlace" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
+                            <FormControl>
+                              <SearchableSelect
+                                options={bornAbroad ? COUNTRIES : ITALIAN_CITIES}
+                                value={field.value || ""}
+                                onChange={(v) => field.onChange(v)}
+                                placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
+                                searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
+                                emptyMessage="Nessun risultato trovato."
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="born-abroad"
+                          checked={bornAbroad}
+                          onCheckedChange={(checked) => {
+                            setBornAbroad(!!checked);
+                            form.setValue("birthPlace", "");
+                          }}
+                        />
+                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
+                          Nato/a all'estero
+                        </Label>
+                      </div>
                     </div>
                   )}
                 </div>
