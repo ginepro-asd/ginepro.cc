@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
+import SearchableSelect from "@/components/SearchableSelect";
+import { ITALIAN_CITIES } from "@/data/italian-cities";
+import { COUNTRIES } from "@/data/countries";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
