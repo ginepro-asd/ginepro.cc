@@ -66,7 +66,11 @@ serve(async (req) => {
       customer_email: email,
       line_items: [
         {
-          price: "price_1T4Ih6HoGl0XEePmNXgp6EZb",
+          price_data: {
+            currency: "eur",
+            product_data: { name: "Tredozio Trail 2027 - Early Bird (TEST)" },
+            unit_amount: 1,
+          },
           quantity: 1,
         },
       ],
