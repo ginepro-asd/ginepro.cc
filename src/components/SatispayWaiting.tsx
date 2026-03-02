@@ -69,7 +69,7 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
                 In attesa del pagamento
               </h3>
               <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Apri l'app Satispay sul tuo telefono e conferma il pagamento di <strong className="text-secondary">0,01€</strong>
+                Apri l'app Satispay sul tuo telefono e conferma il pagamento di <strong className="text-secondary">14,99€</strong>
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={onCancel}>

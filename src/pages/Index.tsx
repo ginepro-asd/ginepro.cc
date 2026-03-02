@@ -52,7 +52,7 @@ const Index = () => {
             className="inline-block mb-8"
           >
             <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
-              <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">0,01€</span>
+              <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">14,99€</span>
               <span className="text-muted-foreground ml-2 text-sm">Early-Bird</span>
             </div>
           </motion.div>
