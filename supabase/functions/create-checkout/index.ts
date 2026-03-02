@@ -68,8 +68,8 @@ serve(async (req) => {
         {
           price_data: {
             currency: "eur",
-            product_data: { name: "Tredozio Trail 2027 - Early Bird (TEST)" },
-            unit_amount: 1,
+            product_data: { name: "Tredozio Trail 2027 - Early Bird" },
+            unit_amount: 1499,
           },
           quantity: 1,
         },
