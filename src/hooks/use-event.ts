@@ -14,6 +14,7 @@ export interface EventData {
   attivo: boolean;
   hero_image: string | null;
   payment_methods: string[];
+  is_tesseramento: boolean;
 }
 
 export interface CustomField {
@@ -41,6 +42,7 @@ export function useEvent(slug: string | undefined) {
         ...data,
         custom_fields: (data.custom_fields as unknown as CustomField[]) || [],
         payment_methods: data.payment_methods || ["stripe", "satispay", "paypal"],
+        is_tesseramento: data.is_tesseramento ?? false,
       };
     },
     enabled: !!slug,
@@ -62,6 +64,55 @@ export function useEvents() {
         ...e,
         custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
+        is_tesseramento: e.is_tesseramento ?? false,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export interface PastEventData {
+  id: string;
+  nome: string;
+  slug: string;
+  data_evento: string | null;
+  luogo: string | null;
+  descrizione: string | null;
+  is_tesseramento: boolean;
+  registration_count: number;
+}
+
+export function usePastEvents() {
+  return useQuery({
+    queryKey: ["past-events"],
+    queryFn: async (): Promise<PastEventData[]> => {
+      // Fetch inactive events
+      const { data: events, error } = await supabase
+        .from("events")
+        .select("id, nome, slug, data_evento, luogo, descrizione, is_tesseramento")
+        .eq("attivo", false)
+        .order("data_evento", { ascending: false });
+      if (error) throw error;
+      if (!events || events.length === 0) return [];
+
+      // Fetch registration counts per event
+      const eventIds = events.map((e) => e.id);
+      const { data: regs, error: regError } = await supabase
+        .from("registrations")
+        .select("event_id")
+        .in("event_id", eventIds);
+      
+      const counts: Record<string, number> = {};
+      if (!regError && regs) {
+        for (const r of regs) {
+          if (r.event_id) counts[r.event_id] = (counts[r.event_id] || 0) + 1;
+        }
+      }
+
+      return events.map((e) => ({
+        ...e,
+        is_tesseramento: e.is_tesseramento ?? false,
+        registration_count: counts[e.id] || 0,
       }));
     },
     staleTime: 5 * 60 * 1000,
