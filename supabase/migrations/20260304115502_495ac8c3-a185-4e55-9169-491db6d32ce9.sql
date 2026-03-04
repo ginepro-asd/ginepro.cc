@@ -1,0 +1,1 @@
+UPDATE public.events SET descrizione = 'Corsa/passeggiata ludico motoria non competitiva organizzata da Castel Raniero APS e Ginepro ASD. Scegli il tuo percorso: camminata 5 km o corsa 11 km. Ritrovo ore 18:00. Partenza ore 18:30.' WHERE slug = 'castel-raniero-2026';
