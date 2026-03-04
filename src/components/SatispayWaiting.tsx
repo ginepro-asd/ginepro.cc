@@ -4,14 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatPrice } from "@/hooks/use-event";
 
 interface SatispayWaitingProps {
   paymentId: string;
   registrationId: string;
   onCancel: () => void;
+  eventSlug: string;
+  price: number;
 }
 
-const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitingProps) => {
+const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price }: SatispayWaitingProps) => {
   const [status, setStatus] = useState<"pending" | "paid" | "cancelled" | "error">("pending");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
@@ -22,14 +25,12 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
         const { data, error } = await supabase.functions.invoke("check-satispay-payment", {
           body: { payment_id: paymentId, registration_id: registrationId },
         });
-
         if (error) throw error;
-
         if (data.status === "completed") {
           setStatus("paid");
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTimeout(() => {
-            navigate(`/conferma?registration_id=${registrationId}&provider=satispay`);
+            navigate(`/${eventSlug}/conferma?registration_id=${registrationId}&provider=satispay`);
           }, 2000);
         } else if (data.status === "cancelled") {
           setStatus("cancelled");
@@ -42,8 +43,6 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
 
     checkPayment();
     intervalRef.current = setInterval(checkPayment, 3000);
-
-    // Stop polling after 5 minutes
     const timeout = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setStatus("error");
@@ -53,7 +52,7 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
       if (intervalRef.current) clearInterval(intervalRef.current);
       clearTimeout(timeout);
     };
-  }, [paymentId, registrationId, navigate]);
+  }, [paymentId, registrationId, navigate, eventSlug]);
 
   return (
     <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
@@ -65,31 +64,23 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
               <Loader2 className="h-20 w-20 absolute inset-0 animate-spin text-primary/30" />
             </div>
             <div>
-              <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                In attesa del pagamento
-              </h3>
+              <h3 className="font-display text-xl font-bold text-foreground mb-2">In attesa del pagamento</h3>
               <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Apri l'app Satispay sul tuo telefono e conferma il pagamento di <strong className="text-secondary">14,99€</strong>
+                Apri l'app Satispay sul tuo telefono e conferma il pagamento di <strong className="text-secondary">{formatPrice(price)}</strong>
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={onCancel}>
-              Annulla
-            </Button>
+            <Button variant="outline" size="sm" onClick={onCancel}>Annulla</Button>
           </>
         )}
-
         {status === "paid" && (
           <>
             <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
             <div>
-              <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                Pagamento ricevuto!
-              </h3>
+              <h3 className="font-display text-xl font-bold text-foreground mb-2">Pagamento ricevuto!</h3>
               <p className="text-muted-foreground text-sm">Reindirizzamento alla conferma...</p>
             </div>
           </>
         )}
-
         {(status === "cancelled" || status === "error") && (
           <>
             <XCircle className="h-16 w-16 mx-auto text-destructive" />
@@ -98,14 +89,10 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel }: SatispayWaitin
                 {status === "cancelled" ? "Pagamento annullato" : "Tempo scaduto"}
               </h3>
               <p className="text-muted-foreground text-sm">
-                {status === "cancelled"
-                  ? "Il pagamento è stato annullato."
-                  : "Non abbiamo ricevuto il pagamento in tempo."}
+                {status === "cancelled" ? "Il pagamento è stato annullato." : "Non abbiamo ricevuto il pagamento in tempo."}
               </p>
             </div>
-            <Button variant="outline" onClick={onCancel}>
-              Riprova
-            </Button>
+            <Button variant="outline" onClick={onCancel}>Riprova</Button>
           </>
         )}
       </CardContent>

@@ -18,6 +18,9 @@ import SatispayWaiting from "@/components/SatispayWaiting";
 import SearchableSelect from "@/components/SearchableSelect";
 import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { EventData, CustomField } from "@/hooks/use-event";
+import { formatPrice } from "@/hooks/use-event";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -55,15 +58,35 @@ const COUNTRY_CODES = [
   { code: "+1", country: "🇺🇸 US", label: "USA" },
 ];
 
-const RegistrationForm = () => {
-  const expired = useIsExpired();
+const PAYMENT_ICONS: Record<string, React.ReactNode> = {
+  stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
+  satispay: <Smartphone className="h-4 w-4 text-muted-foreground" />,
+  paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  stripe: "Carta",
+  satispay: "Satispay",
+  paypal: "PayPal",
+};
+
+interface RegistrationFormProps {
+  event: EventData;
+}
+
+const RegistrationForm = ({ event }: RegistrationFormProps) => {
+  const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
+  const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  const defaultPayment = event.payment_methods[0] || "stripe";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -76,13 +99,20 @@ const RegistrationForm = () => {
       birthDate: "",
       birthPlace: "",
       codiceFiscale: "",
-      paymentMethod: "stripe",
+      paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
     },
   });
 
   const onSubmit = async (data: FormData) => {
+    // Validate required custom fields
+    for (const field of event.custom_fields) {
+      if (field.required && !customFieldValues[field.key]) {
+        toast({ title: "Errore", description: `${field.label} è obbligatorio`, variant: "destructive" });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
-    // Strip any leading +/country code the user may have typed, then prepend the selected one
     const rawPhone = data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "");
     const fullPhone = `${countryCode}${rawPhone}`;
 
@@ -95,13 +125,13 @@ const RegistrationForm = () => {
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
       codiceFiscale: data.codiceFiscale || null,
+      eventId: event.id,
+      customData: customFieldValues,
     };
 
     try {
       if (data.paymentMethod === "stripe") {
-        const { data: result, error } = await supabase.functions.invoke("create-checkout", {
-          body: payload,
-        });
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", { body: payload });
         if (error) throw error;
         if (result?.url) {
           window.location.href = result.url;
@@ -109,22 +139,15 @@ const RegistrationForm = () => {
           throw new Error("Nessun URL di pagamento ricevuto");
         }
       } else if (data.paymentMethod === "satispay") {
-        const { data: result, error } = await supabase.functions.invoke("create-satispay-payment", {
-          body: payload,
-        });
+        const { data: result, error } = await supabase.functions.invoke("create-satispay-payment", { body: payload });
         if (error) throw error;
         if (result?.payment_id && result?.registration_id) {
-          setSatispayState({
-            paymentId: result.payment_id,
-            registrationId: result.registration_id,
-          });
+          setSatispayState({ paymentId: result.payment_id, registrationId: result.registration_id });
         } else {
           throw new Error("Errore nella creazione del pagamento Satispay");
         }
       } else if (data.paymentMethod === "paypal") {
-        const { data: result, error } = await supabase.functions.invoke("create-paypal-order", {
-          body: payload,
-        });
+        const { data: result, error } = await supabase.functions.invoke("create-paypal-order", { body: payload });
         if (error) throw error;
         if (result?.url) {
           window.location.href = result.url;
@@ -133,11 +156,7 @@ const RegistrationForm = () => {
         }
       }
     } catch (err: any) {
-      toast({
-        title: "Errore",
-        description: err.message || "Errore durante la creazione del pagamento.",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: err.message || "Errore durante la creazione del pagamento.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,9 +169,7 @@ const RegistrationForm = () => {
           <Alert className="border-secondary bg-secondary/10">
             <Lock className="h-5 w-5 text-secondary" />
             <AlertTitle className="font-display text-lg">Iscrizioni chiuse</AlertTitle>
-            <AlertDescription>
-              Le iscrizioni early-bird sono terminate il 29 Marzo 2026 alle 23:59.
-            </AlertDescription>
+            <AlertDescription>Le iscrizioni sono terminate.</AlertDescription>
           </Alert>
         </div>
       </section>
@@ -167,6 +184,8 @@ const RegistrationForm = () => {
             paymentId={satispayState.paymentId}
             registrationId={satispayState.registrationId}
             onCancel={() => setSatispayState(null)}
+            eventSlug={event.slug}
+            price={event.prezzo}
           />
         </div>
       </section>
@@ -176,11 +195,9 @@ const RegistrationForm = () => {
   return (
     <section id="iscrizione" className="py-16 sm:py-24 px-4">
       <div className="max-w-xl mx-auto">
-        <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">
-          Iscriviti ora
-        </h2>
+        <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">Iscriviti ora</h2>
         <p className="text-center text-muted-foreground mb-8">
-          Assicurati il posto al prezzo early-bird di <span className="font-bold text-secondary">14,99€</span>
+          Assicurati il posto al prezzo di <span className="font-bold text-secondary">{formatPrice(event.prezzo)}</span>
         </p>
 
         <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
@@ -208,7 +225,6 @@ const RegistrationForm = () => {
                   )} />
                 </div>
 
-                {/* Contact */}
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email *</FormLabel>
@@ -227,9 +243,7 @@ const RegistrationForm = () => {
                         className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0"
                       >
                         {COUNTRY_CODES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.country} {c.code}
-                          </option>
+                          <option key={c.code} value={c.code}>{c.country} {c.code}</option>
                         ))}
                       </select>
                       <FormControl>
@@ -252,7 +266,7 @@ const RegistrationForm = () => {
                     className="flex gap-4"
                   >
                     <div className="flex items-center gap-2">
-                     <RadioGroupItem value="birth" id="birth" />
+                      <RadioGroupItem value="birth" id="birth" />
                       <Label htmlFor="birth" className="cursor-pointer">Data/Luogo di nascita</Label>
                     </div>
                     <div className="flex items-center gap-2">
@@ -315,6 +329,21 @@ const RegistrationForm = () => {
                   )}
                 </div>
 
+                {/* Custom fields */}
+                {event.custom_fields.length > 0 && (
+                  <div className="space-y-4 border-t border-border/50 pt-5">
+                    <Label className="text-sm font-medium">Informazioni aggiuntive</Label>
+                    {event.custom_fields.map((cf) => (
+                      <CustomFieldInput
+                        key={cf.key}
+                        field={cf}
+                        value={customFieldValues[cf.key] || ""}
+                        onChange={(v) => setCustomFieldValues((prev) => ({ ...prev, [cf.key]: v }))}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {/* Payment method */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">Metodo di pagamento *</Label>
@@ -322,21 +351,17 @@ const RegistrationForm = () => {
                     <FormItem>
                       <FormControl>
                         <RadioGroup value={field.value} onValueChange={field.onChange} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <label htmlFor="pay-stripe" className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === "stripe" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
-                            <RadioGroupItem value="stripe" id="pay-stripe" />
-                            <CreditCard className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Carta</span>
-                          </label>
-                          <label htmlFor="pay-satispay" className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === "satispay" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
-                            <RadioGroupItem value="satispay" id="pay-satispay" />
-                            <Smartphone className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Satispay</span>
-                          </label>
-                          <label htmlFor="pay-paypal" className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === "paypal" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
-                            <RadioGroupItem value="paypal" id="pay-paypal" />
-                            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">PayPal</span>
-                          </label>
+                          {event.payment_methods.map((pm) => (
+                            <label
+                              key={pm}
+                              htmlFor={`pay-${pm}`}
+                              className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === pm ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                            >
+                              <RadioGroupItem value={pm} id={`pay-${pm}`} />
+                              {PAYMENT_ICONS[pm]}
+                              <span className="text-sm font-medium">{PAYMENT_LABELS[pm] || pm}</span>
+                            </label>
+                          ))}
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
@@ -351,7 +376,7 @@ const RegistrationForm = () => {
                       Elaborazione...
                     </>
                   ) : (
-                    "Iscriviti e Paga — 14,99€"
+                    `Iscriviti e Paga — ${formatPrice(event.prezzo)}`
                   )}
                 </Button>
               </form>
@@ -362,5 +387,49 @@ const RegistrationForm = () => {
     </section>
   );
 };
+
+// Dynamic custom field renderer
+function CustomFieldInput({ field, value, onChange }: { field: CustomField; value: string; onChange: (v: string) => void }) {
+  const label = `${field.label}${field.required ? " *" : ""}`;
+
+  if (field.type === "select" && field.options) {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-sm">{label}</Label>
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder={`Seleziona ${field.label.toLowerCase()}...`} />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((opt) => (
+              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+
+  if (field.type === "checkbox") {
+    return (
+      <div className="flex items-center gap-2">
+        <Checkbox id={field.key} checked={value === "true"} onCheckedChange={(c) => onChange(c ? "true" : "false")} />
+        <Label htmlFor={field.key} className="cursor-pointer text-sm">{label}</Label>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">{label}</Label>
+      <Input
+        type={field.type === "number" ? "number" : "text"}
+        placeholder={field.placeholder || ""}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
 
 export default RegistrationForm;

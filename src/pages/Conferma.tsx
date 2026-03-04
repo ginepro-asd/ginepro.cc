@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ interface RegistrationData {
 }
 
 const Conferma = () => {
+  const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<"loading" | "paid" | "error">("loading");
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
@@ -28,7 +29,6 @@ const Conferma = () => {
       return;
     }
 
-    // Satispay flow — payment already verified by polling
     if (provider === "satispay") {
       const fetchRegistration = async () => {
         try {
@@ -48,11 +48,9 @@ const Conferma = () => {
       return;
     }
 
-    // PayPal flow — capture the order after redirect
     if (provider === "paypal") {
-      const token = searchParams.get("token"); // PayPal passes order ID as token
+      const token = searchParams.get("token");
       const orderId = token || searchParams.get("order_id");
-      
       const capturePaypal = async () => {
         try {
           const { data, error } = await supabase.functions.invoke("capture-paypal-order", {
@@ -73,7 +71,6 @@ const Conferma = () => {
       return;
     }
 
-    // Stripe flow
     if (!sessionId) {
       setStatus("error");
       return;
@@ -84,9 +81,7 @@ const Conferma = () => {
         const { data, error } = await supabase.functions.invoke("verify-payment", {
           body: { session_id: sessionId, registration_id: registrationId },
         });
-
         if (error) throw error;
-
         if (data.status === "completed") {
           setStatus("paid");
           setRegistration(data.registration);
@@ -97,9 +92,10 @@ const Conferma = () => {
         setStatus("error");
       }
     };
-
     verify();
   }, [searchParams]);
+
+  const homePath = slug ? `/${slug}` : "/";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
@@ -118,12 +114,8 @@ const Conferma = () => {
             <>
               <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
               <div>
-                <h1 className="font-display text-2xl font-bold text-foreground mb-2">
-                  Iscrizione confermata!
-                </h1>
-                <p className="text-muted-foreground mb-6">
-                  Grazie per esserti iscritto al Tredozio Trail 2027.
-                </p>
+                <h1 className="font-display text-2xl font-bold text-foreground mb-2">Iscrizione confermata!</h1>
+                <p className="text-muted-foreground mb-6">Grazie per esserti iscritto.</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
                 <p className="text-sm">
@@ -146,9 +138,7 @@ const Conferma = () => {
             <>
               <XCircle className="h-16 w-16 mx-auto text-destructive" />
               <div>
-                <h1 className="font-display text-2xl font-bold text-foreground mb-2">
-                  Errore nella verifica
-                </h1>
+                <h1 className="font-display text-2xl font-bold text-foreground mb-2">Errore nella verifica</h1>
                 <p className="text-muted-foreground">
                   Non è stato possibile verificare il pagamento. Contattaci se hai completato il pagamento.
                 </p>
@@ -157,7 +147,7 @@ const Conferma = () => {
           )}
 
           <Button asChild variant="outline" className="mt-4">
-            <Link to="/">Torna alla home</Link>
+            <Link to={homePath}>Torna alla home</Link>
           </Button>
         </CardContent>
       </Card>
