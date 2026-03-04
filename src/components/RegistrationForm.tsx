@@ -189,6 +189,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchDismissed, setMatchDismissed] = useState(false);
+  const [returningUserData, setReturningUserData] = useState<MatchedRegistration | null>(null);
   const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
