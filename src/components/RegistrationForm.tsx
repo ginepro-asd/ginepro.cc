@@ -532,7 +532,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                       <FormField control={form.control} name="codiceFiscale" render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className="uppercase" {...field} />
+                            <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className={`uppercase ${returningUserData?.codice_fiscale ? "bg-muted/50 cursor-not-allowed" : ""}`} readOnly={!!returningUserData?.codice_fiscale} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
