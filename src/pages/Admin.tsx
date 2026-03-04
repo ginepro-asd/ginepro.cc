@@ -359,7 +359,7 @@ const Admin = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    flatRegistrations.map((r) => {
+                    filteredRegistrations.map((r) => {
                       const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
                       return (
                         <TableRow key={r.id}>
