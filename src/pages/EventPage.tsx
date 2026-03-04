@@ -41,7 +41,17 @@ const EventPage = () => {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-20">
-        <TopographicPattern className="absolute inset-0 w-full h-full text-primary pointer-events-none" />
+        {event.hero_image ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${event.hero_image})` }}
+            />
+            <div className="absolute inset-0 bg-background/75 backdrop-blur-[2px]" />
+          </>
+        ) : (
+          <TopographicPattern className="absolute inset-0 w-full h-full text-primary pointer-events-none" />
+        )}
 
         <div className="absolute top-20 left-10 w-24 h-24 border border-secondary/20 rotate-45 hidden sm:block" />
         <div className="absolute bottom-32 right-16 w-16 h-16 rounded-full border border-primary/15 hidden sm:block" />
@@ -83,13 +93,12 @@ const EventPage = () => {
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
                 {formatPrice(event.prezzo)}
               </span>
-              <span className="text-muted-foreground ml-2 text-sm">Early-Bird</span>
             </div>
           </motion.div>
 
           {event.scadenza_iscrizioni && (
             <div className="mb-10">
-              <p className="text-xs text-muted-foreground mb-3 uppercase tracking-widest">L'offerta scade tra</p>
+              <p className="text-xs text-muted-foreground mb-3 uppercase tracking-widest">Iscrizioni entro</p>
               <Countdown deadline={new Date(event.scadenza_iscrizioni)} />
             </div>
           )}
