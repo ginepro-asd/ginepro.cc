@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, CalendarDays } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, CalendarDays, Upload, Info } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -25,7 +25,7 @@ interface EventRegistration {
   payment_method: string;
   payment_status: string;
   payment_id: string | null;
-  custom_data: any;
+  custom_data: Record<string, any> | null;
   created_at: string;
 }
 
@@ -35,6 +35,8 @@ interface Participant {
   cognome: string;
   telefono: string;
   codice_fiscale: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
   participant_id: string | null;
   registrations: EventRegistration[];
 }
@@ -45,8 +47,12 @@ interface FlatRegistration {
   cognome: string;
   email: string;
   telefono: string;
+  codice_fiscale: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
   payment_method: string;
   payment_status: string;
+  custom_data: Record<string, any> | null;
   created_at: string;
   event_nome?: string;
   event_slug?: string;
@@ -60,8 +66,10 @@ const Admin = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [flatRegistrations, setFlatRegistrations] = useState<FlatRegistration[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [detailRegistration, setDetailRegistration] = useState<FlatRegistration | null>(null);
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -109,6 +117,30 @@ const Admin = () => {
     }
   };
 
+  const importFromFirestore = async () => {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-firestore", {
+        body: { password },
+      });
+      if (error) throw error;
+      if (data.error) {
+        toast({ title: "Errore importazione", description: data.error, variant: "destructive" });
+        return;
+      }
+      toast({
+        title: "Importazione completata",
+        description: `${data.eventsCreated} eventi, ${data.participantsCreated} partecipanti, ${data.registrationsCreated} iscrizioni importate. ${data.errors?.length || 0} errori.`,
+      });
+      // Refresh data
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const statusColor = (status: string) => {
     if (status === "paid" || status === "completed") return "default";
     if (status === "pending") return "secondary";
@@ -123,6 +155,19 @@ const Admin = () => {
       : "Iscrizioni";
 
   const totalRegistrations = participants.reduce((sum, p) => sum + p.registrations.length, 0);
+
+  // Custom data label prettifier
+  const prettyLabel = (key: string) => {
+    const map: Record<string, string> = {
+      team: "Squadra", photo: "Foto", signature: "Firma", type: "Tipo",
+      gender: "Sesso", distance: "Distanza", food: "Pasto", bib: "Pettorale",
+      address: "Indirizzo", city: "Città", cap: "CAP", province: "Provincia",
+      nation: "Nazione", emergencyContact: "Contatto emergenza",
+      emergencyPhone: "Telefono emergenza", medicalCertificate: "Certificato medico",
+      tShirtSize: "Taglia maglietta", notes: "Note",
+    };
+    return map[key] || key;
+  };
 
   if (!authenticated) {
     return (
@@ -182,7 +227,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 py-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src={logoDark} alt="GINEPRO" className="h-8 object-contain" />
@@ -191,6 +236,12 @@ const Admin = () => {
             {isGlobal && <Badge variant="outline">{totalRegistrations} iscrizioni</Badge>}
           </div>
           <div className="flex gap-2">
+            {isGlobal && (
+              <Button onClick={importFromFirestore} disabled={importing} variant="outline">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                Importa da Firestore
+              </Button>
+            )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
               Scarica CSV
@@ -225,55 +276,61 @@ const Admin = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefono</TableHead>
+                    <TableHead>C.F.</TableHead>
+                    <TableHead>Data nascita</TableHead>
+                    <TableHead>Luogo nascita</TableHead>
                     <TableHead>Pagamento</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Data</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {participants.length === 0 ? (
+                  {flatRegistrations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         Nessuna iscrizione trovata
                       </TableCell>
                     </TableRow>
                   ) : (
-                    participants.map((p) => {
-                      const firstReg = p.registrations[0];
-                      const multiEvent = p.registrations.length > 1;
+                    flatRegistrations.map((r) => {
+                      const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
                       return (
-                        <TableRow key={p.email}>
+                        <TableRow key={r.id}>
                           <TableCell>
-                            {multiEvent ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-xs gap-1.5"
-                                onClick={() => setSelectedParticipant(p)}
-                              >
-                                <CalendarDays className="h-3.5 w-3.5" />
-                                {p.registrations.length} eventi
-                              </Button>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {firstReg?.event_nome || "—"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">{p.nome} {p.cognome}</TableCell>
-                          <TableCell>{p.email}</TableCell>
-                          <TableCell>{p.telefono}</TableCell>
-                          <TableCell className="capitalize">{firstReg?.payment_method}</TableCell>
-                          <TableCell>
-                            <Badge variant={statusColor(firstReg?.payment_status)}>
-                              {firstReg?.payment_status}
+                            <Badge variant="outline" className="text-xs">
+                              {r.event_nome || "—"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {firstReg && new Date(firstReg.created_at).toLocaleDateString("it-IT", {
-                              day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                          <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
+                          <TableCell className="text-sm">{r.email}</TableCell>
+                          <TableCell className="text-sm">{r.telefono}</TableCell>
+                          <TableCell className="text-xs font-mono">{r.codice_fiscale || "—"}</TableCell>
+                          <TableCell className="text-sm">{r.birth_date || "—"}</TableCell>
+                          <TableCell className="text-sm">{r.birth_place || "—"}</TableCell>
+                          <TableCell className="capitalize text-sm">{r.payment_method}</TableCell>
+                          <TableCell>
+                            <Badge variant={statusColor(r.payment_status)}>
+                              {r.payment_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                            {new Date(r.created_at).toLocaleDateString("it-IT", {
+                              day: "2-digit", month: "short", year: "numeric",
                             })}
+                          </TableCell>
+                          <TableCell>
+                            {hasCustom && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() => setDetailRegistration(r)}
+                              >
+                                <Info className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -285,7 +342,33 @@ const Admin = () => {
           </CardContent>
         </Card>
 
-        {/* Multi-event participant detail dialog */}
+        {/* Registration detail modal */}
+        <Dialog open={!!detailRegistration} onOpenChange={(open) => !open && setDetailRegistration(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                Dettagli — {detailRegistration?.nome} {detailRegistration?.cognome}
+              </DialogTitle>
+              <DialogDescription>
+                {detailRegistration?.event_nome} · {detailRegistration?.email}
+              </DialogDescription>
+            </DialogHeader>
+            {detailRegistration?.custom_data && (
+              <div className="space-y-3 mt-2">
+                {Object.entries(detailRegistration.custom_data).map(([key, value]) => (
+                  <div key={key} className="flex items-start justify-between gap-4 py-2 border-b border-border/50 last:border-0">
+                    <span className="text-sm font-medium text-muted-foreground">{prettyLabel(key)}</span>
+                    <span className="text-sm text-foreground text-right max-w-[60%] break-words">
+                      {typeof value === "boolean" ? (value ? "Sì" : "No") : String(value || "—")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Multi-event participant detail dialog (keep for grouped view) */}
         <Dialog open={!!selectedParticipant} onOpenChange={(open) => !open && setSelectedParticipant(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
