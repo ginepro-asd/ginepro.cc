@@ -497,7 +497,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                         ))}
                       </select>
                       <FormControl>
-                        <Input type="tel" placeholder="333 1234567" {...field} />
+                        <Input type="tel" placeholder="333 1234567" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
