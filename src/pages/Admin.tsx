@@ -81,6 +81,9 @@ const Admin = () => {
   const [loadingFirestore, setLoadingFirestore] = useState(false);
   const [importingEventId, setImportingEventId] = useState<string | null>(null);
   const [importedEvents, setImportedEvents] = useState<Set<string>>(new Set());
+  // Filter & search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterEvent, setFilterEvent] = useState<string>("all");
   const { toast } = useToast();
 
   const isGlobal = !slug;
