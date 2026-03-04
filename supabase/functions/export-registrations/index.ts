@@ -30,7 +30,7 @@ serve(async (req) => {
 
     let query = supabaseAdmin
       .from("registrations")
-      .select("*")
+      .select("*, events(nome, slug)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
@@ -41,11 +41,18 @@ serve(async (req) => {
 
     if (error) throw new Error(error.message);
 
+    // Flatten event info
+    const enriched = (registrations || []).map((r: any) => ({
+      ...r,
+      event_nome: r.events?.nome || "—",
+      event_slug: r.events?.slug || "",
+    }));
+
     if (format === "csv") {
       const headers = [
         "id", "nome", "cognome", "email", "telefono",
         "identification_type", "codice_fiscale", "birth_date", "birth_place",
-        "payment_method", "payment_status", "payment_id", "event_id", "custom_data", "created_at",
+        "payment_method", "payment_status", "payment_id", "event_nome", "custom_data", "created_at",
       ];
 
       const escapeCSV = (val: any) => {
@@ -59,7 +66,7 @@ serve(async (req) => {
 
       const csv = [
         headers.join(","),
-        ...(registrations || []).map((r: any) =>
+        ...enriched.map((r: any) =>
           headers.map((h) => escapeCSV(r[h])).join(",")
         ),
       ].join("\n");
@@ -74,7 +81,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ registrations }), {
+    return new Response(JSON.stringify({ registrations: enriched }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

@@ -23,6 +23,8 @@ interface Registration {
   payment_method: string;
   payment_status: string;
   created_at: string;
+  event_nome?: string;
+  event_slug?: string;
 }
 
 const Admin = () => {
@@ -34,6 +36,8 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+
+  const isGlobal = !slug;
 
   const authenticate = async () => {
     setLoading(true);
@@ -84,7 +88,11 @@ const Admin = () => {
   };
 
   const homePath = slug ? `/${slug}` : "/";
-  const title = event?.nome ? `Iscrizioni — ${event.nome}` : "Iscrizioni";
+  const title = isGlobal
+    ? "Tutte le iscrizioni"
+    : event?.nome
+      ? `Iscrizioni — ${event.nome}`
+      : "Iscrizioni";
 
   if (!authenticated) {
     return (
@@ -96,6 +104,9 @@ const Admin = () => {
               <Lock className="h-5 w-5" />
               Area Admin
             </CardTitle>
+            {isGlobal && (
+              <p className="text-sm text-muted-foreground mt-1">Vista globale — tutti gli eventi</p>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -130,6 +141,15 @@ const Admin = () => {
     );
   }
 
+  // Group registrations by event for the global view
+  const eventCounts = isGlobal
+    ? registrations.reduce<Record<string, number>>((acc, r) => {
+        const name = r.event_nome || "Sconosciuto";
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {})
+    : null;
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -150,12 +170,27 @@ const Admin = () => {
           </div>
         </div>
 
+        {/* Event summary cards for global view */}
+        {isGlobal && eventCounts && Object.keys(eventCounts).length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {Object.entries(eventCounts).map(([name, count]) => (
+              <Card key={name} className="border-border/50 bg-card/80">
+                <CardContent className="p-4 text-center">
+                  <p className="text-sm text-muted-foreground truncate">{name}</p>
+                  <p className="text-2xl font-bold text-foreground">{count}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isGlobal && <TableHead>Evento</TableHead>}
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefono</TableHead>
@@ -167,7 +202,7 @@ const Admin = () => {
                 <TableBody>
                   {registrations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={isGlobal ? 7 : 6} className="text-center text-muted-foreground py-8">
                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         Nessuna iscrizione trovata
                       </TableCell>
@@ -175,6 +210,13 @@ const Admin = () => {
                   ) : (
                     registrations.map((r) => (
                       <TableRow key={r.id}>
+                        {isGlobal && (
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {r.event_nome || "—"}
+                            </Badge>
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{r.nome} {r.cognome}</TableCell>
                         <TableCell>{r.email}</TableCell>
                         <TableCell>{r.telefono}</TableCell>
