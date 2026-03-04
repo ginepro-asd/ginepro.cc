@@ -395,6 +395,52 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   return (
     <section id="iscrizione" className="py-16 sm:py-24 px-4">
       <div className="max-w-xl mx-auto">
+        {/* Returning user recognition dialog */}
+        <Dialog open={showMatchDialog} onOpenChange={(open) => { if (!open) { setShowMatchDialog(false); setMatchDismissed(true); } }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <UserCheck className="h-5 w-5 text-primary" />
+                <DialogTitle className="font-display">Ci conosciamo già?</DialogTitle>
+              </div>
+              <DialogDescription>
+                Abbiamo trovato {matchedUsers.length > 1 ? "alcune iscrizioni" : "un'iscrizione"} con il tuo nome. Sei tu?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {matchedUsers.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleSelectMatch(m)}
+                  className="w-full text-left border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 transition-all space-y-1"
+                >
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Email: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscateEmail(m.email)}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Telefono: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscatePhone(m.telefono)}</span>
+                  </div>
+                  {m.codice_fiscale && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">C.F.: </span>
+                      <span className="font-medium font-mono text-foreground">{obfuscateCF(m.codice_fiscale)}</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => { setShowMatchDialog(false); setMatchDismissed(true); }}
+              >
+                No, sono un nuovo iscritto
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">Iscriviti ora</h2>
         <p className="text-center text-muted-foreground mb-8">
           Assicurati il posto al prezzo di <span className="font-bold text-secondary">{formatPrice(event.prezzo)}</span>
