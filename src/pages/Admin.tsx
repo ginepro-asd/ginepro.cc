@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -81,6 +81,9 @@ const Admin = () => {
   const [loadingFirestore, setLoadingFirestore] = useState(false);
   const [importingEventId, setImportingEventId] = useState<string | null>(null);
   const [importedEvents, setImportedEvents] = useState<Set<string>>(new Set());
+  // Filter & search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterEvent, setFilterEvent] = useState<string>("all");
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -248,6 +251,20 @@ const Admin = () => {
       }, {})
     : null;
 
+  // Unique event names for filter
+  const eventNames = [...new Set(flatRegistrations.map(r => r.event_nome).filter(Boolean))] as string[];
+
+  // Apply filters
+  const filteredRegistrations = flatRegistrations.filter((r) => {
+    if (filterEvent !== "all" && r.event_nome !== filterEvent) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const fullName = `${r.nome} ${r.cognome}`.toLowerCase();
+      if (!fullName.includes(q) && !r.email.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -288,6 +305,32 @@ const Admin = () => {
           </div>
         )}
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca per nome o email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {eventNames.length > 1 && (
+            <select
+              value={filterEvent}
+              onChange={(e) => setFilterEvent(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="all">Tutti gli eventi</option>
+              {eventNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          )}
+          <Badge variant="outline">{filteredRegistrations.length} risultati</Badge>
+        </div>
+
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -308,7 +351,7 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {flatRegistrations.length === 0 ? (
+                  {filteredRegistrations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -316,7 +359,7 @@ const Admin = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    flatRegistrations.map((r) => {
+                    filteredRegistrations.map((r) => {
                       const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
                       return (
                         <TableRow key={r.id}>
