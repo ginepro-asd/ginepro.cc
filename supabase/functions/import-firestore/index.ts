@@ -99,28 +99,23 @@ async function listFirestoreEvents(accessToken: string, baseUrl: string) {
   if (!eventsData.documents) return [];
 
   const results: any[] = [];
-  for (const doc of eventsData.documents) {
+  // Process all events in parallel for speed
+  const promises = eventsData.documents.map(async (doc: any) => {
     const eventId = doc.name.split("/").pop()!;
-    if (SKIP_EVENTS.some((s) => eventId.toLowerCase() === s.toLowerCase())) continue;
-
-    // Count entries
-    const entriesRes = await fetch(`${baseUrl}/events/${eventId}/entries?pageSize=1`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const entriesData = await entriesRes.json();
-    const hasEntries = !!(entriesData.documents && entriesData.documents.length > 0);
+    if (SKIP_EVENTS.some((s) => eventId.toLowerCase() === s.toLowerCase())) return null;
 
     const fields = doc.fields || {};
     const name = fv(fields.name) || fv(fields.title) || fv(fields.nome) || eventId;
 
-    results.push({
+    return {
       firestore_id: eventId,
       name,
-      has_entries: hasEntries,
       is_tesseramento: TESSERAMENTO_IDS.includes(eventId.toLowerCase()),
-    });
-  }
-  return results;
+    };
+  });
+
+  const settled = await Promise.all(promises);
+  return settled.filter(Boolean);
 }
 
 async function importSingleEvent(
