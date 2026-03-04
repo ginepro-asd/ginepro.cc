@@ -61,7 +61,6 @@ interface FlatRegistration {
 interface FirestoreEvent {
   firestore_id: string;
   name: string;
-  has_entries: boolean;
   is_tesseramento: boolean;
 }
 
