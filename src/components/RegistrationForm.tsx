@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -22,6 +23,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { EventData, CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
 import CodiceFiscale from "codice-fiscale-js";
+
+/** Obfuscate email: ma***o@gm***l.com */
+function obfuscateEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***@***.***";
+  const oLocal = local.length <= 2 ? local[0] + "***" : local[0] + local[1] + "***" + local.slice(-1);
+  const parts = domain.split(".");
+  const oDomain = parts[0].length <= 2 ? parts[0][0] + "***" : parts[0][0] + parts[0][1] + "***" + parts[0].slice(-1);
+  return `${oLocal}@${oDomain}.${parts.slice(1).join(".")}`;
+}
+
+/** Obfuscate phone: +39 33***567 */
+function obfuscatePhone(phone: string): string {
+  if (phone.length <= 6) return "***";
+  return phone.slice(0, phone.length > 10 ? 6 : 3) + "***" + phone.slice(-3);
+}
+
+/** Obfuscate CF: RSS***85M***01Z */
+function obfuscateCF(cf: string | null): string {
+  if (!cf || cf.length < 10) return "***";
+  return cf.slice(0, 3) + "***" + cf.slice(6, 9) + "***" + cf.slice(-2);
+}
+
+interface MatchedRegistration {
+  id: string;
+  email: string;
+  telefono: string;
+  codice_fiscale: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  identification_type: string;
+}
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -153,6 +186,10 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [computedCF, setComputedCF] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
+  const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
+  const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [matchDismissed, setMatchDismissed] = useState(false);
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   const defaultPayment = event.payment_methods[0] || "stripe";
@@ -181,6 +218,58 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const watchedGender = form.watch("gender");
   const watchedCF = form.watch("codiceFiscale");
 
+  // Lookup existing registrations by nome+cognome (debounced)
+  useEffect(() => {
+    if (matchDismissed) return;
+    if (!watchedNome?.trim() || !watchedCognome?.trim()) {
+      setMatchedUsers([]);
+      return;
+    }
+    if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current);
+    lookupTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from("registrations")
+          .select("id, email, telefono, codice_fiscale, birth_date, birth_place, identification_type")
+          .ilike("nome", watchedNome.trim())
+          .ilike("cognome", watchedCognome.trim())
+          .eq("payment_status", "completed")
+          .neq("event_id", event.id)
+          .limit(10);
+        if (data && data.length > 0) {
+          // Deduplicate by email
+          const unique = data.filter((r, i, arr) => arr.findIndex(x => x.email === r.email) === i);
+          setMatchedUsers(unique);
+          setShowMatchDialog(true);
+        } else {
+          setMatchedUsers([]);
+        }
+      } catch {
+        // silently fail
+      }
+    }, 800);
+    return () => { if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current); };
+  }, [watchedNome, watchedCognome, event.id, matchDismissed]);
+
+  const handleSelectMatch = (match: MatchedRegistration) => {
+    form.setValue("email", match.email);
+    form.setValue("telefono", match.telefono.replace(/^\+\d{1,3}/, ""));
+    const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
+    if (phoneMatch) {
+      const cc = COUNTRY_CODES.find(c => c.code === phoneMatch[1]);
+      if (cc) setCountryCode(cc.code);
+    }
+    if (match.codice_fiscale) {
+      form.setValue("codiceFiscale", match.codice_fiscale);
+      setIdentificationType("fiscal");
+      form.setValue("identificationType", "fiscal");
+    }
+    if (match.birth_date) form.setValue("birthDate", match.birth_date);
+    if (match.birth_place) form.setValue("birthPlace", match.birth_place);
+    setShowMatchDialog(false);
+    setMatchDismissed(true);
+    toast({ title: "Dati recuperati!", description: "Abbiamo precompilato il form con i tuoi dati." });
+  };
   // Auto-compute CF from birth data
   useEffect(() => {
     if (identificationType !== "birth") return;
@@ -306,6 +395,52 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   return (
     <section id="iscrizione" className="py-16 sm:py-24 px-4">
       <div className="max-w-xl mx-auto">
+        {/* Returning user recognition dialog */}
+        <Dialog open={showMatchDialog} onOpenChange={(open) => { if (!open) { setShowMatchDialog(false); setMatchDismissed(true); } }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <UserCheck className="h-5 w-5 text-primary" />
+                <DialogTitle className="font-display">Ci conosciamo già?</DialogTitle>
+              </div>
+              <DialogDescription>
+                Abbiamo trovato {matchedUsers.length > 1 ? "alcune iscrizioni" : "un'iscrizione"} con il tuo nome. Sei tu?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {matchedUsers.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleSelectMatch(m)}
+                  className="w-full text-left border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 transition-all space-y-1"
+                >
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Email: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscateEmail(m.email)}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Telefono: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscatePhone(m.telefono)}</span>
+                  </div>
+                  {m.codice_fiscale && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">C.F.: </span>
+                      <span className="font-medium font-mono text-foreground">{obfuscateCF(m.codice_fiscale)}</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => { setShowMatchDialog(false); setMatchDismissed(true); }}
+              >
+                No, sono un nuovo iscritto
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">Iscriviti ora</h2>
         <p className="text-center text-muted-foreground mb-8">
           Assicurati il posto al prezzo di <span className="font-bold text-secondary">{formatPrice(event.prezzo)}</span>
