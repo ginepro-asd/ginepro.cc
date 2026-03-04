@@ -13,6 +13,13 @@ const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: event, isLoading, error } = useEvent(slug);
 
+  React.useEffect(() => {
+    if (event) {
+      document.title = `Ginepro - ${event.nome}`;
+    }
+    return () => { document.title = "Ginepro"; };
+  }, [event?.nome]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -24,12 +31,6 @@ const EventPage = () => {
   if (error || !event) {
     return <Navigate to="/" replace />;
   }
-
-  // Update document title with event name
-  React.useEffect(() => {
-    document.title = `Ginepro - ${event.nome}`;
-    return () => { document.title = "Ginepro"; };
-  }, [event.nome]);
 
   const eventDate = event.data_evento
     ? new Date(event.data_evento).toLocaleDateString("it-IT", {
