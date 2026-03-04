@@ -23,6 +23,7 @@ export type Database = {
           descrizione: string | null
           hero_image: string | null
           id: string
+          is_tesseramento: boolean
           luogo: string | null
           nome: string
           payment_methods: string[] | null
@@ -39,6 +40,7 @@ export type Database = {
           descrizione?: string | null
           hero_image?: string | null
           id?: string
+          is_tesseramento?: boolean
           luogo?: string | null
           nome: string
           payment_methods?: string[] | null
@@ -55,6 +57,7 @@ export type Database = {
           descrizione?: string | null
           hero_image?: string | null
           id?: string
+          is_tesseramento?: boolean
           luogo?: string | null
           nome?: string
           payment_methods?: string[] | null
