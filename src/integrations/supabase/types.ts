@@ -65,6 +65,48 @@ export type Database = {
         }
         Relationships: []
       }
+      participants: {
+        Row: {
+          birth_date: string | null
+          birth_place: string | null
+          codice_fiscale: string | null
+          cognome: string
+          created_at: string
+          email: string
+          id: string
+          identification_type: string
+          nome: string
+          telefono: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_place?: string | null
+          codice_fiscale?: string | null
+          cognome: string
+          created_at?: string
+          email: string
+          id?: string
+          identification_type?: string
+          nome: string
+          telefono: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          birth_place?: string | null
+          codice_fiscale?: string | null
+          cognome?: string
+          created_at?: string
+          email?: string
+          id?: string
+          identification_type?: string
+          nome?: string
+          telefono?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       registrations: {
         Row: {
           birth_date: string | null
@@ -78,6 +120,7 @@ export type Database = {
           id: string
           identification_type: string
           nome: string
+          participant_id: string | null
           payment_id: string | null
           payment_method: string
           payment_status: string
@@ -96,6 +139,7 @@ export type Database = {
           id?: string
           identification_type: string
           nome: string
+          participant_id?: string | null
           payment_id?: string | null
           payment_method: string
           payment_status?: string
@@ -114,6 +158,7 @@ export type Database = {
           id?: string
           identification_type?: string
           nome?: string
+          participant_id?: string | null
           payment_id?: string | null
           payment_method?: string
           payment_status?: string
@@ -126,6 +171,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
             referencedColumns: ["id"]
           },
         ]

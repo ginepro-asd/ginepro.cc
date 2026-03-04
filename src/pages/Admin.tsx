@@ -6,15 +6,40 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, CalendarDays } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent } from "@/hooks/use-event";
 
-interface Registration {
+interface EventRegistration {
+  id: string;
+  event_id: string;
+  event_nome: string;
+  event_slug: string;
+  payment_method: string;
+  payment_status: string;
+  payment_id: string | null;
+  custom_data: any;
+  created_at: string;
+}
+
+interface Participant {
+  email: string;
+  nome: string;
+  cognome: string;
+  telefono: string;
+  codice_fiscale: string | null;
+  participant_id: string | null;
+  registrations: EventRegistration[];
+}
+
+interface FlatRegistration {
   id: string;
   nome: string;
   cognome: string;
@@ -32,9 +57,11 @@ const Admin = () => {
   const { data: event } = useEvent(slug);
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [flatRegistrations, setFlatRegistrations] = useState<FlatRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -50,7 +77,8 @@ const Admin = () => {
         toast({ title: "Errore", description: data.error, variant: "destructive" });
         return;
       }
-      setRegistrations(data.registrations || []);
+      setParticipants(data.participants || []);
+      setFlatRegistrations(data.registrations || []);
       setAuthenticated(true);
     } catch (err: any) {
       toast({ title: "Errore", description: err.message || "Password non valida", variant: "destructive" });
@@ -93,6 +121,8 @@ const Admin = () => {
     : event?.nome
       ? `Iscrizioni — ${event.nome}`
       : "Iscrizioni";
+
+  const totalRegistrations = participants.reduce((sum, p) => sum + p.registrations.length, 0);
 
   if (!authenticated) {
     return (
@@ -141,9 +171,9 @@ const Admin = () => {
     );
   }
 
-  // Group registrations by event for the global view
+  // Event summary cards for global view
   const eventCounts = isGlobal
-    ? registrations.reduce<Record<string, number>>((acc, r) => {
+    ? flatRegistrations.reduce<Record<string, number>>((acc, r) => {
         const name = r.event_nome || "Sconosciuto";
         acc[name] = (acc[name] || 0) + 1;
         return acc;
@@ -157,7 +187,8 @@ const Admin = () => {
           <div className="flex items-center gap-3">
             <img src={logoDark} alt="GINEPRO" className="h-8 object-contain" />
             <h1 className="font-display text-2xl font-bold text-foreground">{title}</h1>
-            <Badge variant="outline">{registrations.length} totali</Badge>
+            <Badge variant="outline">{participants.length} partecipanti</Badge>
+            {isGlobal && <Badge variant="outline">{totalRegistrations} iscrizioni</Badge>}
           </div>
           <div className="flex gap-2">
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
@@ -190,7 +221,7 @@ const Admin = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {isGlobal && <TableHead>Evento</TableHead>}
+                    <TableHead>Evento</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefono</TableHead>
@@ -200,43 +231,93 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {registrations.length === 0 ? (
+                  {participants.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={isGlobal ? 7 : 6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         Nessuna iscrizione trovata
                       </TableCell>
                     </TableRow>
                   ) : (
-                    registrations.map((r) => (
-                      <TableRow key={r.id}>
-                        {isGlobal && (
+                    participants.map((p) => {
+                      const firstReg = p.registrations[0];
+                      const multiEvent = p.registrations.length > 1;
+                      return (
+                        <TableRow key={p.email}>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {r.event_nome || "—"}
+                            {multiEvent ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs gap-1.5"
+                                onClick={() => setSelectedParticipant(p)}
+                              >
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                {p.registrations.length} eventi
+                              </Button>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                {firstReg?.event_nome || "—"}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{p.nome} {p.cognome}</TableCell>
+                          <TableCell>{p.email}</TableCell>
+                          <TableCell>{p.telefono}</TableCell>
+                          <TableCell className="capitalize">{firstReg?.payment_method}</TableCell>
+                          <TableCell>
+                            <Badge variant={statusColor(firstReg?.payment_status)}>
+                              {firstReg?.payment_status}
                             </Badge>
                           </TableCell>
-                        )}
-                        <TableCell className="font-medium">{r.nome} {r.cognome}</TableCell>
-                        <TableCell>{r.email}</TableCell>
-                        <TableCell>{r.telefono}</TableCell>
-                        <TableCell className="capitalize">{r.payment_method}</TableCell>
-                        <TableCell>
-                          <Badge variant={statusColor(r.payment_status)}>{r.payment_status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(r.created_at).toLocaleDateString("it-IT", {
-                            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-                          })}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          <TableCell className="text-muted-foreground text-sm">
+                            {firstReg && new Date(firstReg.created_at).toLocaleDateString("it-IT", {
+                              day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
+
+        {/* Multi-event participant detail dialog */}
+        <Dialog open={!!selectedParticipant} onOpenChange={(open) => !open && setSelectedParticipant(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                {selectedParticipant?.nome} {selectedParticipant?.cognome}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedParticipant?.email} · {selectedParticipant?.registrations.length} eventi
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {selectedParticipant?.registrations.map((reg) => (
+                <Card key={reg.id} className="border-border/50">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-foreground">{reg.event_nome}</span>
+                      <Badge variant={statusColor(reg.payment_status)}>{reg.payment_status}</Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="capitalize">{reg.payment_method}</span>
+                      <span>
+                        {new Date(reg.created_at).toLocaleDateString("it-IT", {
+                          day: "2-digit", month: "short", year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

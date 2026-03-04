@@ -38,9 +38,25 @@ serve(async (req) => {
 
     if (eventError || !event) throw new Error("Evento non trovato");
 
+    // Upsert participant
+    const { data: participant, error: partError } = await supabaseAdmin
+      .from("participants")
+      .upsert({
+        nome, cognome, email, telefono,
+        codice_fiscale: codiceFiscale || null,
+        birth_date: birthDate || null,
+        birth_place: birthPlace || null,
+        identification_type: identificationType,
+      }, { onConflict: "email" })
+      .select("id")
+      .single();
+
+    if (partError) throw new Error(`Participant error: ${partError.message}`);
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
+        participant_id: participant.id,
         nome, cognome, email, telefono,
         identification_type: identificationType,
         birth_date: birthDate || null,

@@ -28,17 +28,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let query = supabaseAdmin
+    // Query participants with their registrations
+    let registrationsQuery = supabaseAdmin
       .from("registrations")
       .select("*, events(nome, slug)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
-      query = query.eq("event_id", event_id);
+      registrationsQuery = registrationsQuery.eq("event_id", event_id);
     }
 
-    const { data: registrations, error } = await query;
-
+    const { data: registrations, error } = await registrationsQuery;
     if (error) throw new Error(error.message);
 
     // Flatten event info
@@ -47,6 +47,36 @@ serve(async (req) => {
       event_nome: r.events?.nome || "—",
       event_slug: r.events?.slug || "",
     }));
+
+    // Group by participant (email) for the admin view
+    const participantMap: Record<string, any> = {};
+    for (const r of enriched) {
+      const key = r.email.toLowerCase();
+      if (!participantMap[key]) {
+        participantMap[key] = {
+          email: r.email,
+          nome: r.nome,
+          cognome: r.cognome,
+          telefono: r.telefono,
+          codice_fiscale: r.codice_fiscale,
+          participant_id: r.participant_id,
+          registrations: [],
+        };
+      }
+      participantMap[key].registrations.push({
+        id: r.id,
+        event_id: r.event_id,
+        event_nome: r.event_nome,
+        event_slug: r.event_slug,
+        payment_method: r.payment_method,
+        payment_status: r.payment_status,
+        payment_id: r.payment_id,
+        custom_data: r.custom_data,
+        created_at: r.created_at,
+      });
+    }
+
+    const participants = Object.values(participantMap);
 
     if (format === "csv") {
       const headers = [
@@ -81,7 +111,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ registrations: enriched }), {
+    return new Response(JSON.stringify({ registrations: enriched, participants }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
