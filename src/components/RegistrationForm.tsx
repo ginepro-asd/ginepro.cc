@@ -184,8 +184,10 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-  const [computedCF, setComputedCF] = useState<string | null>(null);
-  const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
+  const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
+  const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [matchDismissed, setMatchDismissed] = useState(false);
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   const defaultPayment = event.payment_methods[0] || "stripe";
@@ -205,6 +207,63 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
       paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
     },
   });
+
+  // Lookup existing registrations by nome+cognome (debounced)
+  const watchedNome = form.watch("nome");
+  const watchedCognome = form.watch("cognome");
+
+  useEffect(() => {
+    if (matchDismissed) return;
+    if (!watchedNome?.trim() || !watchedCognome?.trim()) {
+      setMatchedUsers([]);
+      return;
+    }
+    if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current);
+    lookupTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from("registrations")
+          .select("id, email, telefono, codice_fiscale, birth_date, birth_place, identification_type")
+          .ilike("nome", watchedNome.trim())
+          .ilike("cognome", watchedCognome.trim())
+          .eq("payment_status", "completed")
+          .neq("event_id", event.id)
+          .limit(10);
+        if (data && data.length > 0) {
+          // Deduplicate by email
+          const unique = data.filter((r, i, arr) => arr.findIndex(x => x.email === r.email) === i);
+          setMatchedUsers(unique);
+          setShowMatchDialog(true);
+        } else {
+          setMatchedUsers([]);
+        }
+      } catch {
+        // silently fail
+      }
+    }, 800);
+    return () => { if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current); };
+  }, [watchedNome, watchedCognome, event.id, matchDismissed]);
+
+  const handleSelectMatch = (match: MatchedRegistration) => {
+    form.setValue("email", match.email);
+    form.setValue("telefono", match.telefono.replace(/^\+\d{1,3}/, ""));
+    // Extract country code from phone
+    const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
+    if (phoneMatch) {
+      const cc = COUNTRY_CODES.find(c => c.code === phoneMatch[1]);
+      if (cc) setCountryCode(cc.code);
+    }
+    if (match.codice_fiscale) {
+      form.setValue("codiceFiscale", match.codice_fiscale);
+      setIdentificationType("fiscal");
+      form.setValue("identificationType", "fiscal");
+    }
+    if (match.birth_date) form.setValue("birthDate", match.birth_date);
+    if (match.birth_place) form.setValue("birthPlace", match.birth_place);
+    setShowMatchDialog(false);
+    setMatchDismissed(true);
+    toast({ title: "Dati recuperati!", description: "Abbiamo precompilato il form con i tuoi dati." });
+  };
 
   // Watch fields for auto-computation
   const watchedNome = form.watch("nome");
