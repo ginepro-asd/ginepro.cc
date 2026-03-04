@@ -183,7 +183,8 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [computedCF, setComputedCF] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
   const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchDismissed, setMatchDismissed] = useState(false);
@@ -208,10 +209,15 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
     },
   });
 
-  // Lookup existing registrations by nome+cognome (debounced)
+  // Watch fields for auto-computation
   const watchedNome = form.watch("nome");
   const watchedCognome = form.watch("cognome");
+  const watchedBirthDate = form.watch("birthDate");
+  const watchedBirthPlace = form.watch("birthPlace");
+  const watchedGender = form.watch("gender");
+  const watchedCF = form.watch("codiceFiscale");
 
+  // Lookup existing registrations by nome+cognome (debounced)
   useEffect(() => {
     if (matchDismissed) return;
     if (!watchedNome?.trim() || !watchedCognome?.trim()) {
@@ -247,7 +253,6 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const handleSelectMatch = (match: MatchedRegistration) => {
     form.setValue("email", match.email);
     form.setValue("telefono", match.telefono.replace(/^\+\d{1,3}/, ""));
-    // Extract country code from phone
     const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
     if (phoneMatch) {
       const cc = COUNTRY_CODES.find(c => c.code === phoneMatch[1]);
@@ -264,15 +269,6 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
     setMatchDismissed(true);
     toast({ title: "Dati recuperati!", description: "Abbiamo precompilato il form con i tuoi dati." });
   };
-
-  // Watch fields for auto-computation
-  const watchedNome = form.watch("nome");
-  const watchedCognome = form.watch("cognome");
-  const watchedBirthDate = form.watch("birthDate");
-  const watchedBirthPlace = form.watch("birthPlace");
-  const watchedGender = form.watch("gender");
-  const watchedCF = form.watch("codiceFiscale");
-
   // Auto-compute CF from birth data
   useEffect(() => {
     if (identificationType !== "birth") return;
