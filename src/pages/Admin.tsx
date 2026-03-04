@@ -305,6 +305,32 @@ const Admin = () => {
           </div>
         )}
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca per nome o email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {eventNames.length > 1 && (
+            <select
+              value={filterEvent}
+              onChange={(e) => setFilterEvent(e.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="all">Tutti gli eventi</option>
+              {eventNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          )}
+          <Badge variant="outline">{filteredRegistrations.length} risultati</Badge>
+        </div>
+
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
