@@ -313,6 +313,12 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
       }
     }
 
+    // Validate email format when not using returning user data
+    if (!returningUserData && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      toast({ title: "Errore", description: "Email non valida", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Use real returning user data if available, otherwise use form data
