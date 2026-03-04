@@ -39,7 +39,7 @@ export function useEvent(slug: string | undefined) {
       if (error) throw error;
       return {
         ...data,
-        custom_fields: (data.custom_fields as CustomField[]) || [],
+        custom_fields: (data.custom_fields as unknown as CustomField[]) || [],
         payment_methods: data.payment_methods || ["stripe", "satispay", "paypal"],
       };
     },
@@ -60,7 +60,7 @@ export function useEvents() {
       if (error) throw error;
       return (data || []).map((e) => ({
         ...e,
-        custom_fields: (e.custom_fields as CustomField[]) || [],
+        custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
       }));
     },
