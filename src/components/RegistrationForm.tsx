@@ -253,15 +253,18 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   }, [watchedNome, watchedCognome, event.id, matchDismissed]);
 
   const handleSelectMatch = (match: MatchedRegistration) => {
-    form.setValue("email", match.email);
-    form.setValue("telefono", match.telefono.replace(/^\+\d{1,3}/, ""));
+    // Store real data for submission
+    setReturningUserData(match);
+    // Show obfuscated values in the form
+    form.setValue("email", obfuscateEmail(match.email));
+    form.setValue("telefono", obfuscatePhone(match.telefono));
     const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
     if (phoneMatch) {
       const cc = COUNTRY_CODES.find(c => c.code === phoneMatch[1]);
       if (cc) setCountryCode(cc.code);
     }
     if (match.codice_fiscale) {
-      form.setValue("codiceFiscale", match.codice_fiscale);
+      form.setValue("codiceFiscale", obfuscateCF(match.codice_fiscale));
       setIdentificationType("fiscal");
       form.setValue("identificationType", "fiscal");
     }
