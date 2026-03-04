@@ -457,15 +457,12 @@ const Admin = () => {
                           {fe.is_tesseramento && (
                             <Badge variant="secondary" className="text-xs h-4">Tesseramento</Badge>
                           )}
-                          {!fe.has_entries && (
-                            <Badge variant="outline" className="text-xs h-4">Vuoto</Badge>
-                          )}
                         </div>
                       </div>
                       <Button
                         size="sm"
                         variant={isImported ? "ghost" : "default"}
-                        disabled={isImporting || isImported || !fe.has_entries}
+                        disabled={isImporting || isImported}
                         onClick={() => importSingleEvent(fe.firestore_id)}
                       >
                         {isImporting ? (
