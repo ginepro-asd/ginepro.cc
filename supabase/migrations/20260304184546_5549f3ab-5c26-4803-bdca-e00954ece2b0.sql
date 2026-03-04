@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD CONSTRAINT events_slug_unique UNIQUE (slug);
