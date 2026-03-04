@@ -59,6 +59,8 @@ serve(async (req) => {
           cognome: r.cognome,
           telefono: r.telefono,
           codice_fiscale: r.codice_fiscale,
+          birth_date: r.birth_date,
+          birth_place: r.birth_place,
           participant_id: r.participant_id,
           registrations: [],
         };
