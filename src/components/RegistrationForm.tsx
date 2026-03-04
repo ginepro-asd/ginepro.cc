@@ -59,7 +59,7 @@ interface MatchedRegistration {
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
   cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-  email: z.string().trim().email("Email non valida").max(255),
+  email: z.string().trim().min(1, "Campo obbligatorio").max(255),
   telefono: z.string().trim().min(6, "Numero non valido").max(20),
   identificationType: z.enum(["birth", "fiscal"]),
   birthDate: z.string().optional(),
