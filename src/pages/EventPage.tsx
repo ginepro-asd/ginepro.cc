@@ -1,3 +1,4 @@
+import React from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
@@ -11,6 +12,13 @@ import { useEvent, formatPrice } from "@/hooks/use-event";
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: event, isLoading, error } = useEvent(slug);
+
+  React.useEffect(() => {
+    if (event) {
+      document.title = `Ginepro - ${event.nome}`;
+    }
+    return () => { document.title = "Ginepro"; };
+  }, [event?.nome]);
 
   if (isLoading) {
     return (
