@@ -314,21 +314,21 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
     }
 
     setIsSubmitting(true);
-    const rawPhone = data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "");
-    const fullPhone = `${countryCode}${rawPhone}`;
 
-    // Use computed CF if available
-    const finalCF = data.codiceFiscale || computedCF || null;
+    // Use real returning user data if available, otherwise use form data
+    const realEmail = returningUserData ? returningUserData.email : data.email;
+    const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
+    const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
     const payload = {
       nome: data.nome,
       cognome: data.cognome,
-      email: data.email,
-      telefono: fullPhone,
+      email: realEmail,
+      telefono: realPhone,
       identificationType: data.identificationType,
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
-      codiceFiscale: finalCF,
+      codiceFiscale: realCF,
       eventId: event.id,
       customData: customFieldValues,
     };
