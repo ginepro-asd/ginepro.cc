@@ -1,0 +1,1 @@
+UPDATE public.events SET attivo = true WHERE slug = 'tesseramento-2026';
