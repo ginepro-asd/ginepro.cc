@@ -1,0 +1,1 @@
+UPDATE public.events SET luogo = 'Castel Raniero, Faenza (RA)' WHERE slug = 'castel-raniero-2026';
