@@ -183,6 +183,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [computedCF, setComputedCF] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
   const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
