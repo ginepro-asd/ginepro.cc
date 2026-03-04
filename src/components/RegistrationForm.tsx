@@ -59,7 +59,7 @@ interface MatchedRegistration {
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
   cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-  email: z.string().trim().email("Email non valida").max(255),
+  email: z.string().trim().min(1, "Campo obbligatorio").max(255),
   telefono: z.string().trim().min(6, "Numero non valido").max(20),
   identificationType: z.enum(["birth", "fiscal"]),
   birthDate: z.string().optional(),
@@ -189,6 +189,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [matchedUsers, setMatchedUsers] = useState<MatchedRegistration[]>([]);
   const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [matchDismissed, setMatchDismissed] = useState(false);
+  const [returningUserData, setReturningUserData] = useState<MatchedRegistration | null>(null);
   const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
@@ -252,15 +253,18 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   }, [watchedNome, watchedCognome, event.id, matchDismissed]);
 
   const handleSelectMatch = (match: MatchedRegistration) => {
-    form.setValue("email", match.email);
-    form.setValue("telefono", match.telefono.replace(/^\+\d{1,3}/, ""));
+    // Store real data for submission
+    setReturningUserData(match);
+    // Show obfuscated values in the form
+    form.setValue("email", obfuscateEmail(match.email));
+    form.setValue("telefono", obfuscatePhone(match.telefono));
     const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
     if (phoneMatch) {
       const cc = COUNTRY_CODES.find(c => c.code === phoneMatch[1]);
       if (cc) setCountryCode(cc.code);
     }
     if (match.codice_fiscale) {
-      form.setValue("codiceFiscale", match.codice_fiscale);
+      form.setValue("codiceFiscale", obfuscateCF(match.codice_fiscale));
       setIdentificationType("fiscal");
       form.setValue("identificationType", "fiscal");
     }
@@ -309,22 +313,28 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
       }
     }
 
-    setIsSubmitting(true);
-    const rawPhone = data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "");
-    const fullPhone = `${countryCode}${rawPhone}`;
+    // Validate email format when not using returning user data
+    if (!returningUserData && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      toast({ title: "Errore", description: "Email non valida", variant: "destructive" });
+      return;
+    }
 
-    // Use computed CF if available
-    const finalCF = data.codiceFiscale || computedCF || null;
+    setIsSubmitting(true);
+
+    // Use real returning user data if available, otherwise use form data
+    const realEmail = returningUserData ? returningUserData.email : data.email;
+    const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
+    const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
     const payload = {
       nome: data.nome,
       cognome: data.cognome,
-      email: data.email,
-      telefono: fullPhone,
+      email: realEmail,
+      telefono: realPhone,
       identificationType: data.identificationType,
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
-      codiceFiscale: finalCF,
+      codiceFiscale: realCF,
       eventId: event.id,
       customData: customFieldValues,
     };
@@ -474,7 +484,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email *</FormLabel>
-                    <FormControl><Input type="email" placeholder="mario@email.com" {...field} /></FormControl>
+                    <FormControl><Input type={returningUserData ? "text" : "email"} placeholder="mario@email.com" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -493,7 +503,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                         ))}
                       </select>
                       <FormControl>
-                        <Input type="tel" placeholder="333 1234567" {...field} />
+                        <Input type="tel" placeholder="333 1234567" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} />
                       </FormControl>
                     </div>
                     <FormMessage />
@@ -528,7 +538,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                       <FormField control={form.control} name="codiceFiscale" render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className="uppercase" {...field} />
+                            <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className={`uppercase ${returningUserData?.codice_fiscale ? "bg-muted/50 cursor-not-allowed" : ""}`} readOnly={!!returningUserData?.codice_fiscale} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
