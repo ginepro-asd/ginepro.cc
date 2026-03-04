@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2 } from "lucide-react";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -21,6 +21,7 @@ import { COUNTRIES } from "@/data/countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { EventData, CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
+import CodiceFiscale from "codice-fiscale-js";
 
 const formSchema = z.object({
   nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
@@ -30,12 +31,13 @@ const formSchema = z.object({
   identificationType: z.enum(["birth", "fiscal"]),
   birthDate: z.string().optional(),
   birthPlace: z.string().optional(),
+  gender: z.enum(["M", "F"]).optional(),
   codiceFiscale: z.string().optional(),
   paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
 }).refine(
   (data) => {
     if (data.identificationType === "birth") {
-      return data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0;
+      return data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0 && data.gender;
     }
     return data.codiceFiscale && data.codiceFiscale.length >= 11;
   },
@@ -70,6 +72,71 @@ const PAYMENT_LABELS: Record<string, string> = {
   paypal: "PayPal",
 };
 
+/** Strip province suffix: "Faenza (RA)" → "Faenza" */
+function stripProvincia(comune: string): string {
+  return comune.replace(/\s*\([A-Z]{2}\)$/, "");
+}
+
+/** Extract provincia code: "Faenza (RA)" → "RA" */
+function extractProvincia(comune: string): string {
+  const match = comune.match(/\(([A-Z]{2})\)$/);
+  return match ? match[1] : "";
+}
+
+/** Try to compute codice fiscale from personal data */
+function tryComputeCF(
+  nome: string,
+  cognome: string,
+  birthDate: string,
+  birthPlace: string,
+  gender: "M" | "F",
+  bornAbroad: boolean
+): string | null {
+  if (!nome || !cognome || !birthDate || !birthPlace || !gender) return null;
+  try {
+    const date = new Date(birthDate);
+    const placeName = bornAbroad ? birthPlace : stripProvincia(birthPlace);
+    const cf = new CodiceFiscale({
+      name: nome,
+      surname: cognome,
+      gender,
+      day: date.getDate(),
+      month: date.getMonth() + 1,
+      year: date.getFullYear(),
+      birthplace: placeName,
+      birthplaceProvincia: bornAbroad ? "EE" : extractProvincia(birthPlace),
+    });
+    return cf.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Try to extract birth data from codice fiscale */
+function tryInverseCF(cf: string): {
+  birthDate: string;
+  birthPlace: string;
+  birthPlaceProvincia: string;
+  gender: "M" | "F";
+} | null {
+  if (!cf || cf.length < 16) return null;
+  try {
+    if (!CodiceFiscale.check(cf)) return null;
+    const data = CodiceFiscale.computeInverse(cf);
+    const y = data.year;
+    const m = String(data.month).padStart(2, "0");
+    const d = String(data.day).padStart(2, "0");
+    return {
+      birthDate: `${y}-${m}-${d}`,
+      birthPlace: data.birthplace,
+      birthPlaceProvincia: data.birthplaceProvincia,
+      gender: data.gender,
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface RegistrationFormProps {
   event: EventData;
 }
@@ -84,6 +151,8 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [computedCF, setComputedCF] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
   const { toast } = useToast();
 
   const defaultPayment = event.payment_methods[0] || "stripe";
@@ -98,10 +167,49 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
       identificationType: "birth",
       birthDate: "",
       birthPlace: "",
+      gender: undefined,
       codiceFiscale: "",
       paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
     },
   });
+
+  // Watch fields for auto-computation
+  const watchedNome = form.watch("nome");
+  const watchedCognome = form.watch("cognome");
+  const watchedBirthDate = form.watch("birthDate");
+  const watchedBirthPlace = form.watch("birthPlace");
+  const watchedGender = form.watch("gender");
+  const watchedCF = form.watch("codiceFiscale");
+
+  // Auto-compute CF from birth data
+  useEffect(() => {
+    if (identificationType !== "birth") return;
+    if (!watchedNome || !watchedCognome || !watchedBirthDate || !watchedBirthPlace || !watchedGender) {
+      setComputedCF(null);
+      return;
+    }
+    const cf = tryComputeCF(watchedNome, watchedCognome, watchedBirthDate, watchedBirthPlace, watchedGender, bornAbroad);
+    setComputedCF(cf);
+    if (cf) {
+      form.setValue("codiceFiscale", cf);
+    }
+  }, [identificationType, watchedNome, watchedCognome, watchedBirthDate, watchedBirthPlace, watchedGender, bornAbroad]);
+
+  // Auto-extract birth data from CF
+  useEffect(() => {
+    if (identificationType !== "fiscal") return;
+    if (!watchedCF || watchedCF.length < 16) {
+      setExtractedData(null);
+      return;
+    }
+    const data = tryInverseCF(watchedCF);
+    setExtractedData(data);
+    if (data) {
+      form.setValue("birthDate", data.birthDate);
+      form.setValue("birthPlace", data.birthPlace);
+      form.setValue("gender", data.gender);
+    }
+  }, [identificationType, watchedCF]);
 
   const onSubmit = async (data: FormData) => {
     // Validate required custom fields
@@ -116,6 +224,9 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
     const rawPhone = data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "");
     const fullPhone = `${countryCode}${rawPhone}`;
 
+    // Use computed CF if available
+    const finalCF = data.codiceFiscale || computedCF || null;
+
     const payload = {
       nome: data.nome,
       cognome: data.cognome,
@@ -124,7 +235,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
       identificationType: data.identificationType,
       birthDate: data.birthDate || null,
       birthPlace: data.birthPlace || null,
-      codiceFiscale: data.codiceFiscale || null,
+      codiceFiscale: finalCF,
       eventId: event.id,
       customData: customFieldValues,
     };
@@ -262,6 +373,8 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                     onValueChange={(v) => {
                       setIdentificationType(v as "birth" | "fiscal");
                       form.setValue("identificationType", v as "birth" | "fiscal");
+                      setComputedCF(null);
+                      setExtractedData(null);
                     }}
                     className="flex gap-4"
                   >
@@ -276,14 +389,46 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                   </RadioGroup>
 
                   {identificationType === "fiscal" ? (
-                    <FormField control={form.control} name="codiceFiscale" render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className="uppercase" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                    <div className="space-y-3">
+                      <FormField control={form.control} name="codiceFiscale" render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className="uppercase" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      {/* Show extracted data from CF */}
+                      {extractedData && (
+                        <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                            <Calculator className="h-3.5 w-3.5" />
+                            Dati estratti dal Codice Fiscale
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Nato/a il: </span>
+                              <span className="font-medium text-foreground">
+                                {new Date(extractedData.birthDate).toLocaleDateString("it-IT")}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Sesso: </span>
+                              <span className="font-medium text-foreground">{extractedData.gender}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Luogo: </span>
+                              <span className="font-medium text-foreground">
+                                {extractedData.birthPlace}
+                                {extractedData.birthPlaceProvincia && extractedData.birthPlaceProvincia !== "EE"
+                                  ? ` (${extractedData.birthPlaceProvincia})`
+                                  : ""}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
@@ -299,6 +444,31 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                           Nato/a all'estero
                         </Label>
                       </div>
+
+                      {/* Gender selection */}
+                      <FormField control={form.control} name="gender" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sesso *</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              value={field.value || ""}
+                              onValueChange={field.onChange}
+                              className="flex gap-4"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="M" id="gender-m" />
+                                <Label htmlFor="gender-m" className="cursor-pointer">M</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="F" id="gender-f" />
+                                <Label htmlFor="gender-f" className="cursor-pointer">F</Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={form.control} name="birthDate" render={({ field }) => (
                           <FormItem>
@@ -325,6 +495,17 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                           </FormItem>
                         )} />
                       </div>
+
+                      {/* Show computed CF */}
+                      {computedCF && (
+                        <div className="bg-muted/50 border border-border rounded-lg p-3">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                            <Calculator className="h-3.5 w-3.5" />
+                            Codice Fiscale calcolato
+                          </div>
+                          <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{computedCF}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
