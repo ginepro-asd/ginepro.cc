@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,17 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import logoDark from "@/assets/icon-mountain.png";
+import { useEvent } from "@/hooks/use-event";
 
 interface Registration {
   id: string;
@@ -30,6 +26,8 @@ interface Registration {
 }
 
 const Admin = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { data: event } = useEvent(slug);
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -41,23 +39,17 @@ const Admin = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("export-registrations", {
-        body: { password, format: "json" },
+        body: { password, format: "json", event_id: event?.id || null },
       });
-
       if (error) throw error;
       if (data.error) {
         toast({ title: "Errore", description: data.error, variant: "destructive" });
         return;
       }
-
       setRegistrations(data.registrations || []);
       setAuthenticated(true);
     } catch (err: any) {
-      toast({
-        title: "Errore",
-        description: err.message || "Password non valida",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: err.message || "Password non valida", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -67,37 +59,32 @@ const Admin = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("export-registrations", {
-        body: { password, format: "csv" },
+        body: { password, format: "csv", event_id: event?.id || null },
       });
-
       if (error) throw error;
-
-      // data is the CSV string
       const blob = new Blob([data], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `iscrizioni_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `iscrizioni_${slug || "tutti"}_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-
       toast({ title: "Download avviato", description: "Il file CSV è stato scaricato." });
     } catch (err: any) {
-      toast({
-        title: "Errore",
-        description: err.message || "Errore durante il download.",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: err.message || "Errore durante il download.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const statusColor = (status: string) => {
-    if (status === "paid") return "default";
+    if (status === "paid" || status === "completed") return "default";
     if (status === "pending") return "secondary";
     return "destructive";
   };
+
+  const homePath = slug ? `/${slug}` : "/";
+  const title = event?.nome ? `Iscrizioni — ${event.nome}` : "Iscrizioni";
 
   if (!authenticated) {
     return (
@@ -135,7 +122,7 @@ const Admin = () => {
               Accedi
             </Button>
             <Button asChild variant="ghost" size="sm" className="w-full">
-              <Link to="/">← Torna alla home</Link>
+              <Link to={homePath}>← Torna alla home</Link>
             </Button>
           </CardContent>
         </Card>
@@ -149,7 +136,7 @@ const Admin = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <img src={logoDark} alt="GINEPRO" className="h-8 object-contain" />
-            <h1 className="font-display text-2xl font-bold text-foreground">Iscrizioni</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">{title}</h1>
             <Badge variant="outline">{registrations.length} totali</Badge>
           </div>
           <div className="flex gap-2">
@@ -158,7 +145,7 @@ const Admin = () => {
               Scarica CSV
             </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link to="/">Home</Link>
+              <Link to={homePath}>Home</Link>
             </Button>
           </div>
         </div>
@@ -193,17 +180,11 @@ const Admin = () => {
                         <TableCell>{r.telefono}</TableCell>
                         <TableCell className="capitalize">{r.payment_method}</TableCell>
                         <TableCell>
-                          <Badge variant={statusColor(r.payment_status)}>
-                            {r.payment_status}
-                          </Badge>
+                          <Badge variant={statusColor(r.payment_status)}>{r.payment_status}</Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {new Date(r.created_at).toLocaleDateString("it-IT", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
+                            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                           })}
                         </TableCell>
                       </TableRow>

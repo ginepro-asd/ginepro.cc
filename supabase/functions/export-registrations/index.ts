@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { password, format } = await req.json();
+    const { password, format, event_id } = await req.json();
 
     const adminPassword = Deno.env.get("ADMIN_PASSWORD");
     if (!password || password !== adminPassword) {
@@ -28,10 +28,16 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: registrations, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("registrations")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (event_id) {
+      query = query.eq("event_id", event_id);
+    }
+
+    const { data: registrations, error } = await query;
 
     if (error) throw new Error(error.message);
 
@@ -39,12 +45,12 @@ serve(async (req) => {
       const headers = [
         "id", "nome", "cognome", "email", "telefono",
         "identification_type", "codice_fiscale", "birth_date", "birth_place",
-        "payment_method", "payment_status", "payment_id", "created_at",
+        "payment_method", "payment_status", "payment_id", "event_id", "custom_data", "created_at",
       ];
 
       const escapeCSV = (val: any) => {
         if (val === null || val === undefined) return "";
-        const str = String(val);
+        const str = typeof val === "object" ? JSON.stringify(val) : String(val);
         if (str.includes(",") || str.includes('"') || str.includes("\n")) {
           return `"${str.replace(/"/g, '""')}"`;
         }
@@ -68,7 +74,6 @@ serve(async (req) => {
       });
     }
 
-    // JSON format
     return new Response(JSON.stringify({ registrations }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

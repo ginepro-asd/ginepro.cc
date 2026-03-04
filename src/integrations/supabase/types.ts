@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      events: {
+        Row: {
+          attivo: boolean
+          created_at: string
+          custom_fields: Json | null
+          data_evento: string | null
+          descrizione: string | null
+          hero_image: string | null
+          id: string
+          luogo: string | null
+          nome: string
+          payment_methods: string[] | null
+          prezzo: number
+          scadenza_iscrizioni: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          attivo?: boolean
+          created_at?: string
+          custom_fields?: Json | null
+          data_evento?: string | null
+          descrizione?: string | null
+          hero_image?: string | null
+          id?: string
+          luogo?: string | null
+          nome: string
+          payment_methods?: string[] | null
+          prezzo?: number
+          scadenza_iscrizioni?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          attivo?: boolean
+          created_at?: string
+          custom_fields?: Json | null
+          data_evento?: string | null
+          descrizione?: string | null
+          hero_image?: string | null
+          id?: string
+          luogo?: string | null
+          nome?: string
+          payment_methods?: string[] | null
+          prezzo?: number
+          scadenza_iscrizioni?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       registrations: {
         Row: {
           birth_date: string | null
@@ -21,7 +72,9 @@ export type Database = {
           codice_fiscale: string | null
           cognome: string
           created_at: string
+          custom_data: Json | null
           email: string
+          event_id: string | null
           id: string
           identification_type: string
           nome: string
@@ -37,7 +90,9 @@ export type Database = {
           codice_fiscale?: string | null
           cognome: string
           created_at?: string
+          custom_data?: Json | null
           email: string
+          event_id?: string | null
           id?: string
           identification_type: string
           nome: string
@@ -53,7 +108,9 @@ export type Database = {
           codice_fiscale?: string | null
           cognome?: string
           created_at?: string
+          custom_data?: Json | null
           email?: string
+          event_id?: string | null
           id?: string
           identification_type?: string
           nome?: string
@@ -63,7 +120,15 @@ export type Database = {
           telefono?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

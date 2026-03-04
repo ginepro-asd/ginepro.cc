@@ -41,17 +41,12 @@ serve(async (req) => {
 
   try {
     const {
-      nome,
-      cognome,
-      email,
-      telefono,
-      identificationType,
-      birthDate,
-      birthPlace,
-      codiceFiscale,
+      nome, cognome, email, telefono,
+      identificationType, birthDate, birthPlace, codiceFiscale,
+      eventId, customData,
     } = await req.json();
 
-    if (!nome || !cognome || !email || !telefono || !identificationType) {
+    if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
       throw new Error("Campi obbligatori mancanti");
     }
 
@@ -60,27 +55,35 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Save registration
+    // Fetch event for pricing
+    const { data: event, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("id, nome, prezzo, slug")
+      .eq("id", eventId)
+      .single();
+
+    if (eventError || !event) throw new Error("Evento non trovato");
+
+    const priceEur = (event.prezzo / 100).toFixed(2);
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
-        nome,
-        cognome,
-        email,
-        telefono,
+        nome, cognome, email, telefono,
         identification_type: identificationType,
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
         codice_fiscale: codiceFiscale || null,
         payment_method: "paypal",
         payment_status: "pending",
+        event_id: eventId,
+        custom_data: customData || {},
       })
       .select("id")
       .single();
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // Create PayPal order
     const accessToken = await getAccessToken();
     const origin = req.headers.get("origin") || "https://tredoziotrail.lovable.app";
 
@@ -95,10 +98,10 @@ serve(async (req) => {
         purchase_units: [
           {
             reference_id: registration.id,
-            description: "Tredozio Trail 2027 - Early Bird",
+            description: event.nome,
             amount: {
               currency_code: "EUR",
-              value: "0.01",
+              value: priceEur,
             },
           },
         ],
@@ -106,11 +109,11 @@ serve(async (req) => {
           paypal: {
             experience_context: {
               payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
-              brand_name: "Tredozio Trail by GINEPRO",
+              brand_name: `${event.nome} by GINEPRO`,
               locale: "it-IT",
               user_action: "PAY_NOW",
-              return_url: `${origin}/conferma?registration_id=${registration.id}&provider=paypal`,
-              cancel_url: `${origin}/?cancelled=true`,
+              return_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&provider=paypal`,
+              cancel_url: `${origin}/${event.slug}?cancelled=true`,
             },
           },
         },
@@ -125,19 +128,15 @@ serve(async (req) => {
 
     const order = await orderRes.json();
 
-    // Store PayPal order ID
     await supabaseAdmin
       .from("registrations")
       .update({ payment_id: order.id })
       .eq("id", registration.id);
 
-    // Find the approval URL
     const approveLink = order.links?.find((l: any) => l.rel === "payer-action" || l.rel === "approve");
     const approveUrl = approveLink?.href;
 
-    if (!approveUrl) {
-      throw new Error("Nessun URL di approvazione PayPal ricevuto");
-    }
+    if (!approveUrl) throw new Error("Nessun URL di approvazione PayPal ricevuto");
 
     return new Response(
       JSON.stringify({ url: approveUrl, order_id: order.id, registration_id: registration.id }),

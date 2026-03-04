@@ -15,18 +15,12 @@ serve(async (req) => {
 
   try {
     const {
-      nome,
-      cognome,
-      email,
-      telefono,
-      identificationType,
-      birthDate,
-      birthPlace,
-      codiceFiscale,
+      nome, cognome, email, telefono,
+      identificationType, birthDate, birthPlace, codiceFiscale,
+      eventId, customData,
     } = await req.json();
 
-    // Validate required fields
-    if (!nome || !cognome || !email || !telefono || !identificationType) {
+    if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
       throw new Error("Campi obbligatori mancanti");
     }
 
@@ -35,27 +29,33 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Save registration with pending status
+    // Fetch event for pricing
+    const { data: event, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("id, nome, prezzo, slug")
+      .eq("id", eventId)
+      .single();
+
+    if (eventError || !event) throw new Error("Evento non trovato");
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
-        nome,
-        cognome,
-        email,
-        telefono,
+        nome, cognome, email, telefono,
         identification_type: identificationType,
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
         codice_fiscale: codiceFiscale || null,
         payment_method: "stripe",
         payment_status: "pending",
+        event_id: eventId,
+        custom_data: customData || {},
       })
       .select("id")
       .single();
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // Create Stripe checkout session
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-08-27.basil",
     });
@@ -68,21 +68,18 @@ serve(async (req) => {
         {
           price_data: {
             currency: "eur",
-            product_data: { name: "Tredozio Trail 2027 - Early Bird" },
-            unit_amount: 1499,
+            product_data: { name: `${event.nome}` },
+            unit_amount: event.prezzo,
           },
           quantity: 1,
         },
       ],
       mode: "payment",
-      success_url: `${origin}/conferma?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?cancelled=true`,
-      metadata: {
-        registration_id: registration.id,
-      },
+      success_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/${event.slug}?cancelled=true`,
+      metadata: { registration_id: registration.id, event_id: eventId },
     });
 
-    // Store the Stripe session ID
     await supabaseAdmin
       .from("registrations")
       .update({ payment_id: session.id })

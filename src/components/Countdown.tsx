@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 
-const DEADLINE = new Date("2026-03-29T23:59:59+02:00"); // CEST
-
 interface TimeLeft {
   days: number;
   hours: number;
@@ -9,8 +7,8 @@ interface TimeLeft {
   seconds: number;
 }
 
-function getTimeLeft(): TimeLeft | null {
-  const diff = DEADLINE.getTime() - Date.now();
+function getTimeLeft(deadline: Date): TimeLeft | null {
+  const diff = deadline.getTime() - Date.now();
   if (diff <= 0) return null;
   return {
     days: Math.floor(diff / (1000 * 60 * 60 * 24)),
@@ -20,18 +18,18 @@ function getTimeLeft(): TimeLeft | null {
   };
 }
 
-export function useIsExpired() {
-  const [expired, setExpired] = useState(() => Date.now() >= DEADLINE.getTime());
+export function useIsExpired(deadline: Date) {
+  const [expired, setExpired] = useState(() => Date.now() >= deadline.getTime());
   useEffect(() => {
     if (expired) return;
     const id = setInterval(() => {
-      if (Date.now() >= DEADLINE.getTime()) {
+      if (Date.now() >= deadline.getTime()) {
         setExpired(true);
         clearInterval(id);
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [expired]);
+  }, [expired, deadline]);
   return expired;
 }
 
@@ -48,13 +46,17 @@ const TimeUnit = ({ value, label }: { value: number; label: string }) => (
   </div>
 );
 
-const Countdown = () => {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(getTimeLeft);
+interface CountdownProps {
+  deadline: Date;
+}
+
+const Countdown = ({ deadline }: CountdownProps) => {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
 
   useEffect(() => {
-    const id = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
+    const id = setInterval(() => setTimeLeft(getTimeLeft(deadline)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [deadline]);
 
   if (!timeLeft) {
     return (

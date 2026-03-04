@@ -18,9 +18,10 @@ serve(async (req) => {
     const {
       nome, cognome, email, telefono,
       identificationType, birthDate, birthPlace, codiceFiscale,
+      eventId, customData,
     } = await req.json();
 
-    if (!nome || !cognome || !email || !telefono || !identificationType) {
+    if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
       throw new Error("Campi obbligatori mancanti");
     }
 
@@ -29,7 +30,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Save registration
+    // Fetch event for pricing
+    const { data: event, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("id, nome, prezzo, slug")
+      .eq("id", eventId)
+      .single();
+
+    if (eventError || !event) throw new Error("Evento non trovato");
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
@@ -40,21 +49,22 @@ serve(async (req) => {
         codice_fiscale: codiceFiscale || null,
         payment_method: "satispay",
         payment_status: "pending",
+        event_id: eventId,
+        custom_data: customData || {},
       })
       .select("id")
       .single();
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
-    // Call external xpay service
-    const orderId = `Tredozio 2027 ${cognome} ${nome}`;
+    const orderId = `${event.nome} ${cognome} ${nome}`;
     const res = await fetch(`${XPAY_BASE}/payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         orderId,
         phoneNumber: telefono,
-        price: 1499,
+        price: event.prezzo,
       }),
     });
 
@@ -66,17 +76,13 @@ serve(async (req) => {
 
     const { paymentId } = await res.json();
 
-    // Store the payment ID
     await supabaseAdmin
       .from("registrations")
       .update({ payment_id: paymentId })
       .eq("id", registration.id);
 
     return new Response(
-      JSON.stringify({
-        payment_id: paymentId,
-        registration_id: registration.id,
-      }),
+      JSON.stringify({ payment_id: paymentId, registration_id: registration.id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
