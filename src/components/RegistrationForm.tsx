@@ -230,17 +230,13 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
     lookupTimeoutRef.current = setTimeout(async () => {
       try {
         const { data } = await supabase
-          .from("registrations")
+          .from("participants")
           .select("id, email, telefono, codice_fiscale, birth_date, birth_place, identification_type")
           .ilike("nome", watchedNome.trim())
           .ilike("cognome", watchedCognome.trim())
-          .eq("payment_status", "completed")
-          .neq("event_id", event.id)
           .limit(10);
         if (data && data.length > 0) {
-          // Deduplicate by email
-          const unique = data.filter((r, i, arr) => arr.findIndex(x => x.email === r.email) === i);
-          setMatchedUsers(unique);
+          setMatchedUsers(data);
           setShowMatchDialog(true);
         } else {
           setMatchedUsers([]);
