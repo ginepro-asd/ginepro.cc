@@ -1,75 +1,68 @@
 
 
-# Landing Page — Tredozio Trail by GINEPRO (Early-Bird)
+## Scalare l'applicazione: evoluzione vs nuovo progetto
 
-## Panoramica
-Landing page per iscrizioni early-bird al Tredozio Trail by GINEPRO (11 Aprile 2027) a 14,99€. Offerta valida fino alla mezzanotte del 29 Marzo 2025. Pagamento via Stripe, Satispay o PayPal.
+### Analisi della situazione attuale
 
----
+Il progetto è una landing page single-event con tutto hardcoded: nome evento, data, luogo, prezzo, campi del form. Non c'è nessun concetto di "evento" nel database — solo una tabella `registrations`.
 
-## 1. Brand Identity
-- **Colori primari**: Teal scuro e Rosa corallo, dai loghi GINEPRO
-- **Loghi**: Dark e Light mode con i loghi forniti
-- **Grafica topografica**: NON usata direttamente — verrà ricreata come pattern SVG/CSS con linee di livello stilizzate ispirate all'originale, in qualità vettoriale, usata come texture decorativa di sfondo
-- **Elementi decorativi**: triangoli e cerchi dal brand, forme montagna/sole
+### Raccomandazione: evolvere questo progetto
 
-## 2. Hero Section
-- Logo GINEPRO grande
-- Titolo: **Tredozio Trail** — **11 Aprile 2027**
-- Prezzo: **14,99€ Early-Bird**
-- **Countdown timer** fino a mezzanotte del 29 Marzo 2025
-- Sfondo con pattern topografico vettoriale ricreato
-- CTA "Iscriviti ora"
+Non serve freezare e ripartire. Conviene trasformare questa app in una **piattaforma multi-evento** riusando tutto il codice esistente. Ecco il piano:
 
-## 3. Sezione Info Evento
-- Data, luogo (Tredozio), descrizione breve
-- **"Offerta valida fino al 29 Marzo 2025 alle 23:59"**
+### Architettura proposta
 
-## 4. Form di Iscrizione (bloccato dopo scadenza)
-Campi obbligatori:
-- **Nome**
-- **Cognome**
-- **Email**
-- **Numero di telefono** (necessario per Satispay)
-- **Scelta** tra: Data e luogo di nascita OPPURE Codice fiscale
-- **Metodo di pagamento**: Stripe, Satispay o PayPal
+```text
+┌─────────────────────────────────────┐
+│           events (nuova tabella)     │
+│  - id, slug, nome, data, luogo      │
+│  - prezzo (centesimi), descrizione   │
+│  - hero_image, scadenza_iscrizioni   │
+│  - custom_fields (JSONB)             │
+│  - attivo (boolean)                  │
+└──────────────┬──────────────────────┘
+               │ 1:N
+┌──────────────▼──────────────────────┐
+│        registrations (esistente)     │
+│  + event_id (FK → events.id)        │
+│  + custom_data (JSONB)              │
+└─────────────────────────────────────┘
+```
 
-Dopo mezzanotte del 29/03/2025: form disabilitato → "Le iscrizioni early-bird sono chiuse"
+### Campi configurabili per evento
 
-## 5. Pagamento — Tre opzioni
+La colonna `custom_fields` in `events` conterrà un array JSON che definisce i campi extra per quell'evento:
 
-### 5a. Stripe
-- Redirect a Stripe Checkout per 14,99€, ritorno a pagina di conferma
+```json
+[
+  { "key": "certificato_medico", "label": "Certificato medico", "type": "file", "required": true },
+  { "key": "taglia_maglia", "label": "Taglia maglia", "type": "select", "options": ["S","M","L","XL"], "required": false }
+]
+```
 
-### 5b. Satispay
-- Creazione pagamento via API Satispay (edge function)
-- **Nessun redirect**: notifica push sull'app Satispay dell'utente
-- Pagina mostra "In attesa di pagamento..." con polling per conferma
-- Al completamento → conferma iscrizione
+Il form li renderizza dinamicamente e salva i valori in `custom_data` (JSONB) nella registrazione.
 
-### 5c. PayPal
-- Integrazione PayPal Checkout (SDK JavaScript o redirect)
-- Pagamento one-off di 14,99€
-- Ritorno a pagina di conferma
+### Routing
 
-## 6. Pagina di Conferma
-- Messaggio di successo con riepilogo: nome, cognome, email, metodo di pagamento
+- `/:slug` → landing page dell'evento (carica dati da `events` per slug)
+- `/:slug/conferma` → pagina conferma
+- `/:slug/admin` → dashboard admin filtrata per evento
+- `/` → lista eventi attivi oppure redirect all'evento principale
 
-## 7. Salvataggio Dati
-- Database Supabase con possibilità di esportazione CSV
-- Ogni iscrizione collegata allo stato pagamento (Stripe/Satispay/PayPal)
+### Passi di implementazione
 
-## 8. Design & Stile
-- Palette natura teal/corallo dal brand
-- Pattern topografico ricreato in SVG/CSS ad alta qualità (ispirato alla grafica originale)
-- Layout responsive mobile-first
-- Countdown con urgenza visiva
-- Dark/Light mode con loghi appropriati
+1. **Creare tabella `events`** con tutti i campi configurabili (nome, data, luogo, prezzo, custom_fields JSONB, slug, scadenza, metodi pagamento abilitati)
+2. **Aggiungere `event_id` e `custom_data` alla tabella `registrations`** con FK verso events
+3. **Migrare i dati esistenti**: creare l'evento "Tredozio Trail 2027" e collegare le registrazioni esistenti
+4. **Refactoring del frontend**: parametrizzare Index, RegistrationForm, Conferma e Admin per leggere la config dall'evento via slug
+5. **Rendering dinamico dei campi custom** nel RegistrationForm basato su `custom_fields`
+6. **Aggiornare le edge functions** per ricevere `event_id`, validare il prezzo dall'evento e passare i metadati corretti
+7. **Admin multi-evento**: filtro per evento nella dashboard, export CSV per evento
 
-## Note Tecniche
-- **Lovable Cloud / Supabase** per edge function (Satispay API, salvataggio dati)
-- **Stripe** integrato tramite Lovable
-- **Satispay API key** salvate come secret
-- **PayPal Client ID** salvato come secret
-- I loghi forniti integrati come asset nel progetto
+### Vantaggi di questo approccio
+
+- Riuso completo del codice esistente (form, pagamenti, admin)
+- Ogni evento è configurabile da database senza toccare il codice
+- I campi custom (certificato medico, taglia, ecc.) sono gestiti via JSONB senza migrazioni
+- Si può creare un mini-admin per gestire gli eventi in futuro
 
