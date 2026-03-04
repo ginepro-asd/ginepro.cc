@@ -478,7 +478,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email *</FormLabel>
-                    <FormControl><Input type="email" placeholder="mario@email.com" {...field} /></FormControl>
+                    <FormControl><Input type={returningUserData ? "text" : "email"} placeholder="mario@email.com" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
