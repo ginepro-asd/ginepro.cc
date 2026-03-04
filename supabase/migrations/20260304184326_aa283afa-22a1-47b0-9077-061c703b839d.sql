@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN is_tesseramento boolean NOT NULL DEFAULT false;
