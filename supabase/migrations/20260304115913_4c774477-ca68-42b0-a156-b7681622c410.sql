@@ -1,0 +1,1 @@
+UPDATE public.events SET nome = '45ª Classicissima — Castel Raniero' WHERE slug = 'castel-raniero-2026';
