@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, CalendarDays, Upload, Info } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -58,6 +58,13 @@ interface FlatRegistration {
   event_slug?: string;
 }
 
+interface FirestoreEvent {
+  firestore_id: string;
+  name: string;
+  has_entries: boolean;
+  is_tesseramento: boolean;
+}
+
 const Admin = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: event } = useEvent(slug);
@@ -66,10 +73,15 @@ const Admin = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [flatRegistrations, setFlatRegistrations] = useState<FlatRegistration[]>([]);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [detailRegistration, setDetailRegistration] = useState<FlatRegistration | null>(null);
+  // Firestore import state
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [firestoreEvents, setFirestoreEvents] = useState<FirestoreEvent[]>([]);
+  const [loadingFirestore, setLoadingFirestore] = useState(false);
+  const [importingEventId, setImportingEventId] = useState<string | null>(null);
+  const [importedEvents, setImportedEvents] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -117,34 +129,48 @@ const Admin = () => {
     }
   };
 
-  const importFromFirestore = async () => {
-    setImporting(true);
+  const openImportDialog = async () => {
+    setShowImportDialog(true);
+    setLoadingFirestore(true);
     try {
       const { data, error } = await supabase.functions.invoke("import-firestore", {
-        body: { password },
+        body: { password, action: "list" },
       });
       if (error) throw error;
-      if (data.error) {
-        toast({ title: "Errore importazione", description: data.error, variant: "destructive" });
-        return;
-      }
-      toast({
-        title: "Importazione completata",
-        description: `${data.eventsCreated} eventi, ${data.participantsCreated} partecipanti, ${data.registrationsCreated} iscrizioni importate. ${data.errors?.length || 0} errori.`,
-      });
-      // Refresh data
-      authenticate();
+      if (data.error) throw new Error(data.error);
+      setFirestoreEvents(data.events || []);
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
+      setShowImportDialog(false);
     } finally {
-      setImporting(false);
+      setLoadingFirestore(false);
+    }
+  };
+
+  const importSingleEvent = async (firestoreId: string) => {
+    setImportingEventId(firestoreId);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-firestore", {
+        body: { password, firestore_event_id: firestoreId },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setImportedEvents((prev) => new Set(prev).add(firestoreId));
+      toast({
+        title: `Importato: ${data.event_name}`,
+        description: `${data.participantsCreated} nuovi partecipanti, ${data.registrationsCreated} iscrizioni. ${data.errors?.length || 0} errori.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Errore importazione", description: err.message, variant: "destructive" });
+    } finally {
+      setImportingEventId(null);
     }
   };
 
   const statusColor = (status: string) => {
-    if (status === "paid" || status === "completed") return "default";
-    if (status === "pending") return "secondary";
-    return "destructive";
+    if (status === "paid" || status === "completed") return "default" as const;
+    if (status === "pending") return "secondary" as const;
+    return "destructive" as const;
   };
 
   const homePath = slug ? `/${slug}` : "/";
@@ -156,7 +182,6 @@ const Admin = () => {
 
   const totalRegistrations = participants.reduce((sum, p) => sum + p.registrations.length, 0);
 
-  // Custom data label prettifier
   const prettyLabel = (key: string) => {
     const map: Record<string, string> = {
       team: "Squadra", photo: "Foto", signature: "Firma", type: "Tipo",
@@ -216,7 +241,6 @@ const Admin = () => {
     );
   }
 
-  // Event summary cards for global view
   const eventCounts = isGlobal
     ? flatRegistrations.reduce<Record<string, number>>((acc, r) => {
         const name = r.event_nome || "Sconosciuto";
@@ -237,8 +261,8 @@ const Admin = () => {
           </div>
           <div className="flex gap-2">
             {isGlobal && (
-              <Button onClick={importFromFirestore} disabled={importing} variant="outline">
-                {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+              <Button onClick={openImportDialog} variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
                 Importa da Firestore
               </Button>
             )}
@@ -252,7 +276,6 @@ const Admin = () => {
           </div>
         </div>
 
-        {/* Event summary cards for global view */}
         {isGlobal && eventCounts && Object.keys(eventCounts).length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {Object.entries(eventCounts).map(([name, count]) => (
@@ -368,7 +391,7 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Multi-event participant detail dialog (keep for grouped view) */}
+        {/* Multi-event participant detail dialog */}
         <Dialog open={!!selectedParticipant} onOpenChange={(open) => !open && setSelectedParticipant(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -399,6 +422,66 @@ const Admin = () => {
                 </Card>
               ))}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Firestore import dialog */}
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Importa da Firestore</DialogTitle>
+              <DialogDescription>
+                Seleziona un evento da importare. Gli eventi verranno creati come inattivi.
+              </DialogDescription>
+            </DialogHeader>
+            {loadingFirestore ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {firestoreEvents.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nessun evento trovato.</p>
+                )}
+                {firestoreEvents.map((fe) => {
+                  const isImported = importedEvents.has(fe.firestore_id);
+                  const isImporting = importingEventId === fe.firestore_id;
+                  return (
+                    <div
+                      key={fe.firestore_id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50"
+                    >
+                      <div>
+                        <p className="font-medium text-sm text-foreground">{fe.name}</p>
+                        <div className="flex gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">{fe.firestore_id}</span>
+                          {fe.is_tesseramento && (
+                            <Badge variant="secondary" className="text-xs h-4">Tesseramento</Badge>
+                          )}
+                          {!fe.has_entries && (
+                            <Badge variant="outline" className="text-xs h-4">Vuoto</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={isImported ? "ghost" : "default"}
+                        disabled={isImporting || isImported || !fe.has_entries}
+                        onClick={() => importSingleEvent(fe.firestore_id)}
+                      >
+                        {isImporting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isImported ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          "Importa"
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
