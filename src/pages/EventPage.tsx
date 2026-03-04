@@ -97,7 +97,7 @@ const EventPage = () => {
           </motion.div>
 
           {event.scadenza_iscrizioni && (
-            <div className="mb-10">
+            <div className="mb-10 flex flex-col items-center">
               <p className="text-xs text-muted-foreground mb-3 uppercase tracking-widest">Iscrizioni entro</p>
               <Countdown deadline={new Date(event.scadenza_iscrizioni)} />
             </div>
