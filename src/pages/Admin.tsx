@@ -251,6 +251,20 @@ const Admin = () => {
       }, {})
     : null;
 
+  // Unique event names for filter
+  const eventNames = [...new Set(flatRegistrations.map(r => r.event_nome).filter(Boolean))] as string[];
+
+  // Apply filters
+  const filteredRegistrations = flatRegistrations.filter((r) => {
+    if (filterEvent !== "all" && r.event_nome !== filterEvent) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const fullName = `${r.nome} ${r.cognome}`.toLowerCase();
+      if (!fullName.includes(q) && !r.email.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
