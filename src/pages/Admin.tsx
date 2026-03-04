@@ -351,7 +351,7 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {flatRegistrations.length === 0 ? (
+                  {filteredRegistrations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
