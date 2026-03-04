@@ -1,3 +1,4 @@
+import React from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
@@ -23,6 +24,12 @@ const EventPage = () => {
   if (error || !event) {
     return <Navigate to="/" replace />;
   }
+
+  // Update document title with event name
+  React.useEffect(() => {
+    document.title = `Ginepro - ${event.nome}`;
+    return () => { document.title = "Ginepro"; };
+  }, [event.nome]);
 
   const eventDate = event.data_evento
     ? new Date(event.data_evento).toLocaleDateString("it-IT", {
