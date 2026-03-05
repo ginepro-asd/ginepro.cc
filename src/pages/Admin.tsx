@@ -735,6 +735,73 @@ const Admin = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Merge review dialog */}
+        <Dialog open={showMergeDialog} onOpenChange={(open) => { if (!open) setShowMergeDialog(false); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display">Rivedi unione partecipanti</DialogTitle>
+              <DialogDescription>
+                Scegli quale valore mantenere per i campi in conflitto.
+              </DialogDescription>
+            </DialogHeader>
+            {mergeSelection.length === 2 && (() => {
+              const keepPart = mergeSelection.find(p => (p.participant_id || p.email) === mergeKeepId) || mergeSelection[0];
+              const mergePart = mergeSelection.find(p => p !== keepPart) || mergeSelection[1];
+              const fieldLabels: Record<string, string> = {
+                nome: "Nome", cognome: "Cognome", email: "Email", telefono: "Telefono",
+                codice_fiscale: "Codice Fiscale", birth_date: "Data nascita", birth_place: "Luogo nascita",
+              };
+              return (
+                <div className="space-y-4 mt-2">
+                  <div className="text-sm">
+                    <span className="font-medium">Mantieni:</span>{" "}
+                    <span className="text-foreground">{keepPart.nome} {keepPart.cognome}</span>
+                    <span className="text-muted-foreground"> ({keepPart.email})</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Unisci da:</span>{" "}
+                    <span className="text-foreground">{mergePart.nome} {mergePart.cognome}</span>
+                    <span className="text-muted-foreground"> ({mergePart.email})</span>
+                  </div>
+
+                  {Object.keys(mergeConflicts).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nessun conflitto trovato — i campi mancanti verranno completati automaticamente.</p>
+                  ) : (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      <p className="text-sm font-medium">Conflitti da risolvere:</p>
+                      {Object.entries(mergeConflicts).map(([field, { keep, merge }]) => (
+                        <div key={field} className="space-y-2">
+                          <Label className="text-sm">{fieldLabels[field] || field}</Label>
+                          <RadioGroup
+                            value={String(resolvedFields[field] ?? keep)}
+                            onValueChange={(val) => setResolvedFields(prev => ({ ...prev, [field]: val }))}
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value={String(keep)} id={`${field}-keep`} />
+                              <Label htmlFor={`${field}-keep`} className="text-sm font-normal">{String(keep)}</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value={String(merge)} id={`${field}-merge`} />
+                              <Label htmlFor={`${field}-merge`} className="text-sm font-normal">{String(merge)}</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowMergeDialog(false)}>Annulla</Button>
+              <Button onClick={executeMerge} disabled={merging}>
+                {merging ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
+                Conferma unione
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
