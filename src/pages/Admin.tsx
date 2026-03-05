@@ -265,6 +265,22 @@ const Admin = () => {
     return true;
   });
 
+  // When showing all events without search, group by participant
+  const isGroupedView = isGlobal && filterEvent === "all" && !searchQuery;
+
+  // Filter participants by search query
+  const filteredParticipants = participants.filter((p) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const fullName = `${p.nome} ${p.cognome}`.toLowerCase();
+      if (!fullName.includes(q) && !p.email.toLowerCase().includes(q)) return false;
+    }
+    if (filterEvent !== "all") {
+      return p.registrations.some(r => r.event_nome === filterEvent);
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -328,81 +344,130 @@ const Admin = () => {
               ))}
             </select>
           )}
-          <Badge variant="outline">{filteredRegistrations.length} risultati</Badge>
+          <Badge variant="outline">
+            {isGroupedView ? `${filteredParticipants.length} partecipanti` : `${filteredRegistrations.length} risultati`}
+          </Badge>
         </div>
 
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>C.F.</TableHead>
-                    <TableHead>Data nascita</TableHead>
-                    <TableHead>Luogo nascita</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRegistrations.length === 0 ? (
+              {isGroupedView ? (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
-                        <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        Nessuna iscrizione trovata
-                      </TableCell>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefono</TableHead>
+                      <TableHead>C.F.</TableHead>
+                      <TableHead>Data nascita</TableHead>
+                      <TableHead>Luogo nascita</TableHead>
+                      <TableHead>Eventi</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredRegistrations.map((r) => {
-                      const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
-                      return (
-                        <TableRow key={r.id}>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredParticipants.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          Nessun partecipante trovato
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredParticipants.map((p) => (
+                        <TableRow key={p.participant_id || p.email}>
+                          <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
+                          <TableCell className="text-sm">{p.email}</TableCell>
+                          <TableCell className="text-sm">{p.telefono}</TableCell>
+                          <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
+                          <TableCell className="text-sm">{p.birth_date || "—"}</TableCell>
+                          <TableCell className="text-sm">{p.birth_place || "—"}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {r.event_nome || "—"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
-                          <TableCell className="text-sm">{r.email}</TableCell>
-                          <TableCell className="text-sm">{r.telefono}</TableCell>
-                          <TableCell className="text-xs font-mono">{r.codice_fiscale || "—"}</TableCell>
-                          <TableCell className="text-sm">{r.birth_date || "—"}</TableCell>
-                          <TableCell className="text-sm">{r.birth_place || "—"}</TableCell>
-                          <TableCell className="capitalize text-sm">{r.payment_method}</TableCell>
-                          <TableCell>
-                            <Badge variant={statusColor(r.payment_status)}>
-                              {r.payment_status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                            {new Date(r.created_at).toLocaleDateString("it-IT", {
-                              day: "2-digit", month: "short", year: "numeric",
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            {hasCustom && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={() => setDetailRegistration(r)}
-                              >
-                                <Info className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs"
+                              onClick={() => setSelectedParticipant(p)}
+                            >
+                              {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Evento</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefono</TableHead>
+                      <TableHead>C.F.</TableHead>
+                      <TableHead>Data nascita</TableHead>
+                      <TableHead>Luogo nascita</TableHead>
+                      <TableHead>Pagamento</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRegistrations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          Nessuna iscrizione trovata
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRegistrations.map((r) => {
+                        const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
+                        return (
+                          <TableRow key={r.id}>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {r.event_nome || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
+                            <TableCell className="text-sm">{r.email}</TableCell>
+                            <TableCell className="text-sm">{r.telefono}</TableCell>
+                            <TableCell className="text-xs font-mono">{r.codice_fiscale || "—"}</TableCell>
+                            <TableCell className="text-sm">{r.birth_date || "—"}</TableCell>
+                            <TableCell className="text-sm">{r.birth_place || "—"}</TableCell>
+                            <TableCell className="capitalize text-sm">{r.payment_method}</TableCell>
+                            <TableCell>
+                              <Badge variant={statusColor(r.payment_status)}>
+                                {r.payment_status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                              {new Date(r.created_at).toLocaleDateString("it-IT", {
+                                day: "2-digit", month: "short", year: "numeric",
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              {hasCustom && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => setDetailRegistration(r)}
+                                >
+                                  <Info className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </CardContent>
         </Card>
