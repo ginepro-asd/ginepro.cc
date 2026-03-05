@@ -453,6 +453,29 @@ const Admin = () => {
           </Badge>
         </div>
 
+        {/* Merge selection banner */}
+        {mergeMode && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="text-sm">
+                <span className="font-medium">Seleziona 2 partecipanti da unire.</span>
+                {mergeSelection.length > 0 && (
+                  <span className="ml-2 text-muted-foreground">
+                    {mergeSelection.map(p => `${p.nome} ${p.cognome}`).join(" + ")}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                disabled={mergeSelection.length !== 2}
+                onClick={startMergeReview}
+              >
+                <Merge className="h-4 w-4 mr-2" />
+                Rivedi unione
+              </Button>
+            </CardContent>
+          </Card>
+        )
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
