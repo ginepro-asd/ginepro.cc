@@ -28,10 +28,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Query registrations with linked event metadata
+    // Query registrations with linked event + participant metadata in one request
     let registrationsQuery = supabaseAdmin
       .from("registrations")
-      .select("*, events(nome, slug)")
+      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
@@ -41,33 +41,19 @@ serve(async (req) => {
     const { data: registrations, error } = await registrationsQuery;
     if (error) throw new Error(error.message);
 
-    const participantIds = [...new Set((registrations || [])
-      .map((r: any) => r.participant_id)
-      .filter(Boolean))] as string[];
-
-    let participantsById: Record<string, any> = {};
-    if (participantIds.length > 0) {
-      const { data: participantRows, error: participantsError } = await supabaseAdmin
-        .from("participants")
-        .select("id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place")
-        .in("id", participantIds);
-
-      if (participantsError) throw new Error(participantsError.message);
-      participantsById = Object.fromEntries((participantRows || []).map((p: any) => [p.id, p]));
-    }
-
-    // Flatten event info
+    // Flatten event info and keep canonical participant payload from relationship
     const enriched = (registrations || []).map((r: any) => ({
       ...r,
       event_nome: r.events?.nome || "—",
       event_slug: r.events?.slug || "",
+      canonical_participant: r.participants || null,
     }));
 
-    // Group by participant_id (fallback to email if missing) for the admin view
+    // Group by participant_id (fallback to normalized email) for the admin view
     const participantMap: Record<string, any> = {};
     for (const r of enriched) {
-      const key = r.participant_id || r.email.toLowerCase().trim();
-      const canonical = r.participant_id ? participantsById[r.participant_id] : null;
+      const canonical = r.canonical_participant;
+      const key = r.participant_id || (canonical?.email || r.email).toLowerCase().trim();
 
       if (!participantMap[key]) {
         participantMap[key] = {
