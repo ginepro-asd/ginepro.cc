@@ -85,6 +85,14 @@ const Admin = () => {
   // Filter & search state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEvent, setFilterEvent] = useState<string>("all");
+  // Merge state
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState<Participant[]>([]);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergeKeepId, setMergeKeepId] = useState<string | null>(null);
+  const [mergeConflicts, setMergeConflicts] = useState<Record<string, { keep: any; merge: any }>>({});
+  const [resolvedFields, setResolvedFields] = useState<Record<string, any>>({});
+  const [merging, setMerging] = useState(false);
   const { toast } = useToast();
 
   const isGlobal = !slug;
