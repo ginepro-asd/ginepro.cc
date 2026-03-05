@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.import-firestore]
 verify_jwt = false
+
+[functions.merge-participants]
+verify_jwt = false
