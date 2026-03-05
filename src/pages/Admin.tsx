@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent } from "@/hooks/use-event";
 
@@ -84,6 +85,14 @@ const Admin = () => {
   // Filter & search state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEvent, setFilterEvent] = useState<string>("all");
+  // Merge state
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState<Participant[]>([]);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergeKeepId, setMergeKeepId] = useState<string | null>(null);
+  const [mergeConflicts, setMergeConflicts] = useState<Record<string, { keep: any; merge: any }>>({});
+  const [resolvedFields, setResolvedFields] = useState<Record<string, any>>({});
+  const [merging, setMerging] = useState(false);
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -196,6 +205,82 @@ const Admin = () => {
     return map[key] || key;
   };
 
+  const toggleMergeSelect = (p: Participant) => {
+    setMergeSelection((prev) => {
+      const exists = prev.find((x) => (x.participant_id || x.email) === (p.participant_id || p.email));
+      if (exists) return prev.filter((x) => (x.participant_id || x.email) !== (p.participant_id || p.email));
+      if (prev.length >= 2) return prev; // max 2
+      return [...prev, p];
+    });
+  };
+
+  const isMergeSelected = (p: Participant) =>
+    mergeSelection.some((x) => (x.participant_id || x.email) === (p.participant_id || p.email));
+
+  const startMergeReview = () => {
+    if (mergeSelection.length !== 2) return;
+    const [a, b] = mergeSelection;
+    // Default keep: first selected
+    setMergeKeepId(a.participant_id || a.email);
+
+    // Find conflicts: fields where both are non-null and different
+    const fields = ["nome", "cognome", "email", "telefono", "codice_fiscale", "birth_date", "birth_place"];
+    const conflicts: Record<string, { keep: any; merge: any }> = {};
+    for (const f of fields) {
+      const va = (a as any)[f];
+      const vb = (b as any)[f];
+      if (va != null && vb != null && va !== vb) {
+        conflicts[f] = { keep: va, merge: vb };
+      }
+    }
+    setMergeConflicts(conflicts);
+    // Pre-resolve: default to keep's values
+    const resolved: Record<string, any> = {};
+    for (const f of Object.keys(conflicts)) {
+      resolved[f] = conflicts[f].keep;
+    }
+    setResolvedFields(resolved);
+    setShowMergeDialog(true);
+  };
+
+  const executeMerge = async () => {
+    if (mergeSelection.length !== 2) return;
+    const keepPart = mergeSelection.find(p => (p.participant_id || p.email) === mergeKeepId) || mergeSelection[0];
+    const mergePart = mergeSelection.find(p => p !== keepPart) || mergeSelection[1];
+
+    if (!keepPart.participant_id || !mergePart.participant_id) {
+      toast({ title: "Errore", description: "Entrambi devono avere un ID partecipante", variant: "destructive" });
+      return;
+    }
+
+    setMerging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("merge-participants", {
+        body: {
+          password,
+          keep_id: keepPart.participant_id,
+          merge_id: mergePart.participant_id,
+          resolved_fields: resolvedFields,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({
+        title: "Unione completata",
+        description: `${data.moved_registrations} iscrizioni spostate, ${data.merged_fields.length} campi aggiornati.`,
+      });
+      setShowMergeDialog(false);
+      setMergeMode(false);
+      setMergeSelection([]);
+      // Refresh data
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setMerging(false);
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -300,10 +385,22 @@ const Admin = () => {
           </div>
           <div className="flex gap-2">
             {isGlobal && (
-              <Button onClick={openImportDialog} variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Importa da Firestore
-              </Button>
+              <>
+                <Button
+                  onClick={() => {
+                    setMergeMode(!mergeMode);
+                    setMergeSelection([]);
+                  }}
+                  variant={mergeMode ? "default" : "outline"}
+                >
+                  {mergeMode ? <X className="h-4 w-4 mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
+                  {mergeMode ? "Annulla unione" : "Unisci account"}
+                </Button>
+                <Button onClick={openImportDialog} variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importa da Firestore
+                </Button>
+              </>
             )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
@@ -356,6 +453,30 @@ const Admin = () => {
           </Badge>
         </div>
 
+        {/* Merge selection banner */}
+        {mergeMode && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="text-sm">
+                <span className="font-medium">Seleziona 2 partecipanti da unire.</span>
+                {mergeSelection.length > 0 && (
+                  <span className="ml-2 text-muted-foreground">
+                    {mergeSelection.map(p => `${p.nome} ${p.cognome}`).join(" + ")}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                disabled={mergeSelection.length !== 2}
+                onClick={startMergeReview}
+              >
+                <Merge className="h-4 w-4 mr-2" />
+                Rivedi unione
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -363,6 +484,7 @@ const Admin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {mergeMode && <TableHead className="w-10"></TableHead>}
                       <TableHead>Nome</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Telefono</TableHead>
@@ -375,32 +497,50 @@ const Admin = () => {
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={mergeMode ? 8 : 7} className="text-center text-muted-foreground py-8">
                           <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Nessun partecipante trovato
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredParticipants.map((p, idx) => (
-                        <TableRow key={`${p.participant_id || p.email}-${idx}`}>
-                          <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
-                          <TableCell className="text-sm">{p.email}</TableCell>
-                          <TableCell className="text-sm">{p.telefono}</TableCell>
-                          <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
-                          <TableCell className="text-sm">{p.birth_date || "—"}</TableCell>
-                          <TableCell className="text-sm">{p.birth_place || "—"}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => setSelectedParticipant(p)}
-                            >
-                              {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      filteredParticipants.map((p, idx) => {
+                        const selected = isMergeSelected(p);
+                        return (
+                          <TableRow
+                            key={`${p.participant_id || p.email}-${idx}`}
+                            className={selected ? "bg-primary/10" : ""}
+                            onClick={mergeMode ? () => toggleMergeSelect(p) : undefined}
+                            style={mergeMode ? { cursor: "pointer" } : undefined}
+                          >
+                            {mergeMode && (
+                              <TableCell className="w-10">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  readOnly
+                                  className="h-4 w-4 rounded border-input"
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
+                            <TableCell className="text-sm">{p.email}</TableCell>
+                            <TableCell className="text-sm">{p.telefono}</TableCell>
+                            <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
+                            <TableCell className="text-sm">{p.birth_date || "—"}</TableCell>
+                            <TableCell className="text-sm">{p.birth_place || "—"}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs"
+                                onClick={(e) => { e.stopPropagation(); setSelectedParticipant(p); }}
+                              >
+                                {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -593,6 +733,73 @@ const Admin = () => {
                 })}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Merge review dialog */}
+        <Dialog open={showMergeDialog} onOpenChange={(open) => { if (!open) setShowMergeDialog(false); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display">Rivedi unione partecipanti</DialogTitle>
+              <DialogDescription>
+                Scegli quale valore mantenere per i campi in conflitto.
+              </DialogDescription>
+            </DialogHeader>
+            {mergeSelection.length === 2 && (() => {
+              const keepPart = mergeSelection.find(p => (p.participant_id || p.email) === mergeKeepId) || mergeSelection[0];
+              const mergePart = mergeSelection.find(p => p !== keepPart) || mergeSelection[1];
+              const fieldLabels: Record<string, string> = {
+                nome: "Nome", cognome: "Cognome", email: "Email", telefono: "Telefono",
+                codice_fiscale: "Codice Fiscale", birth_date: "Data nascita", birth_place: "Luogo nascita",
+              };
+              return (
+                <div className="space-y-4 mt-2">
+                  <div className="text-sm">
+                    <span className="font-medium">Mantieni:</span>{" "}
+                    <span className="text-foreground">{keepPart.nome} {keepPart.cognome}</span>
+                    <span className="text-muted-foreground"> ({keepPart.email})</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Unisci da:</span>{" "}
+                    <span className="text-foreground">{mergePart.nome} {mergePart.cognome}</span>
+                    <span className="text-muted-foreground"> ({mergePart.email})</span>
+                  </div>
+
+                  {Object.keys(mergeConflicts).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nessun conflitto trovato — i campi mancanti verranno completati automaticamente.</p>
+                  ) : (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      <p className="text-sm font-medium">Conflitti da risolvere:</p>
+                      {Object.entries(mergeConflicts).map(([field, { keep, merge }]) => (
+                        <div key={field} className="space-y-2">
+                          <Label className="text-sm">{fieldLabels[field] || field}</Label>
+                          <RadioGroup
+                            value={String(resolvedFields[field] ?? keep)}
+                            onValueChange={(val) => setResolvedFields(prev => ({ ...prev, [field]: val }))}
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value={String(keep)} id={`${field}-keep`} />
+                              <Label htmlFor={`${field}-keep`} className="text-sm font-normal">{String(keep)}</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value={String(merge)} id={`${field}-merge`} />
+                              <Label htmlFor={`${field}-merge`} className="text-sm font-normal">{String(merge)}</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowMergeDialog(false)}>Annulla</Button>
+              <Button onClick={executeMerge} disabled={merging}>
+                {merging ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
+                Conferma unione
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

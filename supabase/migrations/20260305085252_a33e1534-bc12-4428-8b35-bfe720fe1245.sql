@@ -1,0 +1,2 @@
+CREATE POLICY "Service role can delete participants" ON public.participants FOR DELETE TO service_role USING (true);
+CREATE POLICY "Service role can delete registrations" ON public.registrations FOR DELETE TO service_role USING (true);
