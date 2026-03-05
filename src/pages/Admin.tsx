@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -93,6 +93,10 @@ const Admin = () => {
   const [mergeConflicts, setMergeConflicts] = useState<Record<string, { keep: any; merge: any }>>({});
   const [resolvedFields, setResolvedFields] = useState<Record<string, any>>({});
   const [merging, setMerging] = useState(false);
+  // Edit state
+  const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const isGlobal = !slug;
