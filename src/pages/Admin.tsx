@@ -855,6 +855,45 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit participant dialog */}
+        <Dialog open={!!editParticipant} onOpenChange={(open) => { if (!open) setEditParticipant(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Modifica partecipante</DialogTitle>
+              <DialogDescription>
+                Modifica i dati anagrafici. Le modifiche verranno applicate anche alle iscrizioni collegate.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {[
+                { key: "nome", label: "Nome", type: "text" },
+                { key: "cognome", label: "Cognome", type: "text" },
+                { key: "email", label: "Email", type: "email" },
+                { key: "telefono", label: "Telefono", type: "tel" },
+                { key: "codice_fiscale", label: "Codice Fiscale", type: "text" },
+                { key: "birth_date", label: "Data di nascita", type: "date" },
+                { key: "birth_place", label: "Luogo di nascita", type: "text" },
+              ].map(({ key, label, type }) => (
+                <div key={key} className="space-y-1">
+                  <Label className="text-sm">{label}</Label>
+                  <Input
+                    type={type}
+                    value={editFields[key] || ""}
+                    onChange={(e) => setEditFields(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEditParticipant(null)}>Annulla</Button>
+              <Button onClick={saveEdit} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                Salva
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
