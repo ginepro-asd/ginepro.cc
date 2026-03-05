@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.merge-participants]
 verify_jwt = false
+
+[functions.update-participant]
+verify_jwt = false
