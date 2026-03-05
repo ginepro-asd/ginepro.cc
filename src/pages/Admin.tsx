@@ -285,6 +285,42 @@ const Admin = () => {
     }
   };
 
+  const openEditDialog = (p: Participant) => {
+    setEditParticipant(p);
+    setEditFields({
+      nome: p.nome || "",
+      cognome: p.cognome || "",
+      email: p.email || "",
+      telefono: p.telefono || "",
+      codice_fiscale: p.codice_fiscale || "",
+      birth_date: p.birth_date || "",
+      birth_place: p.birth_place || "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editParticipant?.participant_id) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-participant", {
+        body: {
+          password,
+          participant_id: editParticipant.participant_id,
+          fields: editFields,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Salvato", description: `${data.updated_fields.length} campi aggiornati.` });
+      setEditParticipant(null);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
