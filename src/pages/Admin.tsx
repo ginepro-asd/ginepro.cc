@@ -523,21 +523,23 @@ const Admin = () => {
               {isGroupedView ? (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      {mergeMode && <TableHead className="w-10"></TableHead>}
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefono</TableHead>
-                      <TableHead>C.F.</TableHead>
-                      <TableHead>Data nascita</TableHead>
-                      <TableHead>Luogo nascita</TableHead>
-                      <TableHead>Eventi</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       {mergeMode && <TableHead className="w-10"></TableHead>}
+                       <TableHead>Nome</TableHead>
+                       <TableHead>Cognome</TableHead>
+                       <TableHead>Email</TableHead>
+                       <TableHead>Telefono</TableHead>
+                       <TableHead>C.F.</TableHead>
+                       <TableHead>Data nascita</TableHead>
+                       <TableHead>Luogo nascita</TableHead>
+                       <TableHead>Eventi</TableHead>
+                       <TableHead className="w-10"></TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={mergeMode ? 8 : 7} className="text-center text-muted-foreground py-8">
+                         <TableCell colSpan={mergeMode ? 10 : 9} className="text-center text-muted-foreground py-8">
                           <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Nessun partecipante trovato
                         </TableCell>
@@ -562,7 +564,8 @@ const Admin = () => {
                                 />
                               </TableCell>
                             )}
-                            <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
                             <TableCell className="text-sm">{p.email}</TableCell>
                             <TableCell className="text-sm">{p.telefono}</TableCell>
                             <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
@@ -576,6 +579,16 @@ const Admin = () => {
                                 onClick={(e) => { e.stopPropagation(); setSelectedParticipant(p); }}
                               >
                                 {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             </TableCell>
                           </TableRow>
