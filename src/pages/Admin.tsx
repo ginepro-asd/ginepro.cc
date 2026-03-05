@@ -280,6 +280,8 @@ const Admin = () => {
       setMerging(false);
     }
   };
+
+  if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <Card className="max-w-sm w-full border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
