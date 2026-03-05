@@ -475,7 +475,8 @@ const Admin = () => {
               </Button>
             </CardContent>
           </Card>
-        )
+        )}
+
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
