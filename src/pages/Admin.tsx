@@ -268,15 +268,22 @@ const Admin = () => {
   // Always use grouped view in global mode
   const isGroupedView = isGlobal;
 
-  // Filter participants by search query
+  // Filter participants by search query and event filter
   const filteredParticipants = participants.filter((p) => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const fullName = `${p.nome} ${p.cognome}`.toLowerCase();
-      if (!fullName.includes(q) && !p.email.toLowerCase().includes(q)) return false;
-    }
+    // Event filter first
     if (filterEvent !== "all") {
-      return p.registrations.some(r => r.event_nome === filterEvent);
+      const hasEvent = p.registrations.some(r => r.event_nome === filterEvent);
+      if (!hasEvent) return false;
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      const fullName = `${p.nome} ${p.cognome}`.toLowerCase();
+      const emailMatch = p.email.toLowerCase().includes(q);
+      const nameMatch = fullName.includes(q);
+      const cfMatch = p.codice_fiscale?.toLowerCase().includes(q) || false;
+      const eventMatch = p.registrations.some(r => r.event_nome?.toLowerCase().includes(q));
+      if (!nameMatch && !emailMatch && !cfMatch && !eventMatch) return false;
     }
     return true;
   });
@@ -374,8 +381,8 @@ const Admin = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredParticipants.map((p) => (
-                        <TableRow key={p.participant_id || p.email}>
+                      filteredParticipants.map((p, idx) => (
+                        <TableRow key={`${p.participant_id || p.email}-${idx}`}>
                           <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
                           <TableCell className="text-sm">{p.email}</TableCell>
                           <TableCell className="text-sm">{p.telefono}</TableCell>
