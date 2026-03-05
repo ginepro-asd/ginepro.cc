@@ -265,8 +265,8 @@ const Admin = () => {
     return true;
   });
 
-  // When showing all events without search, group by participant
-  const isGroupedView = isGlobal && filterEvent === "all" && !searchQuery;
+  // Always use grouped view in global mode
+  const isGroupedView = isGlobal;
 
   // Filter participants by search query
   const filteredParticipants = participants.filter((p) => {
