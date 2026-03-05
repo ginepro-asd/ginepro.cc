@@ -265,6 +265,22 @@ const Admin = () => {
     return true;
   });
 
+  // When showing all events without search, group by participant
+  const isGroupedView = isGlobal && filterEvent === "all" && !searchQuery;
+
+  // Filter participants by search query
+  const filteredParticipants = participants.filter((p) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const fullName = `${p.nome} ${p.cognome}`.toLowerCase();
+      if (!fullName.includes(q) && !p.email.toLowerCase().includes(q)) return false;
+    }
+    if (filterEvent !== "all") {
+      return p.registrations.some(r => r.event_nome === filterEvent);
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-7xl mx-auto space-y-6">
