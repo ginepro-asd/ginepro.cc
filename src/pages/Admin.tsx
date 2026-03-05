@@ -205,7 +205,81 @@ const Admin = () => {
     return map[key] || key;
   };
 
-  if (!authenticated) {
+  const toggleMergeSelect = (p: Participant) => {
+    setMergeSelection((prev) => {
+      const exists = prev.find((x) => (x.participant_id || x.email) === (p.participant_id || p.email));
+      if (exists) return prev.filter((x) => (x.participant_id || x.email) !== (p.participant_id || p.email));
+      if (prev.length >= 2) return prev; // max 2
+      return [...prev, p];
+    });
+  };
+
+  const isMergeSelected = (p: Participant) =>
+    mergeSelection.some((x) => (x.participant_id || x.email) === (p.participant_id || p.email));
+
+  const startMergeReview = () => {
+    if (mergeSelection.length !== 2) return;
+    const [a, b] = mergeSelection;
+    // Default keep: first selected
+    setMergeKeepId(a.participant_id || a.email);
+
+    // Find conflicts: fields where both are non-null and different
+    const fields = ["nome", "cognome", "email", "telefono", "codice_fiscale", "birth_date", "birth_place"];
+    const conflicts: Record<string, { keep: any; merge: any }> = {};
+    for (const f of fields) {
+      const va = (a as any)[f];
+      const vb = (b as any)[f];
+      if (va != null && vb != null && va !== vb) {
+        conflicts[f] = { keep: va, merge: vb };
+      }
+    }
+    setMergeConflicts(conflicts);
+    // Pre-resolve: default to keep's values
+    const resolved: Record<string, any> = {};
+    for (const f of Object.keys(conflicts)) {
+      resolved[f] = conflicts[f].keep;
+    }
+    setResolvedFields(resolved);
+    setShowMergeDialog(true);
+  };
+
+  const executeMerge = async () => {
+    if (mergeSelection.length !== 2) return;
+    const keepPart = mergeSelection.find(p => (p.participant_id || p.email) === mergeKeepId) || mergeSelection[0];
+    const mergePart = mergeSelection.find(p => p !== keepPart) || mergeSelection[1];
+
+    if (!keepPart.participant_id || !mergePart.participant_id) {
+      toast({ title: "Errore", description: "Entrambi devono avere un ID partecipante", variant: "destructive" });
+      return;
+    }
+
+    setMerging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("merge-participants", {
+        body: {
+          password,
+          keep_id: keepPart.participant_id,
+          merge_id: mergePart.participant_id,
+          resolved_fields: resolvedFields,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({
+        title: "Unione completata",
+        description: `${data.moved_registrations} iscrizioni spostate, ${data.merged_fields.length} campi aggiornati.`,
+      });
+      setShowMergeDialog(false);
+      setMergeMode(false);
+      setMergeSelection([]);
+      // Refresh data
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setMerging(false);
+    }
+  };
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <Card className="max-w-sm w-full border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
