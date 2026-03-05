@@ -385,10 +385,22 @@ const Admin = () => {
           </div>
           <div className="flex gap-2">
             {isGlobal && (
-              <Button onClick={openImportDialog} variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Importa da Firestore
-              </Button>
+              <>
+                <Button
+                  onClick={() => {
+                    setMergeMode(!mergeMode);
+                    setMergeSelection([]);
+                  }}
+                  variant={mergeMode ? "default" : "outline"}
+                >
+                  {mergeMode ? <X className="h-4 w-4 mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
+                  {mergeMode ? "Annulla unione" : "Unisci account"}
+                </Button>
+                <Button onClick={openImportDialog} variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importa da Firestore
+                </Button>
+              </>
             )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
