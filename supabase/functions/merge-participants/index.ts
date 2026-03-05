@@ -68,6 +68,8 @@ Deno.serve(async (req) => {
       // else keep existing value
     }
 
+    const finalParticipant = { ...keepPart, ...updateData };
+
     // Move all registrations from merge_id to keep_id
     // But skip if the same event already has a registration for keep_id
     const { data: keepRegs } = await supabase
@@ -85,10 +87,23 @@ Deno.serve(async (req) => {
     let movedCount = 0;
     for (const reg of mergeRegs || []) {
       if (!keepEventIds.has(reg.event_id)) {
-        await supabase
+        const { error: moveErr } = await supabase
           .from("registrations")
-          .update({ participant_id: keep_id })
+          .update({
+            participant_id: keep_id,
+            nome: finalParticipant.nome,
+            cognome: finalParticipant.cognome,
+            email: finalParticipant.email,
+            telefono: finalParticipant.telefono,
+            codice_fiscale: finalParticipant.codice_fiscale,
+            birth_date: finalParticipant.birth_date,
+            birth_place: finalParticipant.birth_place,
+            identification_type: finalParticipant.identification_type,
+          })
           .eq("id", reg.id);
+
+        if (moveErr) throw moveErr;
+        keepEventIds.add(reg.event_id);
         movedCount++;
       }
     }

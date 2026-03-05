@@ -28,7 +28,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Query participants with their registrations
+    // Query registrations with linked event metadata
     let registrationsQuery = supabaseAdmin
       .from("registrations")
       .select("*, events(nome, slug)")
@@ -41,6 +41,21 @@ serve(async (req) => {
     const { data: registrations, error } = await registrationsQuery;
     if (error) throw new Error(error.message);
 
+    const participantIds = [...new Set((registrations || [])
+      .map((r: any) => r.participant_id)
+      .filter(Boolean))] as string[];
+
+    let participantsById: Record<string, any> = {};
+    if (participantIds.length > 0) {
+      const { data: participantRows, error: participantsError } = await supabaseAdmin
+        .from("participants")
+        .select("id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place")
+        .in("id", participantIds);
+
+      if (participantsError) throw new Error(participantsError.message);
+      participantsById = Object.fromEntries((participantRows || []).map((p: any) => [p.id, p]));
+    }
+
     // Flatten event info
     const enriched = (registrations || []).map((r: any) => ({
       ...r,
@@ -48,23 +63,26 @@ serve(async (req) => {
       event_slug: r.events?.slug || "",
     }));
 
-    // Group by participant (email) for the admin view
+    // Group by participant_id (fallback to email if missing) for the admin view
     const participantMap: Record<string, any> = {};
     for (const r of enriched) {
-      const key = r.email.toLowerCase();
+      const key = r.participant_id || r.email.toLowerCase().trim();
+      const canonical = r.participant_id ? participantsById[r.participant_id] : null;
+
       if (!participantMap[key]) {
         participantMap[key] = {
-          email: r.email,
-          nome: r.nome,
-          cognome: r.cognome,
-          telefono: r.telefono,
-          codice_fiscale: r.codice_fiscale,
-          birth_date: r.birth_date,
-          birth_place: r.birth_place,
-          participant_id: r.participant_id,
+          email: canonical?.email ?? r.email,
+          nome: canonical?.nome ?? r.nome,
+          cognome: canonical?.cognome ?? r.cognome,
+          telefono: canonical?.telefono ?? r.telefono,
+          codice_fiscale: canonical?.codice_fiscale ?? r.codice_fiscale,
+          birth_date: canonical?.birth_date ?? r.birth_date,
+          birth_place: canonical?.birth_place ?? r.birth_place,
+          participant_id: r.participant_id || null,
           registrations: [],
         };
       }
+
       participantMap[key].registrations.push({
         id: r.id,
         event_id: r.event_id,
