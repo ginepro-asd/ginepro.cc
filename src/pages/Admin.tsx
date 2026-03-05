@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -93,6 +93,10 @@ const Admin = () => {
   const [mergeConflicts, setMergeConflicts] = useState<Record<string, { keep: any; merge: any }>>({});
   const [resolvedFields, setResolvedFields] = useState<Record<string, any>>({});
   const [merging, setMerging] = useState(false);
+  // Edit state
+  const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -278,6 +282,42 @@ const Admin = () => {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     } finally {
       setMerging(false);
+    }
+  };
+
+  const openEditDialog = (p: Participant) => {
+    setEditParticipant(p);
+    setEditFields({
+      nome: p.nome || "",
+      cognome: p.cognome || "",
+      email: p.email || "",
+      telefono: p.telefono || "",
+      codice_fiscale: p.codice_fiscale || "",
+      birth_date: p.birth_date || "",
+      birth_place: p.birth_place || "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editParticipant?.participant_id) return;
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-participant", {
+        body: {
+          password,
+          participant_id: editParticipant.participant_id,
+          fields: editFields,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Salvato", description: `${data.updated_fields.length} campi aggiornati.` });
+      setEditParticipant(null);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -483,21 +523,23 @@ const Admin = () => {
               {isGroupedView ? (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      {mergeMode && <TableHead className="w-10"></TableHead>}
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefono</TableHead>
-                      <TableHead>C.F.</TableHead>
-                      <TableHead>Data nascita</TableHead>
-                      <TableHead>Luogo nascita</TableHead>
-                      <TableHead>Eventi</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       {mergeMode && <TableHead className="w-10"></TableHead>}
+                       <TableHead>Nome</TableHead>
+                       <TableHead>Cognome</TableHead>
+                       <TableHead>Email</TableHead>
+                       <TableHead>Telefono</TableHead>
+                       <TableHead>C.F.</TableHead>
+                       <TableHead>Data nascita</TableHead>
+                       <TableHead>Luogo nascita</TableHead>
+                       <TableHead>Eventi</TableHead>
+                       <TableHead className="w-10"></TableHead>
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={mergeMode ? 8 : 7} className="text-center text-muted-foreground py-8">
+                         <TableCell colSpan={mergeMode ? 10 : 9} className="text-center text-muted-foreground py-8">
                           <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Nessun partecipante trovato
                         </TableCell>
@@ -522,7 +564,8 @@ const Admin = () => {
                                 />
                               </TableCell>
                             )}
-                            <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
                             <TableCell className="text-sm">{p.email}</TableCell>
                             <TableCell className="text-sm">{p.telefono}</TableCell>
                             <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
@@ -536,6 +579,16 @@ const Admin = () => {
                                 onClick={(e) => { e.stopPropagation(); setSelectedParticipant(p); }}
                               >
                                 {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -798,6 +851,45 @@ const Admin = () => {
               <Button onClick={executeMerge} disabled={merging}>
                 {merging ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
                 Conferma unione
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit participant dialog */}
+        <Dialog open={!!editParticipant} onOpenChange={(open) => { if (!open) setEditParticipant(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Modifica partecipante</DialogTitle>
+              <DialogDescription>
+                Modifica i dati anagrafici. Le modifiche verranno applicate anche alle iscrizioni collegate.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {[
+                { key: "nome", label: "Nome", type: "text" },
+                { key: "cognome", label: "Cognome", type: "text" },
+                { key: "email", label: "Email", type: "email" },
+                { key: "telefono", label: "Telefono", type: "tel" },
+                { key: "codice_fiscale", label: "Codice Fiscale", type: "text" },
+                { key: "birth_date", label: "Data di nascita", type: "date" },
+                { key: "birth_place", label: "Luogo di nascita", type: "text" },
+              ].map(({ key, label, type }) => (
+                <div key={key} className="space-y-1">
+                  <Label className="text-sm">{label}</Label>
+                  <Input
+                    type={type}
+                    value={editFields[key] || ""}
+                    onChange={(e) => setEditFields(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEditParticipant(null)}>Annulla</Button>
+              <Button onClick={saveEdit} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                Salva
               </Button>
             </DialogFooter>
           </DialogContent>
