@@ -344,7 +344,9 @@ const Admin = () => {
               ))}
             </select>
           )}
-          <Badge variant="outline">{filteredRegistrations.length} risultati</Badge>
+          <Badge variant="outline">
+            {isGroupedView ? `${filteredParticipants.length} partecipanti` : `${filteredRegistrations.length} risultati`}
+          </Badge>
         </div>
 
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
