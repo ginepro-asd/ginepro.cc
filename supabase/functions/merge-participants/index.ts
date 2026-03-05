@@ -68,15 +68,6 @@ Deno.serve(async (req) => {
       // else keep existing value
     }
 
-    // Update kept participant with merged data
-    if (Object.keys(updateData).length > 0) {
-      const { error: updateErr } = await supabase
-        .from("participants")
-        .update(updateData)
-        .eq("id", keep_id);
-      if (updateErr) throw updateErr;
-    }
-
     // Move all registrations from merge_id to keep_id
     // But skip if the same event already has a registration for keep_id
     const { data: keepRegs } = await supabase
@@ -102,17 +93,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Delete the merged participant
-    // First delete remaining registrations that are duplicates
+    // Delete remaining registrations (duplicates) for merge participant
     await supabase
       .from("registrations")
       .delete()
       .eq("participant_id", merge_id);
 
+    // Delete the merged participant BEFORE updating kept one (to avoid unique constraint on email)
     await supabase
       .from("participants")
       .delete()
       .eq("id", merge_id);
+
+    // Now update kept participant with merged data
+    if (Object.keys(updateData).length > 0) {
+      const { error: updateErr } = await supabase
+        .from("participants")
+        .update(updateData)
+        .eq("id", keep_id);
+      if (updateErr) throw updateErr;
+    }
 
     return new Response(
       JSON.stringify({
