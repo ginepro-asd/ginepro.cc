@@ -484,6 +484,7 @@ const Admin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {mergeMode && <TableHead className="w-10"></TableHead>}
                       <TableHead>Nome</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Telefono</TableHead>
@@ -496,28 +497,50 @@ const Admin = () => {
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={mergeMode ? 8 : 7} className="text-center text-muted-foreground py-8">
                           <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Nessun partecipante trovato
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredParticipants.map((p, idx) => (
-                        <TableRow key={`${p.participant_id || p.email}-${idx}`}>
-                          <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
-                          <TableCell className="text-sm">{p.email}</TableCell>
-                          <TableCell className="text-sm">{p.telefono}</TableCell>
-                          <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
-                          <TableCell className="text-sm">{p.birth_date || "—"}</TableCell>
-                          <TableCell className="text-sm">{p.birth_place || "—"}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => setSelectedParticipant(p)}
-                            >
-                              {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                      filteredParticipants.map((p, idx) => {
+                        const selected = isMergeSelected(p);
+                        return (
+                          <TableRow
+                            key={`${p.participant_id || p.email}-${idx}`}
+                            className={selected ? "bg-primary/10" : ""}
+                            onClick={mergeMode ? () => toggleMergeSelect(p) : undefined}
+                            style={mergeMode ? { cursor: "pointer" } : undefined}
+                          >
+                            {mergeMode && (
+                              <TableCell className="w-10">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  readOnly
+                                  className="h-4 w-4 rounded border-input"
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium whitespace-nowrap">{p.nome} {p.cognome}</TableCell>
+                            <TableCell className="text-sm">{p.email}</TableCell>
+                            <TableCell className="text-sm">{p.telefono}</TableCell>
+                            <TableCell className="text-xs font-mono">{p.codice_fiscale || "—"}</TableCell>
+                            <TableCell className="text-sm">{p.birth_date || "—"}</TableCell>
+                            <TableCell className="text-sm">{p.birth_place || "—"}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs"
+                                onClick={(e) => { e.stopPropagation(); setSelectedParticipant(p); }}
+                              >
+                                {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                             </Button>
                           </TableCell>
                         </TableRow>
