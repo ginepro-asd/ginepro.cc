@@ -17,9 +17,9 @@ interface PhotoAvatarProps {
 }
 
 const SIZES = [
-  { label: "Piccola (200px)", size: 200 },
-  { label: "Media (400px)", size: 400 },
-  { label: "Grande (800px)", size: 800 },
+  { label: "50px", size: 50 },
+  { label: "200px", size: 200 },
+  { label: "800px", size: 800 },
   { label: "Originale", size: 0 },
 ];
 
