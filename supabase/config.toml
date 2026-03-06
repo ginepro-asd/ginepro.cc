@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.admin-chat]
 verify_jwt = false
+
+[functions.list-firestore-collection]
+verify_jwt = false
