@@ -101,6 +101,7 @@ const Admin = () => {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
