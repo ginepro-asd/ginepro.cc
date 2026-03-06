@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const FIDAL_BASE = "https://tessonline.fidal.it";
+const LEGACY_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; rv:11.0) like Gecko";
 
 /** Extract Set-Cookie values from response headers */
 function extractCookies(response: Response): string[] {
@@ -31,7 +32,10 @@ async function fidalLogin(username: string, password: string): Promise<string> {
 
   const res = await fetch(`${FIDAL_BASE}/login.php`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": LEGACY_USER_AGENT,
+    },
     body: body.toString(),
     redirect: "manual",
   });
@@ -57,7 +61,10 @@ async function fidalUploadPhoto(
 ): Promise<{ success: boolean; message: string }> {
   // First, GET the foto page to understand the form
   const fotoPage = await fetch(`${FIDAL_BASE}/foto.php?Tessera=${tessera}`, {
-    headers: { Cookie: cookies },
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
   });
   const fotoHtml = await fotoPage.text();
 
@@ -69,7 +76,10 @@ async function fidalUploadPhoto(
 
   const res = await fetch(`${FIDAL_BASE}/foto.php?Tessera=${tessera}`, {
     method: "POST",
-    headers: { Cookie: cookies },
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
     body: formData,
   });
 
@@ -164,23 +174,31 @@ async function fidalSubmitAthlete(
     headers: {
       Cookie: cookies,
       "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": LEGACY_USER_AGENT,
     },
     body: formData.toString(),
   });
 
   const html = await res.text();
 
-  // Check for errors in the response
+  // Detect explicit legacy-browser rejection page
+  const blockedByUserAgent =
+    html.includes("necessario utilizzare") &&
+    html.includes("Internet Explorer");
+
+  // Check for errors/success in the response
   const hasError = html.includes("ERRORE") || html.includes("errore") || html.includes("Errore");
   const hasSuccess = html.includes("INSERIMENTO EFFETTUATO") || html.includes("inserito") || html.includes("Inserimento");
 
   return {
-    success: !hasError || hasSuccess,
-    message: hasError
-      ? "Possibile errore nell'inserimento"
-      : hasSuccess
-        ? "Atleta inserito con successo"
-        : "Invio completato, verifica manualmente il risultato",
+    success: !blockedByUserAgent && (hasSuccess || (!hasError && !blockedByUserAgent)),
+    message: blockedByUserAgent
+      ? "FIDAL ha rifiutato la richiesta per controllo browser (legacy)."
+      : hasError
+        ? "Possibile errore nell'inserimento"
+        : hasSuccess
+          ? "Atleta inserito con successo"
+          : "Invio completato, verifica manualmente il risultato",
     html: html.substring(0, 2000), // First 2000 chars for debugging
   };
 }
