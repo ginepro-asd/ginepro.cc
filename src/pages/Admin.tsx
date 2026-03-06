@@ -707,10 +707,11 @@ const Admin = () => {
                                );
                              })()}
                            </TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {r.event_nome || "—"}
-                              </Badge>
-                            </TableCell>
+                           <TableCell>
+                             <Badge variant="outline" className="text-xs">
+                               {r.event_nome || "—"}
+                             </Badge>
+                           </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
                             <TableCell className="text-sm">{r.email}</TableCell>
                             <TableCell className="text-sm">{r.telefono}</TableCell>
