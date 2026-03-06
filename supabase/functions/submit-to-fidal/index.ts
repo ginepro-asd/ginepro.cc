@@ -404,7 +404,7 @@ Deno.serve(async (req) => {
       email: participant.email || "",
       indirizzo: (fidal_data?.indirizzo || "").toUpperCase(),
       cap: fidal_data?.cap || "",
-      provincia: fidal_data?.provincia || "",
+      provincia: expandProvincia(fidal_data?.provincia || ""),
       citta: (fidal_data?.citta || "").toUpperCase(),
       straniero: fidal_data?.straniero || "N",
       cittadinanza: fidal_data?.cittadinanza || "ITA",
