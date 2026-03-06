@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const FIDAL_BASE = "https://tessonline.fidal.it";
-const LEGACY_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; rv:11.0) like Gecko";
+const LEGACY_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)";
 
 /** Extract Set-Cookie values from response headers */
 function extractCookies(response: Response): string[] {
