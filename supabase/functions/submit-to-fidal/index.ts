@@ -265,7 +265,7 @@ async function fidalSubmitAthlete(
         : hasExplicitSuccess
           ? "Atleta inserito con successo"
           : "FIDAL non ha restituito una conferma esplicita di inserimento",
-    html: html.substring(0, 12000), // More context for debugging FIDAL legacy responses
+    html: html.substring(0, 50000), // More context for debugging FIDAL legacy responses
     diagnostic,
   };
 }
