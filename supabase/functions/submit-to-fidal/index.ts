@@ -199,6 +199,18 @@ async function fidalSubmitAthlete(
     html.includes("INSERIMENTO EFFETTUATO") ||
     html.includes("INSERIMENTO ESEGUITO");
 
+  // Extract a short diagnostic hint from html text
+  const htmlText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const diagnosticMatch = htmlText.match(
+    /(campo[^.]{0,120}(obbligatorio|non valido)|codice fiscale[^.]{0,120}|atleta[^.]{0,120}(presente|esiste)|errore[^.]{0,120})/i,
+  );
+  const diagnostic = diagnosticMatch?.[0] || undefined;
+
   const finalSuccess = !blockedByUserAgent && !hasError && hasExplicitSuccess;
 
   return {
@@ -206,11 +218,12 @@ async function fidalSubmitAthlete(
     message: blockedByUserAgent
       ? "FIDAL ha rifiutato la richiesta per controllo browser (legacy)."
       : hasError
-        ? "Possibile errore nell'inserimento"
+        ? `Possibile errore nell'inserimento${diagnostic ? `: ${diagnostic}` : ""}`
         : hasExplicitSuccess
           ? "Atleta inserito con successo"
           : "FIDAL non ha restituito una conferma esplicita di inserimento",
     html: html.substring(0, 12000), // More context for debugging FIDAL legacy responses
+    diagnostic,
   };
 }
 
