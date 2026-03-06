@@ -241,9 +241,13 @@ Deno.serve(async (req) => {
     if (regs) {
       for (const reg of regs) {
         const cd = reg.custom_data as Record<string, any> | null;
+        // Prefer thumbnail (200px) over original
+        if (cd?.photoUrlThumb) {
+          photoUrl = cd.photoUrlThumb;
+          break;
+        }
         if (cd?.photoUrl) {
           photoUrl = cd.photoUrl;
-          break;
         }
       }
     }
