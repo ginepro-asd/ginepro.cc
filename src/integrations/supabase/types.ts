@@ -76,6 +76,7 @@ export type Database = {
           cognome: string
           created_at: string
           email: string
+          fidal_data: Json | null
           id: string
           identification_type: string
           nome: string
@@ -89,6 +90,7 @@ export type Database = {
           cognome: string
           created_at?: string
           email: string
+          fidal_data?: Json | null
           id?: string
           identification_type?: string
           nome: string
@@ -102,6 +104,7 @@ export type Database = {
           cognome?: string
           created_at?: string
           email?: string
+          fidal_data?: Json | null
           id?: string
           identification_type?: string
           nome?: string
