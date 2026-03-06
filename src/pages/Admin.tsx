@@ -662,22 +662,23 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Evento</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefono</TableHead>
-                      <TableHead>C.F.</TableHead>
-                      <TableHead>Data nascita</TableHead>
-                      <TableHead>Luogo nascita</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
+                 <Table>
+                   <TableHeader>
+                     <TableRow>
+                       <TableHead className="w-14">Foto</TableHead>
+                       <TableHead>Evento</TableHead>
+                       <TableHead>Nome</TableHead>
+                       <TableHead>Email</TableHead>
+                       <TableHead>Telefono</TableHead>
+                       <TableHead>C.F.</TableHead>
+                       <TableHead>Data nascita</TableHead>
+                       <TableHead>Luogo nascita</TableHead>
+                       <TableHead>Pagamento</TableHead>
+                       <TableHead>Stato</TableHead>
+                       <TableHead>Data</TableHead>
+                       <TableHead></TableHead>
+                     </TableRow>
+                   </TableHeader>
                   <TableBody>
                     {filteredRegistrations.length === 0 ? (
                       <TableRow>
