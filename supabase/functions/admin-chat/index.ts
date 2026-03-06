@@ -94,6 +94,124 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_collections",
+      description: "List all top-level collections in Firestore. Returns collection IDs.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_documents",
+      description: "List documents in a Firestore collection or subcollection. Use path like 'events' or 'events/myEventId/entries'.",
+      parameters: {
+        type: "object",
+        properties: {
+          collection_path: {
+            type: "string",
+            description: "The collection path, e.g. 'events', 'users', 'events/eventId/entries'.",
+          },
+          page_size: {
+            type: "number",
+            description: "Number of documents to return (default 20, max 100).",
+          },
+          page_token: {
+            type: "string",
+            description: "Token for pagination (from previous response).",
+          },
+        },
+        required: ["collection_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_get_document",
+      description: "Get a single Firestore document by its full path, e.g. 'events/myEventId'.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path, e.g. 'events/myEventId', 'users/userId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_subcollections",
+      description: "List subcollections of a specific Firestore document, e.g. subcollections of 'events/myEventId'.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path, e.g. 'events/myEventId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_write_document",
+      description: "Create or update a Firestore document. Provide the collection path and document data. If document_id is provided, it updates/creates that specific doc; otherwise a new doc is auto-generated.",
+      parameters: {
+        type: "object",
+        properties: {
+          collection_path: {
+            type: "string",
+            description: "The collection path, e.g. 'events', 'users'.",
+          },
+          document_id: {
+            type: "string",
+            description: "Optional document ID. If omitted, Firestore auto-generates one.",
+          },
+          data: {
+            type: "object",
+            description: "The document data as key-value pairs. Values will be auto-typed (string, number, boolean).",
+          },
+        },
+        required: ["collection_path", "data"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_delete_document",
+      description: "Delete a Firestore document by its full path.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path to delete, e.g. 'events/myEventId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `Sei un assistente admin per il sistema di gestione iscrizioni GINEPRO. Parla italiano.
