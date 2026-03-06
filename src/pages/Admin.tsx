@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil, MessageSquare } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil, MessageSquare, ImageIcon } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -99,7 +100,44 @@ const Admin = () => {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [generatingThumbs, setGeneratingThumbs] = useState(false);
   const { toast } = useToast();
+
+  // Helper: get photo thumbnail URL from participant's registrations
+  const getParticipantPhoto = (p: Participant): string | null => {
+    for (const reg of p.registrations) {
+      const cd = reg.custom_data;
+      if (cd?.photoUrlThumb) return cd.photoUrlThumb;
+      if (cd?.photoUrl) return cd.photoUrl;
+    }
+    return null;
+  };
+
+  // Helper: get photo from flat registration
+  const getRegistrationPhoto = (r: FlatRegistration): string | null => {
+    return r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
+  };
+
+  const generateThumbnails = async () => {
+    setGeneratingThumbs(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-thumbnails", {
+        body: { password },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({
+        title: "Thumbnail generati",
+        description: data.message,
+      });
+      // Refresh data
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingThumbs(false);
+    }
+  };
 
   const isGlobal = !slug;
 
@@ -426,24 +464,32 @@ const Admin = () => {
             {isGlobal && <Badge variant="outline">{totalRegistrations} iscrizioni</Badge>}
           </div>
           <div className="flex gap-2">
-            {isGlobal && (
-              <>
-                <Button
-                  onClick={() => {
-                    setMergeMode(!mergeMode);
-                    setMergeSelection([]);
-                  }}
-                  variant={mergeMode ? "default" : "outline"}
-                >
-                  {mergeMode ? <X className="h-4 w-4 mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
-                  {mergeMode ? "Annulla unione" : "Unisci account"}
-                </Button>
-                <Button onClick={openImportDialog} variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importa da Firestore
-                </Button>
-              </>
-            )}
+             {isGlobal && (
+               <>
+                 <Button
+                   onClick={generateThumbnails}
+                   variant="outline"
+                   disabled={generatingThumbs}
+                 >
+                   {generatingThumbs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ImageIcon className="h-4 w-4 mr-2" />}
+                   Genera thumbnail
+                 </Button>
+                 <Button
+                   onClick={() => {
+                     setMergeMode(!mergeMode);
+                     setMergeSelection([]);
+                   }}
+                   variant={mergeMode ? "default" : "outline"}
+                 >
+                   {mergeMode ? <X className="h-4 w-4 mr-2" /> : <Merge className="h-4 w-4 mr-2" />}
+                   {mergeMode ? "Annulla unione" : "Unisci account"}
+                 </Button>
+                 <Button onClick={openImportDialog} variant="outline">
+                   <Upload className="h-4 w-4 mr-2" />
+                   Importa da Firestore
+                 </Button>
+               </>
+             )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
               Scarica CSV
@@ -524,9 +570,10 @@ const Admin = () => {
             <div className="overflow-x-auto">
               {isGroupedView ? (
                 <Table>
-                  <TableHeader>
+                   <TableHeader>
                      <TableRow>
                        {mergeMode && <TableHead className="w-10"></TableHead>}
+                       <TableHead className="w-14">Foto</TableHead>
                        <TableHead>Nome</TableHead>
                        <TableHead>Cognome</TableHead>
                        <TableHead>Email</TableHead>
@@ -537,14 +584,14 @@ const Admin = () => {
                        <TableHead>Eventi</TableHead>
                        <TableHead className="w-10"></TableHead>
                      </TableRow>
-                  </TableHeader>
+                   </TableHeader>
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                         <TableCell colSpan={mergeMode ? 10 : 9} className="text-center text-muted-foreground py-8">
-                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nessun partecipante trovato
-                        </TableCell>
+                       <TableCell colSpan={mergeMode ? 11 : 10} className="text-center text-muted-foreground py-8">
+                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                         Nessun partecipante trovato
+                       </TableCell>
                       </TableRow>
                     ) : (
                       filteredParticipants.map((p, idx) => {
@@ -556,16 +603,31 @@ const Admin = () => {
                             onClick={mergeMode ? () => toggleMergeSelect(p) : undefined}
                             style={mergeMode ? { cursor: "pointer" } : undefined}
                           >
-                            {mergeMode && (
-                              <TableCell className="w-10">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  readOnly
-                                  className="h-4 w-4 rounded border-input"
-                                />
-                              </TableCell>
-                            )}
+                           {mergeMode && (
+                             <TableCell className="w-10">
+                               <input
+                                 type="checkbox"
+                                 checked={selected}
+                                 readOnly
+                                 className="h-4 w-4 rounded border-input"
+                               />
+                             </TableCell>
+                           )}
+                           <TableCell className="w-14">
+                             {(() => {
+                               const photo = getParticipantPhoto(p);
+                               return (
+                                 <Avatar className="h-10 w-10">
+                                   {photo ? (
+                                     <AvatarImage src={photo} alt={`${p.nome} ${p.cognome}`} className="object-cover" />
+                                   ) : null}
+                                   <AvatarFallback className="text-xs bg-muted">
+                                     {p.nome?.charAt(0)}{p.cognome?.charAt(0)}
+                                   </AvatarFallback>
+                                 </Avatar>
+                               );
+                             })()}
+                           </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
                             <TableCell className="text-sm">{p.email}</TableCell>
@@ -600,40 +662,56 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Evento</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefono</TableHead>
-                      <TableHead>C.F.</TableHead>
-                      <TableHead>Data nascita</TableHead>
-                      <TableHead>Luogo nascita</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
+                 <Table>
+                   <TableHeader>
+                     <TableRow>
+                       <TableHead className="w-14">Foto</TableHead>
+                       <TableHead>Evento</TableHead>
+                       <TableHead>Nome</TableHead>
+                       <TableHead>Email</TableHead>
+                       <TableHead>Telefono</TableHead>
+                       <TableHead>C.F.</TableHead>
+                       <TableHead>Data nascita</TableHead>
+                       <TableHead>Luogo nascita</TableHead>
+                       <TableHead>Pagamento</TableHead>
+                       <TableHead>Stato</TableHead>
+                       <TableHead>Data</TableHead>
+                       <TableHead></TableHead>
+                     </TableRow>
+                   </TableHeader>
                   <TableBody>
                     {filteredRegistrations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
-                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nessuna iscrizione trovata
-                        </TableCell>
+                       <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
+                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                         Nessuna iscrizione trovata
+                       </TableCell>
                       </TableRow>
                     ) : (
                       filteredRegistrations.map((r) => {
                         const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
                         return (
-                          <TableRow key={r.id}>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {r.event_nome || "—"}
-                              </Badge>
-                            </TableCell>
+                         <TableRow key={r.id}>
+                           <TableCell className="w-14">
+                             {(() => {
+                               const photo = getRegistrationPhoto(r);
+                               return (
+                                 <Avatar className="h-10 w-10">
+                                   {photo ? (
+                                     <AvatarImage src={photo} alt={`${r.nome} ${r.cognome}`} className="object-cover" />
+                                   ) : null}
+                                   <AvatarFallback className="text-xs bg-muted">
+                                     {r.nome?.charAt(0)}{r.cognome?.charAt(0)}
+                                   </AvatarFallback>
+                                 </Avatar>
+                               );
+                             })()}
+                           </TableCell>
+                           <TableCell>
+                             <Badge variant="outline" className="text-xs">
+                               {r.event_nome || "—"}
+                             </Badge>
+                           </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
                             <TableCell className="text-sm">{r.email}</TableCell>
                             <TableCell className="text-sm">{r.telefono}</TableCell>
