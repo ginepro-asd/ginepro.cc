@@ -229,6 +229,20 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
     }
   };
 
+  const openFormProxy = () => {
+    const fidalData = {
+      ...fields,
+      scad_cert: formatDate(fields.scad_cert),
+    };
+    const params = new URLSearchParams({
+      password,
+      participant_id: participant.participant_id || "",
+      fidal_data: JSON.stringify(fidalData),
+    });
+    const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/fidal-form-proxy?${params.toString()}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <Dialog open={!!participant} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
