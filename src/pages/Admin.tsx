@@ -662,11 +662,11 @@ const Admin = () => {
                                <Button
                                  variant="ghost"
                                  size="sm"
-                                 className="h-7 w-7 p-0"
+                                 className={`h-7 w-7 p-0 ${p.fidal_data && Object.keys(p.fidal_data).length > 0 ? "text-green-600" : ""}`}
                                  onClick={(e) => { e.stopPropagation(); setFidalParticipant(p); }}
-                                 title="Inserisci su FIDAL"
+                                 title={p.fidal_data && Object.keys(p.fidal_data).length > 0 ? "Dati FIDAL presenti" : "Inserisci su FIDAL"}
                                >
-                                 <Send className="h-3.5 w-3.5" />
+                                 {p.fidal_data && Object.keys(p.fidal_data).length > 0 ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
                                </Button>
                              </TableCell>
                           </TableRow>
