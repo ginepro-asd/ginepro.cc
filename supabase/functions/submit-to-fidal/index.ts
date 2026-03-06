@@ -21,6 +21,31 @@ function extractCookies(response: Response): string[] {
   return cookies;
 }
 
+/** Parse hidden/default input values from FIDAL add form */
+function extractFormDefaults(html: string): Record<string, string> {
+  const defaults: Record<string, string> = {};
+  const inputRegex = /<input[^>]*>/gi;
+  const matches = html.match(inputRegex) || [];
+
+  for (const tag of matches) {
+    const nameMatch = tag.match(/name=["']?([^"'\s>]+)/i);
+    if (!nameMatch) continue;
+
+    const typeMatch = tag.match(/type=["']?([^"'\s>]+)/i);
+    const valueMatch = tag.match(/value=["']([^"']*)["']/i) || tag.match(/value=([^\s>]+)/i);
+
+    const name = nameMatch[1];
+    const type = (typeMatch?.[1] || "text").toLowerCase();
+    const value = valueMatch?.[1] || "";
+
+    if (type === "hidden" || type === "submit" || name === "Action" || name === "a_add") {
+      defaults[name] = value;
+    }
+  }
+
+  return defaults;
+}
+
 /** Login to FIDAL and return session cookie string */
 async function fidalLogin(username: string, password: string): Promise<string> {
   const body = new URLSearchParams({
@@ -97,15 +122,30 @@ async function fidalSubmitAthlete(
   cookies: string,
   data: Record<string, string>,
 ): Promise<{ success: boolean; message: string; html: string; diagnostic?: string }> {
+  // Load add-form defaults/hidden fields from FIDAL page
+  const formPage = await fetch(`${FIDAL_BASE}/insertatleadd.php?cmd=resetall`, {
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
+  });
+  const formHtml = await formPage.text();
+  const defaults = extractFormDefaults(formHtml);
+
   const formData = new URLSearchParams();
 
-  // Fixed hidden fields
-  formData.set("a_add", "A");
-  formData.set("x_TipoSoc", "C");
-  formData.set("x_AnnoGest", "2026");
-  formData.set("x_FlagRin", "N");
-  formData.set("x_autocomm", "S");
-  formData.set("x_CodSoc", data.tessera || "RA602");
+  // Keep server-side defaults first
+  for (const [k, v] of Object.entries(defaults)) {
+    formData.set(k, v);
+  }
+
+  // Fixed hidden fields (override/fallback)
+  formData.set("a_add", defaults.a_add || "A");
+  formData.set("x_TipoSoc", defaults.x_TipoSoc || "C");
+  formData.set("x_AnnoGest", defaults.x_AnnoGest || "2026");
+  formData.set("x_FlagRin", defaults.x_FlagRin || "N");
+  formData.set("x_autocomm", defaults.x_autocomm || "S");
+  formData.set("x_CodSoc", defaults.x_CodSoc || data.tessera || "RA602");
 
   // Required fields from our data
   formData.set("x_nonagonista", data.nonagonista || "S");
