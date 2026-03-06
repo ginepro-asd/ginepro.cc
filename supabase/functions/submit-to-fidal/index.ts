@@ -209,7 +209,8 @@ async function fidalSubmitAthlete(
 
   formData.set("Action", defaults.Action || "Inserisci");
 
-  const res = await fetch(`${FIDAL_BASE}/insertatleadd.php`, {
+  const payloadPreview = formData.toString();
+  console.log("FIDAL payload preview:", payloadPreview.substring(0, 500));
     method: "POST",
     headers: {
       Cookie: cookies,
