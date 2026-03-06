@@ -954,6 +954,13 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
 
+        {/* FIDAL dialog */}
+        <FidalDialog
+          participant={fidalParticipant}
+          password={password}
+          onClose={() => setFidalParticipant(null)}
+        />
+
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
 
