@@ -622,16 +622,26 @@ const Admin = () => {
                                 {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
                               </Button>
                             </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            </TableCell>
+                             <TableCell className="flex gap-1">
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-7 w-7 p-0"
+                                 onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
+                                 title="Modifica"
+                               >
+                                 <Pencil className="h-3.5 w-3.5" />
+                               </Button>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-7 w-7 p-0"
+                                 onClick={(e) => { e.stopPropagation(); setFidalParticipant(p); }}
+                                 title="Inserisci su FIDAL"
+                               >
+                                 <Send className="h-3.5 w-3.5" />
+                               </Button>
+                             </TableCell>
                           </TableRow>
                         );
                       })
