@@ -436,6 +436,126 @@ async function handleToolCall(
     }
   }
 
+  // Firestore direct access tools
+  if (name === "firestore_list_collections") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      // List root documents to discover collections
+      const res = await fetch(`${base}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      // The root listing returns collection IDs
+      if (data.documents) {
+        const collectionIds = [...new Set(data.documents.map((d: any) => d.name.split("/documents/")[1]?.split("/")[0]))];
+        return JSON.stringify({ collections: collectionIds });
+      }
+      // Alternative: try known collections
+      const knownCollections = ["events", "users", "settings", "config"];
+      const found: string[] = [];
+      for (const col of knownCollections) {
+        const r = await fetch(`${base}/${col}?pageSize=1`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const d = await r.json();
+        if (d.documents && d.documents.length > 0) found.push(col);
+      }
+      return JSON.stringify({ collections: found, note: "Scanned known collection names. Use firestore_list_documents with a specific path to explore further." });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_list_documents") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const pageSize = Math.min(args.page_size || 20, 100);
+      let url = `${base}/${args.collection_path}?pageSize=${pageSize}`;
+      if (args.page_token) url += `&pageToken=${args.page_token}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Firestore error" });
+      const docs = (data.documents || []).map(simplifyFirestoreDoc);
+      return JSON.stringify({ documents: docs, count: docs.length, nextPageToken: data.nextPageToken || null });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_get_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const res = await fetch(`${base}/${args.document_path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Document not found" });
+      return JSON.stringify(simplifyFirestoreDoc(data));
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_list_subcollections") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${args.document_path}:listCollectionIds`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Error listing subcollections" });
+      return JSON.stringify({ subcollections: data.collectionIds || [] });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_write_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const fields: any = {};
+      for (const [k, v] of Object.entries(args.data)) fields[k] = toFirestoreValue(v);
+      let url: string;
+      let method: string;
+      if (args.document_id) {
+        url = `${base}/${args.collection_path}/${args.document_id}`;
+        method = "PATCH";
+      } else {
+        url = `${base}/${args.collection_path}`;
+        method = "POST";
+      }
+      const res = await fetch(url, {
+        method,
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ fields }),
+      });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Write error" });
+      return JSON.stringify({ success: true, path: data.name?.split("/documents/")[1] });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_delete_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const res = await fetch(`${base}/${args.document_path}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        return JSON.stringify({ error: data.error?.message || "Delete error" });
+      }
+      return JSON.stringify({ success: true, deleted: args.document_path });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
   return JSON.stringify({ error: `Tool sconosciuto: ${name}` });
 }
 
