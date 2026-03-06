@@ -137,11 +137,30 @@ Deno.serve(async (req) => {
       participantId = body.participant_id;
       fidalDataStr = JSON.stringify(body.fidal_data || {});
       sessionCookies = body.session_cookies || null;
+      const mode = body.mode || "submit";
+
+      if (mode === "prepare") {
+        // Prepare mode: login, upload photo, build HTML form, return as JSON
+        const adminPw = Deno.env.get("ADMIN_PASSWORD");
+        if (!password || password !== adminPw) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        // Fall through to the shared logic below (handled after this block)
+      } else {
+        // Submit mode: unchanged
+      }
     } else {
       password = url.searchParams.get("password") || "";
       participantId = url.searchParams.get("participant_id") || "";
       fidalDataStr = url.searchParams.get("fidal_data") || "{}";
       sessionCookies = null;
+    }
+
+    // Re-parse mode for POST
+    let mode = "page";
+    if (isPost) {
+      const bodyText = await req.clone().text().catch(() => "{}");
+      // mode was already extracted above but we need it in scope
     }
 
     const adminPw = Deno.env.get("ADMIN_PASSWORD");
