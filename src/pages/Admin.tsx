@@ -42,6 +42,7 @@ interface Participant {
   birth_date: string | null;
   birth_place: string | null;
   participant_id: string | null;
+  fidal_data: Record<string, any> | null;
   registrations: EventRegistration[];
 }
 

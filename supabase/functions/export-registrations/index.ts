@@ -31,7 +31,7 @@ serve(async (req) => {
     // Query registrations with linked event + participant metadata in one request
     let registrationsQuery = supabaseAdmin
       .from("registrations")
-      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place)")
+      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
@@ -65,6 +65,7 @@ serve(async (req) => {
           birth_date: canonical?.birth_date ?? r.birth_date,
           birth_place: canonical?.birth_place ?? r.birth_place,
           participant_id: r.participant_id || null,
+          fidal_data: canonical?.fidal_data || null,
           registrations: [],
         };
       }
