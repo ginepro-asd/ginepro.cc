@@ -207,7 +207,7 @@ async function fidalSubmitAthlete(
   const dataMov = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
   formData.set("x_DataMov", dataMov);
 
-  formData.set("Action", "Inserisci");
+  formData.set("Action", defaults.Action || "Inserisci");
 
   const res = await fetch(`${FIDAL_BASE}/insertatleadd.php`, {
     method: "POST",
