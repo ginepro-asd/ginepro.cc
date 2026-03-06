@@ -96,7 +96,7 @@ async function fidalUploadPhoto(
 async function fidalSubmitAthlete(
   cookies: string,
   data: Record<string, string>,
-): Promise<{ success: boolean; message: string; html: string }> {
+): Promise<{ success: boolean; message: string; html: string; diagnostic?: string }> {
   const formData = new URLSearchParams();
 
   // Fixed hidden fields
