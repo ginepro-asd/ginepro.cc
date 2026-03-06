@@ -364,6 +364,17 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
                 {result.success ? <Check className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
                 <span>{result.message}</span>
               </div>
+              {!result.success && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={openFormProxy}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Apri form FIDAL in nuova tab (con foto caricata)
+                </Button>
+              )}
             </div>
           )}
         </div>
