@@ -570,9 +570,10 @@ const Admin = () => {
             <div className="overflow-x-auto">
               {isGroupedView ? (
                 <Table>
-                  <TableHeader>
+                   <TableHeader>
                      <TableRow>
                        {mergeMode && <TableHead className="w-10"></TableHead>}
+                       <TableHead className="w-14">Foto</TableHead>
                        <TableHead>Nome</TableHead>
                        <TableHead>Cognome</TableHead>
                        <TableHead>Email</TableHead>
@@ -583,7 +584,7 @@ const Admin = () => {
                        <TableHead>Eventi</TableHead>
                        <TableHead className="w-10"></TableHead>
                      </TableRow>
-                  </TableHeader>
+                   </TableHeader>
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
