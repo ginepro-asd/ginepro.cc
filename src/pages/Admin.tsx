@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
@@ -470,9 +470,35 @@ const Admin = () => {
                    {mergeMode ? "Annulla unione" : "Unisci account"}
                  </Button>
                  <Button onClick={openImportDialog} variant="outline">
-                   <Upload className="h-4 w-4 mr-2" />
-                   Importa da Firestore
-                 </Button>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importa da Firestore
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("enrich-from-firestore", {
+                          body: { password },
+                        });
+                        if (error) throw error;
+                        if (data.error) throw new Error(data.error);
+                        toast({
+                          title: "Dati FIDAL arricchiti",
+                          description: `${data.updated} partecipanti aggiornati, ${data.skipped} saltati. ${data.errors?.length || 0} errori.`,
+                        });
+                        authenticate();
+                      } catch (err: any) {
+                        toast({ title: "Errore", description: err.message, variant: "destructive" });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    variant="outline"
+                    disabled={loading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Arricchisci dati FIDAL
+                  </Button>
                </>
              )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
