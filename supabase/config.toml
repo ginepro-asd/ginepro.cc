@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.submit-to-fidal]
 verify_jwt = false
+
+[functions.enrich-from-firestore]
+verify_jwt = false
