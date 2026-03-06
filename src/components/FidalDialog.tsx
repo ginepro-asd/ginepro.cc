@@ -18,6 +18,7 @@ interface Participant {
   birth_date: string | null;
   birth_place: string | null;
   participant_id: string | null;
+  fidal_data: Record<string, any> | null;
   registrations: Array<{
     custom_data: Record<string, any> | null;
   }>;
@@ -137,18 +138,20 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
     [participant, gender],
   );
 
+  const fd = participant?.fidal_data || {};
+
   const [fields, setFields] = useState<Record<string, string>>({
-    nonagonista: "S",
-    categoria: suggestedCat,
-    sesso: gender,
-    indirizzo: "",
-    cap: "",
-    provincia: "",
-    citta: "",
-    straniero: "N",
-    cittadinanza: "ITA",
-    doppia_cittadinanza: "N",
-    scad_cert: "",
+    nonagonista: fd.nonagonista || "S",
+    categoria: fd.categoria || suggestedCat,
+    sesso: fd.sesso || gender,
+    indirizzo: fd.indirizzo || "",
+    cap: fd.cap || "",
+    provincia: fd.provincia || "",
+    citta: fd.citta || "",
+    straniero: fd.straniero || "N",
+    cittadinanza: fd.cittadinanza || "ITA",
+    doppia_cittadinanza: fd.doppia_cittadinanza || "N",
+    scad_cert: fd.scad_cert || "",
   });
 
   // Update suggestion when participant changes
