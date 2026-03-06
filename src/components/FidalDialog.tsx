@@ -140,29 +140,25 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
 
   const fd = participant?.fidal_data || {};
 
-  const [fields, setFields] = useState<Record<string, string>>({
-    nonagonista: fd.nonagonista || "S",
-    categoria: fd.categoria || suggestedCat,
-    sesso: fd.sesso || gender,
-    indirizzo: fd.indirizzo || "",
-    cap: fd.cap || "",
-    provincia: fd.provincia || "",
-    citta: fd.citta || "",
-    straniero: fd.straniero || "N",
-    cittadinanza: fd.cittadinanza || "ITA",
-    doppia_cittadinanza: fd.doppia_cittadinanza || "N",
-    scad_cert: fd.scad_cert || "",
-  });
+  const [fields, setFields] = useState<Record<string, string>>({});
 
-  // Update suggestion when participant changes
+  // Re-initialize fields when participant changes
   useMemo(() => {
-    if (suggestedCat && !fields.categoria) {
-      setFields((prev) => ({ ...prev, categoria: suggestedCat }));
-    }
-    if (gender && !fields.sesso) {
-      setFields((prev) => ({ ...prev, sesso: gender }));
-    }
-  }, [suggestedCat, gender]);
+    const newFd = participant?.fidal_data || {};
+    setFields({
+      nonagonista: newFd.nonagonista || "S",
+      categoria: newFd.categoria || suggestedCat,
+      sesso: newFd.sesso || gender,
+      indirizzo: newFd.indirizzo || "",
+      cap: newFd.cap || "",
+      provincia: newFd.provincia || "",
+      citta: newFd.citta || "",
+      straniero: newFd.straniero || "N",
+      cittadinanza: newFd.cittadinanza || "ITA",
+      doppia_cittadinanza: newFd.doppia_cittadinanza || "N",
+      scad_cert: newFd.scad_cert || "",
+    });
+  }, [participant, suggestedCat, gender]);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
