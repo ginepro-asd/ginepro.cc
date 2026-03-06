@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const FIDAL_BASE = "https://tessonline.fidal.it";
+const LEGACY_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)";
 
 /** Extract Set-Cookie values from response headers */
 function extractCookies(response: Response): string[] {
@@ -20,6 +21,31 @@ function extractCookies(response: Response): string[] {
   return cookies;
 }
 
+/** Parse hidden/default input values from FIDAL add form */
+function extractFormDefaults(html: string): Record<string, string> {
+  const defaults: Record<string, string> = {};
+  const inputRegex = /<input[^>]*>/gi;
+  const matches = html.match(inputRegex) || [];
+
+  for (const tag of matches) {
+    const nameMatch = tag.match(/name=["']?([^"'\s>]+)/i);
+    if (!nameMatch) continue;
+
+    const typeMatch = tag.match(/type=["']?([^"'\s>]+)/i);
+    const valueMatch = tag.match(/value=["']([^"']*)["']/i) || tag.match(/value=([^\s>]+)/i);
+
+    const name = nameMatch[1];
+    const type = (typeMatch?.[1] || "text").toLowerCase();
+    const value = valueMatch?.[1] || "";
+
+    if (type === "hidden" || type === "submit" || name === "Action" || name === "a_add") {
+      defaults[name] = value;
+    }
+  }
+
+  return defaults;
+}
+
 /** Login to FIDAL and return session cookie string */
 async function fidalLogin(username: string, password: string): Promise<string> {
   const body = new URLSearchParams({
@@ -31,7 +57,10 @@ async function fidalLogin(username: string, password: string): Promise<string> {
 
   const res = await fetch(`${FIDAL_BASE}/login.php`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": LEGACY_USER_AGENT,
+    },
     body: body.toString(),
     redirect: "manual",
   });
@@ -57,7 +86,10 @@ async function fidalUploadPhoto(
 ): Promise<{ success: boolean; message: string }> {
   // First, GET the foto page to understand the form
   const fotoPage = await fetch(`${FIDAL_BASE}/foto.php?Tessera=${tessera}`, {
-    headers: { Cookie: cookies },
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
   });
   const fotoHtml = await fotoPage.text();
 
@@ -69,7 +101,10 @@ async function fidalUploadPhoto(
 
   const res = await fetch(`${FIDAL_BASE}/foto.php?Tessera=${tessera}`, {
     method: "POST",
-    headers: { Cookie: cookies },
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
     body: formData,
   });
 
@@ -86,16 +121,31 @@ async function fidalUploadPhoto(
 async function fidalSubmitAthlete(
   cookies: string,
   data: Record<string, string>,
-): Promise<{ success: boolean; message: string; html: string }> {
+): Promise<{ success: boolean; message: string; html: string; diagnostic?: string }> {
+  // Load add-form defaults/hidden fields from FIDAL page
+  const formPage = await fetch(`${FIDAL_BASE}/insertatleadd.php?cmd=resetall`, {
+    headers: {
+      Cookie: cookies,
+      "User-Agent": LEGACY_USER_AGENT,
+    },
+  });
+  const formHtml = await formPage.text();
+  const defaults = extractFormDefaults(formHtml);
+
   const formData = new URLSearchParams();
 
-  // Fixed hidden fields
-  formData.set("a_add", "A");
-  formData.set("x_TipoSoc", "C");
-  formData.set("x_AnnoGest", "2026");
-  formData.set("x_FlagRin", "N");
-  formData.set("x_autocomm", "S");
-  formData.set("x_CodSoc", data.tessera || "RA602");
+  // Keep server-side defaults first
+  for (const [k, v] of Object.entries(defaults)) {
+    formData.set(k, v);
+  }
+
+  // Fixed hidden fields (override/fallback)
+  formData.set("a_add", defaults.a_add || "A");
+  formData.set("x_TipoSoc", defaults.x_TipoSoc || "C");
+  formData.set("x_AnnoGest", defaults.x_AnnoGest || "2026");
+  formData.set("x_FlagRin", defaults.x_FlagRin || "N");
+  formData.set("x_autocomm", defaults.x_autocomm || "S");
+  formData.set("x_CodSoc", defaults.x_CodSoc || data.tessera || "RA602");
 
   // Required fields from our data
   formData.set("x_nonagonista", data.nonagonista || "S");
@@ -157,31 +207,66 @@ async function fidalSubmitAthlete(
   const dataMov = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
   formData.set("x_DataMov", dataMov);
 
-  formData.set("Action", "Inserisci");
+  formData.set("Action", defaults.Action || "Inserisci");
+
+  const payloadPreview = formData.toString();
+  console.log("FIDAL payload preview:", payloadPreview.substring(0, 500));
 
   const res = await fetch(`${FIDAL_BASE}/insertatleadd.php`, {
     method: "POST",
     headers: {
       Cookie: cookies,
       "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": LEGACY_USER_AGENT,
     },
     body: formData.toString(),
   });
 
   const html = await res.text();
 
-  // Check for errors in the response
-  const hasError = html.includes("ERRORE") || html.includes("errore") || html.includes("Errore");
-  const hasSuccess = html.includes("INSERIMENTO EFFETTUATO") || html.includes("inserito") || html.includes("Inserimento");
+  // Detect explicit legacy-browser rejection page
+  const blockedByUserAgent =
+    html.includes("necessario utilizzare") &&
+    html.includes("Internet Explorer");
+
+  // Detect explicit error patterns from FIDAL pages
+  const hasError =
+    html.includes("ERRORE") ||
+    html.includes("errore") ||
+    html.includes("Errore") ||
+    html.includes("audio/errore.swf") ||
+    html.includes("errore.swf");
+
+  // Accept success only with explicit confirmation text
+  const hasExplicitSuccess =
+    html.includes("INSERIMENTO EFFETTUATO") ||
+    html.includes("INSERIMENTO ESEGUITO");
+
+  // Extract a short diagnostic hint from html text
+  const htmlText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const diagnosticMatch = htmlText.match(
+    /(campo[^.]{0,120}(obbligatorio|non valido)|codice fiscale[^.]{0,120}|atleta[^.]{0,120}(presente|esiste)|errore[^.]{0,120})/i,
+  );
+  const diagnostic = diagnosticMatch?.[0] || undefined;
+
+  const finalSuccess = !blockedByUserAgent && !hasError && hasExplicitSuccess;
 
   return {
-    success: !hasError || hasSuccess,
-    message: hasError
-      ? "Possibile errore nell'inserimento"
-      : hasSuccess
-        ? "Atleta inserito con successo"
-        : "Invio completato, verifica manualmente il risultato",
-    html: html.substring(0, 2000), // First 2000 chars for debugging
+    success: finalSuccess,
+    message: blockedByUserAgent
+      ? "FIDAL ha rifiutato la richiesta per controllo browser (legacy)."
+      : hasError
+        ? `Possibile errore nell'inserimento${diagnostic ? `: ${diagnostic}` : ""}`
+        : hasExplicitSuccess
+          ? "Atleta inserito con successo"
+          : "FIDAL non ha restituito una conferma esplicita di inserimento",
+    html: html.substring(0, 50000), // More context for debugging FIDAL legacy responses
+    diagnostic,
   };
 }
 
