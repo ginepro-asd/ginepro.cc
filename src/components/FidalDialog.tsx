@@ -229,19 +229,35 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
     }
   };
 
-  const openFormProxy = () => {
+  const openFormProxy = async () => {
+    // Call the proxy to login + upload photo + get form options, then render HTML client-side
     const fidalData = {
       ...fields,
       scad_cert: formatDate(fields.scad_cert),
     };
-    const params = new URLSearchParams({
-      password,
-      participant_id: participant.participant_id || "",
-      fidal_data: JSON.stringify(fidalData),
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
-    });
-    const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/fidal-form-proxy?${params.toString()}`;
-    window.open(url, "_blank");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("fidal-form-proxy", {
+        body: {
+          password,
+          participant_id: participant.participant_id,
+          fidal_data: fidalData,
+          mode: "prepare",
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Open the HTML page from the response as a blob
+      const blob = new Blob([data.html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      // Clean up after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    }
   };
 
   return (
