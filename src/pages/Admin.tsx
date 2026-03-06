@@ -603,16 +603,31 @@ const Admin = () => {
                             onClick={mergeMode ? () => toggleMergeSelect(p) : undefined}
                             style={mergeMode ? { cursor: "pointer" } : undefined}
                           >
-                            {mergeMode && (
-                              <TableCell className="w-10">
-                                <input
-                                  type="checkbox"
-                                  checked={selected}
-                                  readOnly
-                                  className="h-4 w-4 rounded border-input"
-                                />
-                              </TableCell>
-                            )}
+                           {mergeMode && (
+                             <TableCell className="w-10">
+                               <input
+                                 type="checkbox"
+                                 checked={selected}
+                                 readOnly
+                                 className="h-4 w-4 rounded border-input"
+                               />
+                             </TableCell>
+                           )}
+                           <TableCell className="w-14">
+                             {(() => {
+                               const photo = getParticipantPhoto(p);
+                               return (
+                                 <Avatar className="h-10 w-10">
+                                   {photo ? (
+                                     <AvatarImage src={photo} alt={`${p.nome} ${p.cognome}`} className="object-cover" />
+                                   ) : null}
+                                   <AvatarFallback className="text-xs bg-muted">
+                                     {p.nome?.charAt(0)}{p.cognome?.charAt(0)}
+                                   </AvatarFallback>
+                                 </Avatar>
+                               );
+                             })()}
+                           </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
                             <TableCell className="text-sm">{p.email}</TableCell>
