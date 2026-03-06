@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil, MessageSquare } from "lucide-react";
+import AdminChatSidebar from "@/components/AdminChatSidebar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -97,6 +98,7 @@ const Admin = () => {
   const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const { toast } = useToast();
 
   const isGlobal = !slug;
@@ -894,6 +896,19 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Chat sidebar */}
+        <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
+
+        {/* Chat FAB */}
+        {!chatOpen && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40 hover:scale-105"
+          >
+            <MessageSquare className="h-6 w-6" />
+          </button>
+        )}
       </div>
     </div>
   );
