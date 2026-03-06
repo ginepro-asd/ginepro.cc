@@ -9,6 +9,38 @@ const corsHeaders = {
 const FIDAL_BASE = "https://tessonline.fidal.it";
 const LEGACY_USER_AGENT = "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)";
 
+/** Map province abbreviations to full names as expected by FIDAL */
+const PROVINCE_MAP: Record<string, string> = {
+  AG: "AGRIGENTO", AL: "ALESSANDRIA", AN: "ANCONA", AO: "AOSTA", AR: "AREZZO",
+  AP: "ASCOLI PICENO", AT: "ASTI", AV: "AVELLINO", BA: "BARI", BT: "BARLETTA-ANDRIA-TRANI",
+  BL: "BELLUNO", BN: "BENEVENTO", BG: "BERGAMO", BI: "BIELLA", BO: "BOLOGNA",
+  BZ: "BOLZANO", BS: "BRESCIA", BR: "BRINDISI", CA: "CAGLIARI", CL: "CALTANISSETTA",
+  CB: "CAMPOBASSO", CI: "CARBONIA-IGLESIAS", CE: "CASERTA", CT: "CATANIA", CZ: "CATANZARO",
+  CH: "CHIETI", CO: "COMO", CS: "COSENZA", CR: "CREMONA", KR: "CROTONE", CN: "CUNEO",
+  EN: "ENNA", FM: "FERMO", FE: "FERRARA", FI: "FIRENZE", FG: "FOGGIA",
+  FC: "FORLI'-CESENA", FR: "FROSINONE", GE: "GENOVA", GO: "GORIZIA", GR: "GROSSETO",
+  IM: "IMPERIA", IS: "ISERNIA", SP: "LA SPEZIA", AQ: "L'AQUILA", LT: "LATINA",
+  LE: "LECCE", LC: "LECCO", LI: "LIVORNO", LO: "LODI", LU: "LUCCA",
+  MC: "MACERATA", MN: "MANTOVA", MS: "MASSA-CARRARA", MT: "MATERA", VS: "MEDIO CAMPIDANO",
+  ME: "MESSINA", MI: "MILANO", MO: "MODENA", MB: "MONZA E DELLA BRIANZA", NA: "NAPOLI",
+  NO: "NOVARA", NU: "NUORO", OG: "OGLIASTRA", OT: "OLBIA-TEMPIO", OR: "ORISTANO",
+  PD: "PADOVA", PA: "PALERMO", PR: "PARMA", PV: "PAVIA", PG: "PERUGIA",
+  PU: "PESARO E URBINO", PE: "PESCARA", PC: "PIACENZA", PI: "PISA", PT: "PISTOIA",
+  PN: "PORDENONE", PZ: "POTENZA", PO: "PRATO", RG: "RAGUSA", RA: "RAVENNA",
+  RC: "REGGIO CALABRIA", RE: "REGGIO EMILIA", RI: "RIETI", RN: "RIMINI", RM: "ROMA",
+  RO: "ROVIGO", SA: "SALERNO", SS: "SASSARI", SV: "SAVONA", SI: "SIENA",
+  SR: "SIRACUSA", SO: "SONDRIO", SU: "SUD SARDEGNA", TA: "TARANTO", TE: "TERAMO",
+  TR: "TERNI", TO: "TORINO", TP: "TRAPANI", TN: "TRENTO", TV: "TREVISO",
+  TS: "TRIESTE", UD: "UDINE", VA: "VARESE", VE: "VENEZIA", VB: "VERBANO-CUSIO-OSSOLA",
+  VC: "VERCELLI", VR: "VERONA", VV: "VIBO VALENTIA", VI: "VICENZA", VT: "VITERBO",
+};
+
+function expandProvincia(prov: string): string {
+  if (!prov) return "";
+  const upper = prov.toUpperCase().trim();
+  return PROVINCE_MAP[upper] || upper;
+}
+
 /** Extract Set-Cookie values from response headers */
 function extractCookies(response: Response): string[] {
   const cookies: string[] = [];
@@ -372,7 +404,7 @@ Deno.serve(async (req) => {
       email: participant.email || "",
       indirizzo: (fidal_data?.indirizzo || "").toUpperCase(),
       cap: fidal_data?.cap || "",
-      provincia: fidal_data?.provincia || "",
+      provincia: expandProvincia(fidal_data?.provincia || ""),
       citta: (fidal_data?.citta || "").toUpperCase(),
       straniero: fidal_data?.straniero || "N",
       cittadinanza: fidal_data?.cittadinanza || "ITA",
