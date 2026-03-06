@@ -39,3 +39,6 @@ verify_jwt = false
 [functions.admin-chat]
 verify_jwt = false
 
+[functions.generate-thumbnails]
+verify_jwt = false
+

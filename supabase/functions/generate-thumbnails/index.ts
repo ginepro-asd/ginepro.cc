@@ -1,13 +1,12 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-// Simple JPEG resize using canvas-like approach with imagescript
-import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -46,6 +45,7 @@ serve(async (req) => {
 
     let processed = 0;
     let errors = 0;
+    const errorDetails: string[] = [];
 
     for (const reg of toProcess) {
       try {
@@ -55,6 +55,7 @@ serve(async (req) => {
         const imgRes = await fetch(photoUrl);
         if (!imgRes.ok) {
           console.error(`Failed to download ${photoUrl}: ${imgRes.status}`);
+          errorDetails.push(`Download failed for ${reg.id}: ${imgRes.status}`);
           errors++;
           continue;
         }
@@ -62,11 +63,12 @@ serve(async (req) => {
         const imgBuffer = new Uint8Array(await imgRes.arrayBuffer());
 
         // Decode and resize using imagescript
-        let image: any;
+        let image: InstanceType<typeof Image>;
         try {
           image = await Image.decode(imgBuffer);
         } catch (decodeErr) {
           console.error(`Failed to decode image for reg ${reg.id}: ${decodeErr}`);
+          errorDetails.push(`Decode failed for ${reg.id}`);
           errors++;
           continue;
         }
@@ -84,7 +86,7 @@ serve(async (req) => {
         const cropY = Math.round((image.height - size) / 2);
         image = image.crop(cropX, cropY, size, size);
 
-        // Encode as PNG (imagescript outputs PNG)
+        // Encode as PNG
         const thumbBuffer = await image.encode();
 
         // Upload to Supabase Storage
@@ -98,6 +100,7 @@ serve(async (req) => {
 
         if (uploadError) {
           console.error(`Upload error for ${reg.id}: ${uploadError.message}`);
+          errorDetails.push(`Upload failed for ${reg.id}: ${uploadError.message}`);
           errors++;
           continue;
         }
@@ -120,14 +123,16 @@ serve(async (req) => {
 
         if (updateError) {
           console.error(`Update error for ${reg.id}: ${updateError.message}`);
+          errorDetails.push(`Update failed for ${reg.id}: ${updateError.message}`);
           errors++;
           continue;
         }
 
         processed++;
         console.log(`Processed ${processed}/${toProcess.length}: ${reg.id}`);
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Error processing ${reg.id}:`, err);
+        errorDetails.push(`Exception for ${reg.id}: ${err.message}`);
         errors++;
       }
     }
@@ -137,11 +142,12 @@ serve(async (req) => {
         total: toProcess.length,
         processed,
         errors,
+        errorDetails: errorDetails.slice(0, 10),
         message: `Processati ${processed} thumbnail, ${errors} errori.`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -149,7 +155,3 @@ serve(async (req) => {
     });
   }
 });
-
-function serve(handler: (req: Request) => Promise<Response>) {
-  Deno.serve(handler);
-}
