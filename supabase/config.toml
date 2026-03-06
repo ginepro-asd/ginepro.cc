@@ -42,3 +42,5 @@ verify_jwt = false
 [functions.generate-thumbnails]
 verify_jwt = false
 
+[functions.proxy-photo]
+verify_jwt = false
