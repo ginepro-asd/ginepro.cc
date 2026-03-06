@@ -100,7 +100,44 @@ const Admin = () => {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [generatingThumbs, setGeneratingThumbs] = useState(false);
   const { toast } = useToast();
+
+  // Helper: get photo thumbnail URL from participant's registrations
+  const getParticipantPhoto = (p: Participant): string | null => {
+    for (const reg of p.registrations) {
+      const cd = reg.custom_data;
+      if (cd?.photoUrlThumb) return cd.photoUrlThumb;
+      if (cd?.photoUrl) return cd.photoUrl;
+    }
+    return null;
+  };
+
+  // Helper: get photo from flat registration
+  const getRegistrationPhoto = (r: FlatRegistration): string | null => {
+    return r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
+  };
+
+  const generateThumbnails = async () => {
+    setGeneratingThumbs(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-thumbnails", {
+        body: { password },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({
+        title: "Thumbnail generati",
+        description: data.message,
+      });
+      // Refresh data
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingThumbs(false);
+    }
+  };
 
   const isGlobal = !slug;
 
