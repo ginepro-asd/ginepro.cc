@@ -240,39 +240,81 @@ Regole importanti:
 - Per le statistiche, calcola aggregazioni direttamente in SQL
 - Se non sei sicuro di un'operazione distruttiva, chiedi conferma all'utente`;
 
-// Execute a SQL query using the Supabase client's rpc or direct REST
-async function executeSql(supabase: any, sql: string, dbUrl: string): Promise<any> {
-  // Use the REST API directly with the service role key for raw SQL
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/`, {
+// Firestore helpers
+async function getFirestoreAccessToken(): Promise<{ accessToken: string; projectId: string }> {
+  const saJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+  if (!saJson) throw new Error("FIREBASE_SERVICE_ACCOUNT not configured");
+  const sa = JSON.parse(saJson);
+  const now = Math.floor(Date.now() / 1000);
+  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = btoa(JSON.stringify({
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/datastore",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now, exp: now + 3600,
+  }));
+  const inputData = new TextEncoder().encode(`${header}.${payload}`);
+  const pemContents = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\n/g, "");
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey("pkcs8", binaryKey, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, inputData);
+  const sig = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const jwt = `${header}.${payload}.${sig}`;
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-    },
-    body: JSON.stringify({}),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok) throw new Error(`Token error: ${JSON.stringify(tokenData)}`);
+  return { accessToken: tokenData.access_token, projectId: sa.project_id };
+}
 
-  // Fallback: use the database URL directly
-  // We'll use the pg wire protocol via Deno's postgres
-  // Actually let's just use supabase-js .rpc or direct fetch to PostgREST
+function firestoreBaseUrl(projectId: string) {
+  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+}
 
-  // Simplest approach: use the database connection string
-  // But edge functions can't connect to pg directly easily.
-  // Let's use the Supabase Management API or just parse and use PostgREST
+function simplifyFirestoreValue(val: any): any {
+  if (val === undefined || val === null) return null;
+  if (val.stringValue !== undefined) return val.stringValue;
+  if (val.integerValue !== undefined) return Number(val.integerValue);
+  if (val.doubleValue !== undefined) return val.doubleValue;
+  if (val.booleanValue !== undefined) return val.booleanValue;
+  if (val.timestampValue !== undefined) return val.timestampValue;
+  if (val.nullValue !== undefined) return null;
+  if (val.arrayValue) return (val.arrayValue.values || []).map(simplifyFirestoreValue);
+  if (val.mapValue) {
+    const obj: any = {};
+    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = simplifyFirestoreValue(v);
+    return obj;
+  }
+  return JSON.stringify(val);
+}
 
-  // Better approach: call a generic SQL function if it exists, or use the
-  // database URL with a simple HTTP wrapper
+function simplifyFirestoreDoc(doc: any) {
+  const id = doc.name.split("/").pop();
+  const fields: any = {};
+  for (const [k, v] of Object.entries(doc.fields || {})) fields[k] = simplifyFirestoreValue(v as any);
+  return { _id: id, _path: doc.name.split("/documents/")[1], ...fields };
+}
 
-  // Most practical: use the Supabase Data API (PostgREST) isn't suitable for raw SQL
-  // We need to create a pg connection using the DB URL
+function toFirestoreValue(val: any): any {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === "string") return { stringValue: val };
+  if (typeof val === "number") return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
+  if (typeof val === "boolean") return { booleanValue: val };
+  if (Array.isArray(val)) return { arrayValue: { values: val.map(toFirestoreValue) } };
+  if (typeof val === "object") {
+    const fields: any = {};
+    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
 
-  // Let's use Deno postgres
+// SQL helpers
+async function executeSql(_supabase: any, sql: string, dbUrl: string): Promise<any> {
   const { Client } = await import("https://deno.land/x/postgres@v0.19.3/mod.ts");
-
   const client = new Client(dbUrl);
   await client.connect();
   try {
@@ -287,17 +329,14 @@ function isDangerousDDL(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return /\b(DROP\s+TABLE|DROP\s+DATABASE|TRUNCATE|DROP\s+SCHEMA)\b/.test(upper);
 }
-
 function isReadOnly(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("SELECT") || upper.startsWith("WITH") || upper.startsWith("EXPLAIN");
 }
-
 function isDML(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("INSERT") || upper.startsWith("UPDATE") || upper.startsWith("DELETE");
 }
-
 function isDDL(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("ALTER") || upper.startsWith("CREATE");
