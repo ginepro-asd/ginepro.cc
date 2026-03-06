@@ -238,6 +238,7 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
       password,
       participant_id: participant.participant_id || "",
       fidal_data: JSON.stringify(fidalData),
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "",
     });
     const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/fidal-form-proxy?${params.toString()}`;
     window.open(url, "_blank");
