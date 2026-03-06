@@ -682,17 +682,31 @@ const Admin = () => {
                   <TableBody>
                     {filteredRegistrations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
-                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nessuna iscrizione trovata
-                        </TableCell>
+                       <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
+                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                         Nessuna iscrizione trovata
+                       </TableCell>
                       </TableRow>
                     ) : (
                       filteredRegistrations.map((r) => {
                         const hasCustom = r.custom_data && Object.keys(r.custom_data).length > 0;
                         return (
-                          <TableRow key={r.id}>
-                            <TableCell>
+                         <TableRow key={r.id}>
+                           <TableCell className="w-14">
+                             {(() => {
+                               const photo = getRegistrationPhoto(r);
+                               return (
+                                 <Avatar className="h-10 w-10">
+                                   {photo ? (
+                                     <AvatarImage src={photo} alt={`${r.nome} ${r.cognome}`} className="object-cover" />
+                                   ) : null}
+                                   <AvatarFallback className="text-xs bg-muted">
+                                     {r.nome?.charAt(0)}{r.cognome?.charAt(0)}
+                                   </AvatarFallback>
+                                 </Avatar>
+                               );
+                             })()}
+                           </TableCell>
                               <Badge variant="outline" className="text-xs">
                                 {r.event_nome || "—"}
                               </Badge>
