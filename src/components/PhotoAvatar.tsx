@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Download, ImageIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PhotoAvatarProps {
   photoUrl: string | null;
@@ -17,9 +18,9 @@ interface PhotoAvatarProps {
 }
 
 const SIZES = [
-  { label: "Piccola (200px)", size: 200 },
-  { label: "Media (400px)", size: 400 },
-  { label: "Grande (800px)", size: 800 },
+  { label: "50px", size: 50 },
+  { label: "200px", size: 200 },
+  { label: "800px", size: 800 },
   { label: "Originale", size: 0 },
 ];
 
@@ -31,7 +32,14 @@ export default function PhotoAvatar({ photoUrl, name, surname }: PhotoAvatarProp
     if (!photoUrl) return;
     setDownloading(true);
     try {
-      const res = await fetch(photoUrl);
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-photo`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: photoUrl }),
+        }
+      );
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
 
