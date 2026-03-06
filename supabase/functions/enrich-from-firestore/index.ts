@@ -67,11 +67,9 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   return tokenData.access_token;
 }
 
-/** Extract certificate URL from the certificateUrl field which may be a stringified arrayValue */
 function parseCertificateUrl(raw: any): string | null {
   if (!raw) return null;
   if (typeof raw === "string") {
-    // It might be a JSON string of an arrayValue
     if (raw.startsWith("{")) {
       try {
         const parsed = JSON.parse(raw);
@@ -91,6 +89,90 @@ function parseCertificateUrl(raw: any): string | null {
   return null;
 }
 
+/** Use Lovable AI to look up CAP for an Italian city + province */
+async function lookupCAP(city: string, province: string, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "user",
+            content: `Qual è il CAP (codice di avviamento postale) principale del comune di "${city}" in provincia di "${province}" in Italia? Rispondi SOLO con le 5 cifre del CAP, nient'altro. Se non lo sai rispondi "null".`,
+          },
+        ],
+        max_tokens: 20,
+      }),
+    });
+    const data = await res.json();
+    const answer = (data.choices?.[0]?.message?.content || "").trim();
+    // Validate it's a 5-digit number
+    if (/^\d{5}$/.test(answer)) return answer;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Use Lovable AI vision to read certificate expiry date from image */
+async function readCertificateExpiry(imageUrl: string, apiKey: string): Promise<string | null> {
+  try {
+    // Download image and convert to base64
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) return null;
+    const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
+    const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+    
+    // Convert to base64
+    let base64 = "";
+    const chunk = 8192;
+    for (let i = 0; i < imgBytes.length; i += chunk) {
+      base64 += String.fromCharCode(...imgBytes.slice(i, i + chunk));
+    }
+    base64 = btoa(base64);
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Questa è un'immagine di un certificato medico sportivo italiano. Trova la data di scadenza del certificato. Rispondi SOLO con la data in formato YYYY-MM-DD (es: 2026-12-31). Se non riesci a trovarla rispondi "null".`,
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:${contentType};base64,${base64}` },
+              },
+            ],
+          },
+        ],
+        max_tokens: 20,
+      }),
+    });
+    const data = await res.json();
+    const answer = (data.choices?.[0]?.message?.content || "").trim();
+    // Validate date format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(answer)) return answer;
+    return null;
+  } catch (e) {
+    console.error("Certificate reading error:", e.message);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -106,6 +188,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const saJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
     if (!saJson) throw new Error("FIREBASE_SERVICE_ACCOUNT not configured");
@@ -134,6 +219,7 @@ Deno.serve(async (req) => {
     let updated = 0;
     let skipped = 0;
     const errors: string[] = [];
+    const capCache: Record<string, string | null> = {};
 
     for (const entry of allEntries) {
       try {
@@ -164,10 +250,11 @@ Deno.serve(async (req) => {
         // Extract residence fields
         const address = raw.address || null;
         const city = raw.city || null;
-        const state = raw.state || null; // province code like "RA"
+        const state = raw.state || null;
         const certificateUrlRaw = raw.certificateUrl;
         const certificateUrl = parseCertificateUrl(certificateUrlRaw);
-        const type = raw.type || null; // e.g. "FIDAL Running"
+        const type = raw.type || null;
+        const gender = raw.gender || null;
 
         // Build fidal_data update
         const existingFidal = (participant.fidal_data as Record<string, any>) || {};
@@ -178,9 +265,38 @@ Deno.serve(async (req) => {
         if (state) fidalUpdate.provincia = state;
         if (certificateUrl) fidalUpdate.certificateUrl = certificateUrl;
         if (type) fidalUpdate.tipo_tesseramento = type;
+        if (gender) {
+          const g = String(gender).toLowerCase();
+          if (g === "m" || g === "maschio" || g === "male") fidalUpdate.sesso = "M";
+          else if (g === "f" || g === "femmina" || g === "female") fidalUpdate.sesso = "F";
+        }
 
-        // Try to extract CAP from address (if present at end like "Via Roma 1, 48018")
-        // Usually not in the data, so skip
+        // Auto-calculate CAP from city + province using AI
+        if (city && state && !existingFidal.cap) {
+          const cacheKey = `${city.toLowerCase()}_${state.toLowerCase()}`;
+          if (cacheKey in capCache) {
+            if (capCache[cacheKey]) fidalUpdate.cap = capCache[cacheKey];
+          } else {
+            const cap = await lookupCAP(city, state, lovableApiKey);
+            capCache[cacheKey] = cap;
+            if (cap) {
+              fidalUpdate.cap = cap;
+              console.log(`CAP for ${city} (${state}): ${cap}`);
+            }
+          }
+        }
+
+        // Read certificate expiry date from image using AI vision
+        if (certificateUrl && !existingFidal.scad_cert) {
+          console.log(`Reading certificate for ${email}...`);
+          const expiryDate = await readCertificateExpiry(certificateUrl, lovableApiKey);
+          if (expiryDate) {
+            fidalUpdate.scad_cert = expiryDate;
+            console.log(`Certificate expiry for ${email}: ${expiryDate}`);
+          } else {
+            console.log(`Could not read certificate expiry for ${email}`);
+          }
+        }
 
         // Update participant
         const { error: updateErr } = await supabase
@@ -197,14 +313,6 @@ Deno.serve(async (req) => {
         errors.push(`Entry error: ${e.message}`);
       }
     }
-
-    // Also update the registrations custom_data with these fields for display
-    // Find the t26 event
-    const { data: t26Event } = await supabase
-      .from("events")
-      .select("id")
-      .ilike("slug", "%tesseramento-2026%")
-      .single();
 
     return new Response(
       JSON.stringify({
