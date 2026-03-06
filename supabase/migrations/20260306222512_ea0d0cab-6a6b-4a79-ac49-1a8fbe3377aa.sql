@@ -1,0 +1,1 @@
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS fidal_data jsonb DEFAULT '{}'::jsonb;

@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import PhotoAvatar from "@/components/PhotoAvatar";
+import FidalDialog from "@/components/FidalDialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -100,6 +101,7 @@ const Admin = () => {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
@@ -620,16 +622,26 @@ const Admin = () => {
                                 {p.registrations.length} {p.registrations.length === 1 ? "evento" : "eventi"}
                               </Button>
                             </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            </TableCell>
+                             <TableCell className="flex gap-1">
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-7 w-7 p-0"
+                                 onClick={(e) => { e.stopPropagation(); openEditDialog(p); }}
+                                 title="Modifica"
+                               >
+                                 <Pencil className="h-3.5 w-3.5" />
+                               </Button>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-7 w-7 p-0"
+                                 onClick={(e) => { e.stopPropagation(); setFidalParticipant(p); }}
+                                 title="Inserisci su FIDAL"
+                               >
+                                 <Send className="h-3.5 w-3.5" />
+                               </Button>
+                             </TableCell>
                           </TableRow>
                         );
                       })
@@ -941,6 +953,13 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* FIDAL dialog */}
+        <FidalDialog
+          participant={fidalParticipant}
+          password={password}
+          onClose={() => setFidalParticipant(null)}
+        />
 
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />

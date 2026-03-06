@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.proxy-photo]
 verify_jwt = false
+
+[functions.submit-to-fidal]
+verify_jwt = false
