@@ -94,6 +94,124 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_collections",
+      description: "List all top-level collections in Firestore. Returns collection IDs.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_documents",
+      description: "List documents in a Firestore collection or subcollection. Use path like 'events' or 'events/myEventId/entries'.",
+      parameters: {
+        type: "object",
+        properties: {
+          collection_path: {
+            type: "string",
+            description: "The collection path, e.g. 'events', 'users', 'events/eventId/entries'.",
+          },
+          page_size: {
+            type: "number",
+            description: "Number of documents to return (default 20, max 100).",
+          },
+          page_token: {
+            type: "string",
+            description: "Token for pagination (from previous response).",
+          },
+        },
+        required: ["collection_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_get_document",
+      description: "Get a single Firestore document by its full path, e.g. 'events/myEventId'.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path, e.g. 'events/myEventId', 'users/userId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_list_subcollections",
+      description: "List subcollections of a specific Firestore document, e.g. subcollections of 'events/myEventId'.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path, e.g. 'events/myEventId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_write_document",
+      description: "Create or update a Firestore document. Provide the collection path and document data. If document_id is provided, it updates/creates that specific doc; otherwise a new doc is auto-generated.",
+      parameters: {
+        type: "object",
+        properties: {
+          collection_path: {
+            type: "string",
+            description: "The collection path, e.g. 'events', 'users'.",
+          },
+          document_id: {
+            type: "string",
+            description: "Optional document ID. If omitted, Firestore auto-generates one.",
+          },
+          data: {
+            type: "object",
+            description: "The document data as key-value pairs. Values will be auto-typed (string, number, boolean).",
+          },
+        },
+        required: ["collection_path", "data"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "firestore_delete_document",
+      description: "Delete a Firestore document by its full path.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_path: {
+            type: "string",
+            description: "The document path to delete, e.g. 'events/myEventId'.",
+          },
+        },
+        required: ["document_path"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `Sei un assistente admin per il sistema di gestione iscrizioni GINEPRO. Parla italiano.
@@ -103,51 +221,100 @@ Hai accesso a un database PostgreSQL con queste tabelle:
 - **participants**: anagrafica partecipanti (id uuid, nome text, cognome text, email text UNIQUE, telefono text, codice_fiscale text, birth_date date, birth_place text, identification_type text)
 - **registrations**: iscrizioni (id uuid, event_id uuid FK events, participant_id uuid FK participants, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, payment_method text, payment_status text default 'pending', payment_id text, custom_data jsonb)
 
-Puoi anche accedere al database Firestore legacy per importare eventi storici.
+Hai anche accesso COMPLETO al database Firestore legacy:
+- **firestore_list_collections**: elenca tutte le collezioni top-level
+- **firestore_list_documents**: elenca documenti in una collezione (supporta path come 'events', 'events/id/entries')
+- **firestore_get_document**: leggi un singolo documento per path
+- **firestore_list_subcollections**: elenca sottocollezioni di un documento
+- **firestore_write_document**: crea/aggiorna un documento in Firestore
+- **firestore_delete_document**: elimina un documento da Firestore
+- **list_firestore_events** e **import_firestore_event**: per importare eventi nel DB attuale
 
 Regole importanti:
 - Per le query di lettura usa query_database
 - Per modificare dati (INSERT/UPDATE/DELETE) usa modify_data
 - Per modificare lo schema (ALTER TABLE, CREATE TABLE) usa modify_schema — chiedi sempre conferma prima
-- Per Firestore usa list_firestore_events e import_firestore_event
+- Per esplorare Firestore usa i tool firestore_*
 - NON eseguire mai DROP TABLE, DROP DATABASE, TRUNCATE
 - Formatta i risultati in modo leggibile con tabelle markdown quando possibile
 - Per le statistiche, calcola aggregazioni direttamente in SQL
 - Se non sei sicuro di un'operazione distruttiva, chiedi conferma all'utente`;
 
-// Execute a SQL query using the Supabase client's rpc or direct REST
-async function executeSql(supabase: any, sql: string, dbUrl: string): Promise<any> {
-  // Use the REST API directly with the service role key for raw SQL
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/`, {
+// Firestore helpers
+async function getFirestoreAccessToken(): Promise<{ accessToken: string; projectId: string }> {
+  const saJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+  if (!saJson) throw new Error("FIREBASE_SERVICE_ACCOUNT not configured");
+  const sa = JSON.parse(saJson);
+  const now = Math.floor(Date.now() / 1000);
+  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = btoa(JSON.stringify({
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/datastore",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now, exp: now + 3600,
+  }));
+  const inputData = new TextEncoder().encode(`${header}.${payload}`);
+  const pemContents = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\n/g, "");
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey("pkcs8", binaryKey, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, inputData);
+  const sig = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const jwt = `${header}.${payload}.${sig}`;
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-    },
-    body: JSON.stringify({}),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   });
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok) throw new Error(`Token error: ${JSON.stringify(tokenData)}`);
+  return { accessToken: tokenData.access_token, projectId: sa.project_id };
+}
 
-  // Fallback: use the database URL directly
-  // We'll use the pg wire protocol via Deno's postgres
-  // Actually let's just use supabase-js .rpc or direct fetch to PostgREST
+function firestoreBaseUrl(projectId: string) {
+  return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+}
 
-  // Simplest approach: use the database connection string
-  // But edge functions can't connect to pg directly easily.
-  // Let's use the Supabase Management API or just parse and use PostgREST
+function simplifyFirestoreValue(val: any): any {
+  if (val === undefined || val === null) return null;
+  if (val.stringValue !== undefined) return val.stringValue;
+  if (val.integerValue !== undefined) return Number(val.integerValue);
+  if (val.doubleValue !== undefined) return val.doubleValue;
+  if (val.booleanValue !== undefined) return val.booleanValue;
+  if (val.timestampValue !== undefined) return val.timestampValue;
+  if (val.nullValue !== undefined) return null;
+  if (val.arrayValue) return (val.arrayValue.values || []).map(simplifyFirestoreValue);
+  if (val.mapValue) {
+    const obj: any = {};
+    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = simplifyFirestoreValue(v);
+    return obj;
+  }
+  return JSON.stringify(val);
+}
 
-  // Better approach: call a generic SQL function if it exists, or use the
-  // database URL with a simple HTTP wrapper
+function simplifyFirestoreDoc(doc: any) {
+  const id = doc.name.split("/").pop();
+  const fields: any = {};
+  for (const [k, v] of Object.entries(doc.fields || {})) fields[k] = simplifyFirestoreValue(v as any);
+  return { _id: id, _path: doc.name.split("/documents/")[1], ...fields };
+}
 
-  // Most practical: use the Supabase Data API (PostgREST) isn't suitable for raw SQL
-  // We need to create a pg connection using the DB URL
+function toFirestoreValue(val: any): any {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === "string") return { stringValue: val };
+  if (typeof val === "number") return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
+  if (typeof val === "boolean") return { booleanValue: val };
+  if (Array.isArray(val)) return { arrayValue: { values: val.map(toFirestoreValue) } };
+  if (typeof val === "object") {
+    const fields: any = {};
+    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(val) };
+}
 
-  // Let's use Deno postgres
+// SQL helpers
+async function executeSql(_supabase: any, sql: string, dbUrl: string): Promise<any> {
   const { Client } = await import("https://deno.land/x/postgres@v0.19.3/mod.ts");
-
   const client = new Client(dbUrl);
   await client.connect();
   try {
@@ -162,17 +329,14 @@ function isDangerousDDL(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return /\b(DROP\s+TABLE|DROP\s+DATABASE|TRUNCATE|DROP\s+SCHEMA)\b/.test(upper);
 }
-
 function isReadOnly(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("SELECT") || upper.startsWith("WITH") || upper.startsWith("EXPLAIN");
 }
-
 function isDML(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("INSERT") || upper.startsWith("UPDATE") || upper.startsWith("DELETE");
 }
-
 function isDDL(sql: string): boolean {
   const upper = sql.toUpperCase().trim();
   return upper.startsWith("ALTER") || upper.startsWith("CREATE");
@@ -267,6 +431,126 @@ async function handleToolCall(
       });
       const data = await res.json();
       return JSON.stringify(data);
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  // Firestore direct access tools
+  if (name === "firestore_list_collections") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      // List root documents to discover collections
+      const res = await fetch(`${base}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      // The root listing returns collection IDs
+      if (data.documents) {
+        const collectionIds = [...new Set(data.documents.map((d: any) => d.name.split("/documents/")[1]?.split("/")[0]))];
+        return JSON.stringify({ collections: collectionIds });
+      }
+      // Alternative: try known collections
+      const knownCollections = ["events", "users", "settings", "config"];
+      const found: string[] = [];
+      for (const col of knownCollections) {
+        const r = await fetch(`${base}/${col}?pageSize=1`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const d = await r.json();
+        if (d.documents && d.documents.length > 0) found.push(col);
+      }
+      return JSON.stringify({ collections: found, note: "Scanned known collection names. Use firestore_list_documents with a specific path to explore further." });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_list_documents") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const pageSize = Math.min(args.page_size || 20, 100);
+      let url = `${base}/${args.collection_path}?pageSize=${pageSize}`;
+      if (args.page_token) url += `&pageToken=${args.page_token}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Firestore error" });
+      const docs = (data.documents || []).map(simplifyFirestoreDoc);
+      return JSON.stringify({ documents: docs, count: docs.length, nextPageToken: data.nextPageToken || null });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_get_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const res = await fetch(`${base}/${args.document_path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Document not found" });
+      return JSON.stringify(simplifyFirestoreDoc(data));
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_list_subcollections") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${args.document_path}:listCollectionIds`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Error listing subcollections" });
+      return JSON.stringify({ subcollections: data.collectionIds || [] });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_write_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const fields: any = {};
+      for (const [k, v] of Object.entries(args.data)) fields[k] = toFirestoreValue(v);
+      let url: string;
+      let method: string;
+      if (args.document_id) {
+        url = `${base}/${args.collection_path}/${args.document_id}`;
+        method = "PATCH";
+      } else {
+        url = `${base}/${args.collection_path}`;
+        method = "POST";
+      }
+      const res = await fetch(url, {
+        method,
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ fields }),
+      });
+      const data = await res.json();
+      if (!res.ok) return JSON.stringify({ error: data.error?.message || "Write error" });
+      return JSON.stringify({ success: true, path: data.name?.split("/documents/")[1] });
+    } catch (e: any) {
+      return JSON.stringify({ error: e.message });
+    }
+  }
+
+  if (name === "firestore_delete_document") {
+    try {
+      const { accessToken, projectId } = await getFirestoreAccessToken();
+      const base = firestoreBaseUrl(projectId);
+      const res = await fetch(`${base}/${args.document_path}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        return JSON.stringify({ error: data.error?.message || "Delete error" });
+      }
+      return JSON.stringify({ success: true, deleted: args.document_path });
     } catch (e: any) {
       return JSON.stringify({ error: e.message });
     }
