@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.enrich-from-firestore]
 verify_jwt = false
+
+[functions.fidal-form-proxy]
+verify_jwt = false

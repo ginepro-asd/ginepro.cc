@@ -5,7 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Send, Check, AlertTriangle } from "lucide-react";
+import { Loader2, Send, Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -229,6 +229,20 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
     }
   };
 
+  const openFormProxy = () => {
+    const fidalData = {
+      ...fields,
+      scad_cert: formatDate(fields.scad_cert),
+    };
+    const params = new URLSearchParams({
+      password,
+      participant_id: participant.participant_id || "",
+      fidal_data: JSON.stringify(fidalData),
+    });
+    const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/fidal-form-proxy?${params.toString()}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <Dialog open={!!participant} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -350,6 +364,17 @@ export default function FidalDialog({ participant, password, onClose }: FidalDia
                 {result.success ? <Check className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
                 <span>{result.message}</span>
               </div>
+              {!result.success && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={openFormProxy}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Apri form FIDAL in nuova tab (con foto caricata)
+                </Button>
+              )}
             </div>
           )}
         </div>
