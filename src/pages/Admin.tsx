@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Filter, Merge, X, Pencil, MessageSquare, ImageIcon } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
+import PhotoAvatar from "@/components/PhotoAvatar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -100,14 +100,22 @@ const Admin = () => {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [generatingThumbs, setGeneratingThumbs] = useState(false);
   const { toast } = useToast();
 
-  // Helper: get photo thumbnail URL from participant's registrations
+  // Helper: get photo URL from participant's registrations
   const getParticipantPhoto = (p: Participant): string | null => {
     for (const reg of p.registrations) {
       const cd = reg.custom_data;
       if (cd?.photoUrlThumb) return cd.photoUrlThumb;
+      if (cd?.photoUrl) return cd.photoUrl;
+    }
+    return null;
+  };
+
+  // Helper: get original photo URL (for download)
+  const getParticipantOriginalPhoto = (p: Participant): string | null => {
+    for (const reg of p.registrations) {
+      const cd = reg.custom_data;
       if (cd?.photoUrl) return cd.photoUrl;
     }
     return null;
@@ -118,25 +126,8 @@ const Admin = () => {
     return r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
   };
 
-  const generateThumbnails = async () => {
-    setGeneratingThumbs(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-thumbnails", {
-        body: { password },
-      });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      toast({
-        title: "Thumbnail generati",
-        description: data.message,
-      });
-      // Refresh data
-      authenticate();
-    } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
-    } finally {
-      setGeneratingThumbs(false);
-    }
+  const getRegistrationOriginalPhoto = (r: FlatRegistration): string | null => {
+    return r.custom_data?.photoUrl || null;
   };
 
   const isGlobal = !slug;
@@ -467,14 +458,6 @@ const Admin = () => {
              {isGlobal && (
                <>
                  <Button
-                   onClick={generateThumbnails}
-                   variant="outline"
-                   disabled={generatingThumbs}
-                 >
-                   {generatingThumbs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ImageIcon className="h-4 w-4 mr-2" />}
-                   Genera thumbnail
-                 </Button>
-                 <Button
                    onClick={() => {
                      setMergeMode(!mergeMode);
                      setMergeSelection([]);
@@ -614,19 +597,11 @@ const Admin = () => {
                              </TableCell>
                            )}
                            <TableCell className="w-14">
-                             {(() => {
-                               const photo = getParticipantPhoto(p);
-                               return (
-                                 <Avatar className="h-10 w-10">
-                                   {photo ? (
-                                     <AvatarImage src={photo} alt={`${p.nome} ${p.cognome}`} className="object-cover" />
-                                   ) : null}
-                                   <AvatarFallback className="text-xs bg-muted">
-                                     {p.nome?.charAt(0)}{p.cognome?.charAt(0)}
-                                   </AvatarFallback>
-                                 </Avatar>
-                               );
-                             })()}
+                             <PhotoAvatar
+                               photoUrl={getParticipantOriginalPhoto(p)}
+                               name={p.nome}
+                               surname={p.cognome}
+                             />
                            </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
@@ -693,19 +668,11 @@ const Admin = () => {
                         return (
                          <TableRow key={r.id}>
                            <TableCell className="w-14">
-                             {(() => {
-                               const photo = getRegistrationPhoto(r);
-                               return (
-                                 <Avatar className="h-10 w-10">
-                                   {photo ? (
-                                     <AvatarImage src={photo} alt={`${r.nome} ${r.cognome}`} className="object-cover" />
-                                   ) : null}
-                                   <AvatarFallback className="text-xs bg-muted">
-                                     {r.nome?.charAt(0)}{r.cognome?.charAt(0)}
-                                   </AvatarFallback>
-                                 </Avatar>
-                               );
-                             })()}
+                             <PhotoAvatar
+                               photoUrl={getRegistrationOriginalPhoto(r)}
+                               name={r.nome}
+                               surname={r.cognome}
+                             />
                            </TableCell>
                            <TableCell>
                              <Badge variant="outline" className="text-xs">
