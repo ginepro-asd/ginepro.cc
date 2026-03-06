@@ -186,19 +186,30 @@ async function fidalSubmitAthlete(
     html.includes("necessario utilizzare") &&
     html.includes("Internet Explorer");
 
-  // Check for errors/success in the response
-  const hasError = html.includes("ERRORE") || html.includes("errore") || html.includes("Errore");
-  const hasSuccess = html.includes("INSERIMENTO EFFETTUATO") || html.includes("inserito") || html.includes("Inserimento");
+  // Detect explicit error patterns from FIDAL pages
+  const hasError =
+    html.includes("ERRORE") ||
+    html.includes("errore") ||
+    html.includes("Errore") ||
+    html.includes("audio/errore.swf") ||
+    html.includes("errore.swf");
+
+  // Accept success only with explicit confirmation text
+  const hasExplicitSuccess =
+    html.includes("INSERIMENTO EFFETTUATO") ||
+    html.includes("INSERIMENTO ESEGUITO");
+
+  const finalSuccess = !blockedByUserAgent && !hasError && hasExplicitSuccess;
 
   return {
-    success: !blockedByUserAgent && (hasSuccess || (!hasError && !blockedByUserAgent)),
+    success: finalSuccess,
     message: blockedByUserAgent
       ? "FIDAL ha rifiutato la richiesta per controllo browser (legacy)."
       : hasError
         ? "Possibile errore nell'inserimento"
-        : hasSuccess
+        : hasExplicitSuccess
           ? "Atleta inserito con successo"
-          : "Invio completato, verifica manualmente il risultato",
+          : "FIDAL non ha restituito una conferma esplicita di inserimento",
     html: html.substring(0, 2000), // First 2000 chars for debugging
   };
 }
