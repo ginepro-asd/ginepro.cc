@@ -597,19 +597,11 @@ const Admin = () => {
                              </TableCell>
                            )}
                            <TableCell className="w-14">
-                             {(() => {
-                               const photo = getParticipantPhoto(p);
-                               return (
-                                 <Avatar className="h-10 w-10">
-                                   {photo ? (
-                                     <AvatarImage src={photo} alt={`${p.nome} ${p.cognome}`} className="object-cover" />
-                                   ) : null}
-                                   <AvatarFallback className="text-xs bg-muted">
-                                     {p.nome?.charAt(0)}{p.cognome?.charAt(0)}
-                                   </AvatarFallback>
-                                 </Avatar>
-                               );
-                             })()}
+                             <PhotoAvatar
+                               photoUrl={getParticipantOriginalPhoto(p)}
+                               name={p.nome}
+                               surname={p.cognome}
+                             />
                            </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.nome}</TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{p.cognome}</TableCell>
@@ -676,19 +668,11 @@ const Admin = () => {
                         return (
                          <TableRow key={r.id}>
                            <TableCell className="w-14">
-                             {(() => {
-                               const photo = getRegistrationPhoto(r);
-                               return (
-                                 <Avatar className="h-10 w-10">
-                                   {photo ? (
-                                     <AvatarImage src={photo} alt={`${r.nome} ${r.cognome}`} className="object-cover" />
-                                   ) : null}
-                                   <AvatarFallback className="text-xs bg-muted">
-                                     {r.nome?.charAt(0)}{r.cognome?.charAt(0)}
-                                   </AvatarFallback>
-                                 </Avatar>
-                               );
-                             })()}
+                             <PhotoAvatar
+                               photoUrl={getRegistrationOriginalPhoto(r)}
+                               name={r.nome}
+                               surname={r.cognome}
+                             />
                            </TableCell>
                            <TableCell>
                              <Badge variant="outline" className="text-xs">
