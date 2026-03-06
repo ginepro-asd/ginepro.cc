@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.update-participant]
 verify_jwt = false
+
+[functions.admin-chat]
+verify_jwt = false
