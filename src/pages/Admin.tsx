@@ -588,10 +588,10 @@ const Admin = () => {
                   <TableBody>
                     {filteredParticipants.length === 0 ? (
                       <TableRow>
-                         <TableCell colSpan={mergeMode ? 10 : 9} className="text-center text-muted-foreground py-8">
-                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nessun partecipante trovato
-                        </TableCell>
+                       <TableCell colSpan={mergeMode ? 11 : 10} className="text-center text-muted-foreground py-8">
+                         <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                         Nessun partecipante trovato
+                       </TableCell>
                       </TableRow>
                     ) : (
                       filteredParticipants.map((p, idx) => {
