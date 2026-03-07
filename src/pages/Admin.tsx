@@ -207,7 +207,7 @@ const Admin = () => {
       setImportedEvents((prev) => new Set(prev).add(firestoreId));
       toast({
         title: `Importato: ${data.event_name}`,
-        description: `${data.participantsCreated} nuovi partecipanti, ${data.registrationsCreated} iscrizioni. ${data.errors?.length || 0} errori.`,
+        description: `${data.participantsCreated} nuovi utenti, ${data.registrationsCreated} iscrizioni. ${data.errors?.length || 0} errori.`,
       });
     } catch (err: any) {
       toast({ title: "Errore importazione", description: err.message, variant: "destructive" });
@@ -454,7 +454,7 @@ const Admin = () => {
           <div className="flex items-center gap-3">
             <img src={logoDark} alt="GINEPRO" className="h-8 object-contain" />
             <h1 className="font-display text-2xl font-bold text-foreground">{title}</h1>
-            <Badge variant="outline">{participants.length} partecipanti</Badge>
+            <Badge variant="outline">{participants.length} utenti</Badge>
             {isGlobal && <Badge variant="outline">{totalRegistrations} iscrizioni</Badge>}
           </div>
           <div className="flex gap-2">
@@ -485,7 +485,7 @@ const Admin = () => {
                         if (data.error) throw new Error(data.error);
                         toast({
                           title: "Dati FIDAL arricchiti",
-                          description: `${data.updated} partecipanti aggiornati, ${data.skipped} saltati. ${data.errors?.length || 0} errori.`,
+                          description: `${data.updated} utenti aggiornati, ${data.skipped} saltati. ${data.errors?.length || 0} errori.`,
                         });
                         authenticate();
                       } catch (err: any) {
@@ -549,7 +549,7 @@ const Admin = () => {
             </select>
           )}
           <Badge variant="outline">
-            {isGroupedView ? `${filteredParticipants.length} partecipanti` : `${filteredRegistrations.length} risultati`}
+            {isGroupedView ? `${filteredParticipants.length} utenti` : `${filteredRegistrations.length} risultati`}
           </Badge>
         </div>
 
@@ -558,7 +558,7 @@ const Admin = () => {
           <Card className="border-primary/50 bg-primary/5">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="text-sm">
-                <span className="font-medium">Seleziona 2 partecipanti da unire.</span>
+                <span className="font-medium">Seleziona 2 utenti da unire.</span>
                 {mergeSelection.length > 0 && (
                   <span className="ml-2 text-muted-foreground">
                     {mergeSelection.map(p => `${p.nome} ${p.cognome}`).join(" + ")}
@@ -879,7 +879,7 @@ const Admin = () => {
         <Dialog open={showMergeDialog} onOpenChange={(open) => { if (!open) setShowMergeDialog(false); }}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle className="font-display">Rivedi unione partecipanti</DialogTitle>
+              <DialogTitle className="font-display">Rivedi unione utenti</DialogTitle>
               <DialogDescription>
                 Scegli quale valore mantenere per i campi in conflitto.
               </DialogDescription>

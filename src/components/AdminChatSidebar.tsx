@@ -201,10 +201,10 @@ export default function AdminChatSidebar({ password, open, onClose }: AdminChatS
           <div className="text-center text-muted-foreground text-sm py-8 space-y-2">
             <Bot className="h-10 w-10 mx-auto opacity-30" />
             <p>Ciao! Sono l'assistente admin.</p>
-            <p className="text-xs">Puoi chiedermi statistiche, cercare dati, modificare partecipanti, importare da Firestore e altro.</p>
+            <p className="text-xs">Puoi chiedermi statistiche, cercare dati, modificare utenti, importare da Firestore e altro.</p>
             <div className="flex flex-wrap gap-1.5 justify-center mt-3">
               {[
-                "Quanti partecipanti ci sono?",
+                "Quanti utenti ci sono?",
                 "Lista eventi attivi",
                 "Iscrizioni ultimo mese",
                 "Cerca Mario Rossi",
