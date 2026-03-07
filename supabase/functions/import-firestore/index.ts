@@ -10,6 +10,20 @@ const corsHeaders = {
 const SKIP_EVENTS = ["cre2025", "cre25", "ice", "s12", "sig", "gob", "stb"];
 const TESSERAMENTO_IDS = ["t25", "t26"];
 
+const FIDAL_KEYS = new Set([
+  "address", "city", "state", "certificateUrl", "type", "gender",
+  "cap", "nazione", "nazionalita", "category",
+]);
+
+const STANDARD_KEYS = new Set([
+  "name", "first", "last", "lastName", "nome", "cognome",
+  "mail", "email", "contact", "telefono", "phone",
+  "birthday", "birth_date", "birthplace", "birthCity", "birth_place",
+  "fiscalCode", "codice_fiscale",
+  // FIDAL keys are handled separately
+  ...FIDAL_KEYS,
+]);
+
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
@@ -29,12 +43,45 @@ function fv(val: any): any {
   if (val.booleanValue !== undefined) return val.booleanValue;
   if (val.doubleValue !== undefined) return val.doubleValue;
   if (val.timestampValue !== undefined) return val.timestampValue;
+  if (val.arrayValue !== undefined) {
+    const values = val.arrayValue?.values;
+    if (values && Array.isArray(values)) {
+      return values.map((v: any) => fv(v)).filter(Boolean);
+    }
+    return null;
+  }
   if (val.nullValue !== undefined) return null;
   return JSON.stringify(val);
 }
 
 function isEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+function parseCertificateUrl(raw: any): string | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    if (raw.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.arrayValue?.values) {
+          for (const v of parsed.arrayValue.values) {
+            if (v.stringValue) return v.stringValue;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    if (raw.startsWith("http")) return raw;
+    return null;
+  }
+  if (Array.isArray(raw)) {
+    return raw.find((v: string) => typeof v === "string" && v.startsWith("http")) || null;
+  }
+  return null;
+}
+
+function initcap(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 async function getAccessToken(serviceAccount: any): Promise<string> {
@@ -98,8 +145,6 @@ async function listFirestoreEvents(accessToken: string, baseUrl: string) {
   const eventsData = await eventsRes.json();
   if (!eventsData.documents) return [];
 
-  const results: any[] = [];
-  // Process all events in parallel for speed
   const promises = eventsData.documents.map(async (doc: any) => {
     const eventId = doc.name.split("/").pop()!;
     if (SKIP_EVENTS.some((s) => eventId.toLowerCase() === s.toLowerCase())) return null;
@@ -118,6 +163,31 @@ async function listFirestoreEvents(accessToken: string, baseUrl: string) {
   return settled.filter(Boolean);
 }
 
+/** Extract FIDAL-related data from raw Firestore entry */
+function extractFidalData(raw: Record<string, any>): Record<string, any> {
+  const fidal: Record<string, any> = {};
+
+  if (raw.address) fidal.indirizzo = raw.address;
+  if (raw.city) fidal.citta = raw.city;
+  if (raw.state) fidal.provincia = raw.state;
+  if (raw.cap) fidal.cap = raw.cap;
+  if (raw.nazione) fidal.nazione = raw.nazione;
+  if (raw.nazionalita) fidal.nazionalita = raw.nazionalita;
+  if (raw.category) fidal.categoria = raw.category;
+  if (raw.type) fidal.tipo_tesseramento = raw.type;
+
+  const certificateUrl = parseCertificateUrl(raw.certificateUrl);
+  if (certificateUrl) fidal.certificateUrl = certificateUrl;
+
+  if (raw.gender) {
+    const g = String(raw.gender).toLowerCase();
+    if (g === "m" || g === "maschio" || g === "male") fidal.sesso = "M";
+    else if (g === "f" || g === "femmina" || g === "female") fidal.sesso = "F";
+  }
+
+  return Object.keys(fidal).length > 0 ? fidal : {};
+}
+
 async function importSingleEvent(
   firestoreEventId: string,
   accessToken: string,
@@ -128,6 +198,8 @@ async function importSingleEvent(
     participantsCreated: 0,
     participantsUpdated: 0,
     registrationsCreated: 0,
+    registrationsSkipped: 0,
+    duplicatesRemoved: 0,
     errors: [] as string[],
   };
 
@@ -162,15 +234,38 @@ async function importSingleEvent(
 
   if (eventError) throw new Error(`Event upsert failed: ${eventError.message}`);
 
-  // Pre-load existing participants
-  const participantCache = new Map<string, string>();
-  const { data: existingParticipants } = await sb
-    .from("participants")
-    .select("id, email");
-  if (existingParticipants) {
-    for (const p of existingParticipants) {
-      participantCache.set(p.email.toLowerCase(), p.id);
+  // Pre-load existing participants (email -> {id, fidal_data})
+  const participantCache = new Map<string, { id: string; fidal_data: any }>();
+  let offset = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data: batch } = await sb
+      .from("participants")
+      .select("id, email, fidal_data")
+      .range(offset, offset + pageSize - 1);
+    if (!batch || batch.length === 0) break;
+    for (const p of batch) {
+      participantCache.set(p.email.toLowerCase(), { id: p.id, fidal_data: p.fidal_data });
     }
+    if (batch.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  // Pre-load existing registrations for this event (participant_id set)
+  const existingRegs = new Set<string>();
+  offset = 0;
+  while (true) {
+    const { data: batch } = await sb
+      .from("registrations")
+      .select("participant_id")
+      .eq("event_id", createdEvent.id)
+      .range(offset, offset + pageSize - 1);
+    if (!batch || batch.length === 0) break;
+    for (const r of batch) {
+      if (r.participant_id) existingRegs.add(r.participant_id);
+    }
+    if (batch.length < pageSize) break;
+    offset += pageSize;
   }
 
   // Fetch all entries with pagination
@@ -190,12 +285,13 @@ async function importSingleEvent(
     nextPageToken = entriesData.nextPageToken || null;
   } while (nextPageToken);
 
-  const standardKeys = new Set([
-    "name", "first", "last", "lastName", "nome", "cognome",
-    "mail", "email", "contact", "telefono", "phone",
-    "birthday", "birth_date", "birthplace", "birthCity", "birth_place",
-    "fiscalCode", "codice_fiscale",
-  ]);
+  // Deduplicate entries by email within this import batch
+  const seenEmails = new Map<string, any>(); // email -> latest raw entry
+  const parsedEntries: Array<{
+    nome: string; cognome: string; email: string; telefono: string;
+    birthDate: string | null; birthPlace: string | null; codiceFiscale: string | null;
+    fidalData: Record<string, any>; customData: Record<string, any>;
+  }> = [];
 
   for (const entry of allEntries) {
     try {
@@ -205,8 +301,8 @@ async function importSingleEvent(
         raw[k] = fv(v);
       }
 
-      const nome = raw.name || raw.first || raw.nome || "";
-      const cognome = raw.last || raw.lastName || raw.cognome || "";
+      let nome = raw.name || raw.first || raw.nome || "";
+      let cognome = raw.last || raw.lastName || raw.cognome || "";
       let email = raw.mail || raw.email || "";
       let telefono = raw.contact || raw.telefono || raw.phone || "";
 
@@ -225,58 +321,107 @@ async function importSingleEvent(
       if (!nome && !cognome) continue;
       if (!email) email = `noemail_${Date.now()}_${Math.random().toString(36).slice(2)}@placeholder.local`;
 
-      const emailLower = email.toLowerCase();
+      const emailLower = email.toLowerCase().trim();
+      nome = initcap(nome.trim());
+      cognome = initcap(cognome.trim());
+
       const birthDate = raw.birthday || raw.birth_date || null;
       const birthPlace = raw.birthplace || raw.birthCity || raw.birth_place || null;
       const codiceFiscale = raw.fiscalCode || raw.codice_fiscale || null;
+      const fidalData = extractFidalData(raw);
 
-      let participantId = participantCache.get(emailLower);
-      if (!participantId) {
+      const customData: Record<string, any> = {};
+      for (const [k, v] of Object.entries(raw)) {
+        if (!STANDARD_KEYS.has(k) && v !== null && v !== "") {
+          customData[k] = v;
+        }
+      }
+
+      // Deduplicate: keep last occurrence per email (latest data wins)
+      if (seenEmails.has(emailLower)) {
+        stats.duplicatesRemoved++;
+      }
+      seenEmails.set(emailLower, {
+        nome, cognome, email: emailLower, telefono: telefono || "",
+        birthDate, birthPlace, codiceFiscale, fidalData, customData,
+      });
+    } catch (entryErr: any) {
+      stats.errors.push(`Entry parse error: ${entryErr.message}`);
+    }
+  }
+
+  // Process deduplicated entries
+  for (const [emailLower, parsed] of seenEmails) {
+    try {
+      const { nome, cognome, telefono, birthDate, birthPlace, codiceFiscale, fidalData, customData } = parsed;
+
+      let cached = participantCache.get(emailLower);
+      if (!cached) {
+        // Create new participant
         const { data: newP, error: pErr } = await sb
           .from("participants")
           .insert({
-            nome, cognome, email: emailLower, telefono: telefono || "",
+            nome, cognome, email: emailLower, telefono,
             birth_date: birthDate, birth_place: birthPlace,
             codice_fiscale: codiceFiscale,
             identification_type: codiceFiscale ? "cf" : "birth",
+            fidal_data: Object.keys(fidalData).length > 0 ? fidalData : {},
           })
           .select("id")
           .single();
 
         if (pErr) {
+          // Race condition: try to fetch existing
           const { data: existP } = await sb
             .from("participants")
-            .select("id")
+            .select("id, fidal_data")
             .eq("email", emailLower)
             .single();
           if (existP) {
-            participantId = existP.id;
-            participantCache.set(emailLower, participantId);
+            cached = { id: existP.id, fidal_data: existP.fidal_data };
+            participantCache.set(emailLower, cached);
             stats.participantsUpdated++;
           } else {
             stats.errors.push(`Participant ${emailLower}: ${pErr.message}`);
             continue;
           }
         } else {
-          participantId = newP.id;
-          participantCache.set(emailLower, participantId);
+          cached = { id: newP.id, fidal_data: fidalData };
+          participantCache.set(emailLower, cached);
           stats.participantsCreated++;
         }
       } else {
+        // Update existing participant with new data, merge fidal_data
+        const existingFidal = (cached.fidal_data as Record<string, any>) || {};
+        const mergedFidal = { ...existingFidal };
+        // Only fill in missing FIDAL fields, don't overwrite existing
+        for (const [k, v] of Object.entries(fidalData)) {
+          if (!mergedFidal[k] && v) mergedFidal[k] = v;
+        }
+
+        const updateFields: Record<string, any> = {};
+        if (birthDate && !cached.fidal_data?.birth_date_set) updateFields.birth_date = birthDate;
+        if (birthPlace) updateFields.birth_place = birthPlace;
+        if (codiceFiscale) updateFields.codice_fiscale = codiceFiscale;
+        if (Object.keys(mergedFidal).length > 0) updateFields.fidal_data = mergedFidal;
+
+        if (Object.keys(updateFields).length > 0) {
+          await sb.from("participants").update(updateFields).eq("id", cached.id);
+          cached.fidal_data = mergedFidal;
+        }
         stats.participantsUpdated++;
       }
 
-      const customData: Record<string, any> = {};
-      for (const [k, v] of Object.entries(raw)) {
-        if (!standardKeys.has(k) && v !== null && v !== "") {
-          customData[k] = v;
-        }
+      // Skip if registration already exists for this event+participant
+      if (existingRegs.has(cached.id)) {
+        stats.registrationsSkipped++;
+        continue;
       }
 
       const { error: regErr } = await sb.from("registrations").insert({
         event_id: createdEvent.id,
-        participant_id: participantId,
-        nome, cognome, email: emailLower, telefono: telefono || "",
+        participant_id: cached.id,
+        nome, cognome, email: emailLower, telefono,
         birth_date: birthDate, birth_place: birthPlace,
         codice_fiscale: codiceFiscale,
         identification_type: codiceFiscale ? "cf" : "birth",
@@ -289,9 +434,10 @@ async function importSingleEvent(
         stats.errors.push(`Registration ${emailLower}@${slug}: ${regErr.message}`);
       } else {
         stats.registrationsCreated++;
+        existingRegs.add(cached.id);
       }
     } catch (entryErr: any) {
-      stats.errors.push(`Entry parse error: ${entryErr.message}`);
+      stats.errors.push(`Process error: ${entryErr.message}`);
     }
   }
 
@@ -322,7 +468,6 @@ serve(async (req) => {
     const accessToken = await getAccessToken(sa);
     const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
 
-    // MODE: list available events
     if (action === "list") {
       const events = await listFirestoreEvents(accessToken, baseUrl);
       return new Response(JSON.stringify({ events }), {
@@ -330,7 +475,6 @@ serve(async (req) => {
       });
     }
 
-    // MODE: import single event
     if (!firestore_event_id) {
       return new Response(
         JSON.stringify({ error: "Specifica firestore_event_id da importare" }),
