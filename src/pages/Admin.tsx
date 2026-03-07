@@ -474,32 +474,6 @@ const Admin = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     Importa da Firestore
                   </Button>
-                  <Button
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const { data, error } = await supabase.functions.invoke("enrich-from-firestore", {
-                          body: { password },
-                        });
-                        if (error) throw error;
-                        if (data.error) throw new Error(data.error);
-                        toast({
-                          title: "Dati FIDAL arricchiti",
-                          description: `${data.updated} utenti aggiornati, ${data.skipped} saltati. ${data.errors?.length || 0} errori.`,
-                        });
-                        authenticate();
-                      } catch (err: any) {
-                        toast({ title: "Errore", description: err.message, variant: "destructive" });
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    variant="outline"
-                    disabled={loading}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Arricchisci dati FIDAL
-                  </Button>
                </>
              )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
