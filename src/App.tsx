@@ -20,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<EventsList />} />
+          <Route path="/guidelines" element={<Guidelines />} />
           <Route path="/:slug" element={<EventPage />} />
           <Route path="/:slug/conferma" element={<Conferma />} />
           <Route path="/:slug/admin" element={<Admin />} />
