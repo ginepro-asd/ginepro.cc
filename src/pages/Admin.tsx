@@ -670,7 +670,25 @@ const Admin = () => {
                                >
                                  {p.fidal_data && Object.keys(p.fidal_data).length > 0 ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
                                </Button>
-                             </TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget({
+                                      type: "participant",
+                                      id: p.participant_id!,
+                                      label: `${p.nome} ${p.cognome}`,
+                                      regCount: p.registrations.length,
+                                    });
+                                  }}
+                                  title="Elimina utente"
+                                  disabled={!p.participant_id}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
                           </TableRow>
                         );
                       })
