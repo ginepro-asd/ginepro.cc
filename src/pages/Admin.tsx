@@ -755,7 +755,7 @@ const Admin = () => {
                                 day: "2-digit", month: "short", year: "numeric",
                               })}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="flex gap-1">
                               {hasCustom && (
                                 <Button
                                   variant="ghost"
@@ -766,6 +766,19 @@ const Admin = () => {
                                   <Info className="h-4 w-4" />
                                 </Button>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget({
+                                  type: "registration",
+                                  id: r.id,
+                                  label: `${r.nome} ${r.cognome} — ${r.event_nome || "evento"}`,
+                                })}
+                                title="Elimina iscrizione"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
