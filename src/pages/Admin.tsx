@@ -107,6 +107,8 @@ const Admin = () => {
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
