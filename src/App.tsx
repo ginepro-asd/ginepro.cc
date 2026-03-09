@@ -8,6 +8,7 @@ import EventPage from "./pages/EventPage";
 import Conferma from "./pages/Conferma";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Guidelines from "./pages/Guidelines";
 
 const queryClient = new QueryClient();
 
