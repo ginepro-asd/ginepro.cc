@@ -8,6 +8,7 @@ import EventPage from "./pages/EventPage";
 import Conferma from "./pages/Conferma";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Guidelines from "./pages/Guidelines";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<EventsList />} />
+          <Route path="/guidelines" element={<Guidelines />} />
           <Route path="/:slug" element={<EventPage />} />
           <Route path="/:slug/conferma" element={<Conferma />} />
           <Route path="/:slug/admin" element={<Admin />} />
