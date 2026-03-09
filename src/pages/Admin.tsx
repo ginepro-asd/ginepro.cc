@@ -361,6 +361,28 @@ const Admin = () => {
     }
   };
 
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-entity", {
+        body: { password, type: deleteTarget.type, id: deleteTarget.id },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      const desc = deleteTarget.type === "participant"
+        ? `Utente eliminato con ${data.registrations_deleted || 0} iscrizioni.`
+        : "Iscrizione eliminata.";
+      toast({ title: "Eliminato", description: desc });
+      setDeleteTarget(null);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
