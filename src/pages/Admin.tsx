@@ -1014,6 +1014,33 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {deleteTarget?.type === "participant" ? "Elimina utente" : "Elimina iscrizione"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.type === "participant"
+                  ? `Sei sicuro di voler eliminare l'utente "${deleteTarget.label}"? Verranno eliminate anche tutte le sue ${deleteTarget.regCount || 0} iscrizioni. Questa azione è irreversibile.`
+                  : `Sei sicuro di voler eliminare l'iscrizione di "${deleteTarget?.label}"? Questa azione è irreversibile.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={executeDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* FIDAL dialog */}
         <FidalDialog
           participant={fidalParticipant}
