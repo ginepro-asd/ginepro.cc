@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2 } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
@@ -17,6 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent } from "@/hooks/use-event";
@@ -103,6 +107,8 @@ const Admin = () => {
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
@@ -352,6 +358,28 @@ const Admin = () => {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-entity", {
+        body: { password, type: deleteTarget.type, id: deleteTarget.id },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      const desc = deleteTarget.type === "participant"
+        ? `Utente eliminato con ${data.registrations_deleted || 0} iscrizioni.`
+        : "Iscrizione eliminata.";
+      toast({ title: "Eliminato", description: desc });
+      setDeleteTarget(null);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -642,7 +670,25 @@ const Admin = () => {
                                >
                                  {p.fidal_data && Object.keys(p.fidal_data).length > 0 ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
                                </Button>
-                             </TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget({
+                                      type: "participant",
+                                      id: p.participant_id!,
+                                      label: `${p.nome} ${p.cognome}`,
+                                      regCount: p.registrations.length,
+                                    });
+                                  }}
+                                  title="Elimina utente"
+                                  disabled={!p.participant_id}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
                           </TableRow>
                         );
                       })
@@ -709,7 +755,7 @@ const Admin = () => {
                                 day: "2-digit", month: "short", year: "numeric",
                               })}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="flex gap-1">
                               {hasCustom && (
                                 <Button
                                   variant="ghost"
@@ -720,6 +766,19 @@ const Admin = () => {
                                   <Info className="h-4 w-4" />
                                 </Button>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget({
+                                  type: "registration",
+                                  id: r.id,
+                                  label: `${r.nome} ${r.cognome} — ${r.event_nome || "evento"}`,
+                                })}
+                                title="Elimina iscrizione"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -954,6 +1013,33 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {deleteTarget?.type === "participant" ? "Elimina utente" : "Elimina iscrizione"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.type === "participant"
+                  ? `Sei sicuro di voler eliminare l'utente "${deleteTarget.label}"? Verranno eliminate anche tutte le sue ${deleteTarget.regCount || 0} iscrizioni. Questa azione è irreversibile.`
+                  : `Sei sicuro di voler eliminare l'iscrizione di "${deleteTarget?.label}"? Questa azione è irreversibile.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={executeDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* FIDAL dialog */}
         <FidalDialog
