@@ -69,6 +69,8 @@ export function useEvents() {
         custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: e.is_tesseramento ?? false,
+        is_coppia: (e as any).is_coppia ?? false,
+        pettorale_start: (e as any).pettorale_start ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
