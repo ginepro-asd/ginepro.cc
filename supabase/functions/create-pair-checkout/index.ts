@@ -35,7 +35,7 @@ serve(async (req) => {
   }
 
   try {
-    const { participantA, participantB, paymentMethod, eventId, customData } = await req.json();
+    const { participantA, participantB, paymentMethod, eventId, customData, disciplina } = await req.json();
 
     if (!participantA || !participantB || !paymentMethod || !eventId) {
       throw new Error("Campi obbligatori mancanti");
@@ -56,7 +56,13 @@ serve(async (req) => {
     if (eventError || !event) throw new Error("Evento non trovato");
     if (!event.is_coppia) throw new Error("Questo evento non è una gara in coppia");
 
-    const totalPrice = event.prezzo * 2;
+    // Determine unit price based on discipline
+    const DISCIPLINE_PRICES: Record<string, number> = {
+      "Staffetta": 800,
+      "Eco-camminata": 500,
+    };
+    const unitPrice = disciplina && DISCIPLINE_PRICES[disciplina] ? DISCIPLINE_PRICES[disciplina] : event.prezzo;
+    const totalPrice = unitPrice * 2;
     const pairId = crypto.randomUUID();
 
     // Determine next bib number
