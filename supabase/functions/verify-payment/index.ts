@@ -32,10 +32,18 @@ serve(async (req) => {
     );
 
     if (session.payment_status === "paid") {
+      // Update the main registration
       await supabaseAdmin
         .from("registrations")
         .update({ payment_status: "completed", payment_id: session_id })
         .eq("id", registration_id);
+
+      // Also update any paired registration sharing the same payment_id
+      await supabaseAdmin
+        .from("registrations")
+        .update({ payment_status: "completed" })
+        .eq("payment_id", session_id)
+        .neq("id", registration_id);
 
       // Fetch registration data for confirmation
       const { data: registration } = await supabaseAdmin

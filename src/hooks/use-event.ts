@@ -15,6 +15,8 @@ export interface EventData {
   hero_image: string | null;
   payment_methods: string[];
   is_tesseramento: boolean;
+  is_coppia: boolean;
+  pettorale_start: number | null;
 }
 
 export interface CustomField {
@@ -43,6 +45,8 @@ export function useEvent(slug: string | undefined) {
         custom_fields: (data.custom_fields as unknown as CustomField[]) || [],
         payment_methods: data.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: data.is_tesseramento ?? false,
+        is_coppia: (data as any).is_coppia ?? false,
+        pettorale_start: (data as any).pettorale_start ?? null,
       };
     },
     enabled: !!slug,
@@ -65,6 +69,8 @@ export function useEvents() {
         custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: e.is_tesseramento ?? false,
+        is_coppia: (e as any).is_coppia ?? false,
+        pettorale_start: (e as any).pettorale_start ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,

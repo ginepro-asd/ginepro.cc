@@ -701,6 +701,7 @@ const Admin = () => {
                      <TableRow>
                        <TableHead className="w-14">Foto</TableHead>
                        <TableHead>Evento</TableHead>
+                       <TableHead>Pett.</TableHead>
                        <TableHead>Nome</TableHead>
                        <TableHead>Email</TableHead>
                        <TableHead>Telefono</TableHead>
@@ -716,7 +717,7 @@ const Admin = () => {
                   <TableBody>
                     {filteredRegistrations.length === 0 ? (
                       <TableRow>
-                       <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
+                       <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
                          <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 opacity-50" />
                          Nessuna iscrizione trovata
                        </TableCell>
@@ -737,6 +738,11 @@ const Admin = () => {
                              <Badge variant="outline" className="text-xs">
                                {r.event_nome || "—"}
                              </Badge>
+                           </TableCell>
+                           <TableCell>
+                             {r.custom_data?.pettorale ? (
+                               <Badge variant="secondary" className="text-xs font-mono">{r.custom_data.pettorale}</Badge>
+                             ) : "—"}
                            </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
                             <TableCell className="text-sm">{r.email}</TableCell>
