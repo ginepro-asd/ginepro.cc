@@ -15,6 +15,8 @@ export interface EventData {
   hero_image: string | null;
   payment_methods: string[];
   is_tesseramento: boolean;
+  is_coppia: boolean;
+  pettorale_start: number | null;
 }
 
 export interface CustomField {
