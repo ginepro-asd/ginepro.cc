@@ -153,7 +153,11 @@ const EventPage = () => {
       )}
 
       {/* Registration Form */}
-      <RegistrationForm event={event} />
+      {event.is_coppia ? (
+        <PairRegistrationForm event={event} />
+      ) : (
+        <RegistrationForm event={event} />
+      )}
 
       {/* Footer */}
       <footer className="py-8 px-4 border-t border-border/50 text-center">
