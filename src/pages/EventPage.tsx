@@ -5,6 +5,7 @@ import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
+import PairRegistrationForm from "@/components/PairRegistrationForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
