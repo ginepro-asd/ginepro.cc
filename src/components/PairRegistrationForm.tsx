@@ -266,7 +266,11 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
-  const totalPrice = event.prezzo * 2;
+  // Discipline selection (from custom_fields)
+  const disciplinaField = event.custom_fields.find((f) => f.key === "disciplina");
+  const [disciplina, setDisciplina] = useState<string>(disciplinaField?.options?.[0] || "");
+  const unitPrice = disciplina && DISCIPLINE_PRICES[disciplina] ? DISCIPLINE_PRICES[disciplina] : event.prezzo;
+  const totalPrice = unitPrice * 2;
 
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
