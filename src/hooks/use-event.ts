@@ -17,6 +17,9 @@ export interface EventData {
   is_tesseramento: boolean;
   is_coppia: boolean;
   pettorale_start: number | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_label: string | null;
 }
 
 export interface CustomField {
