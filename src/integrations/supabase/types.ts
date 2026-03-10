@@ -25,6 +25,9 @@ export type Database = {
           id: string
           is_coppia: boolean
           is_tesseramento: boolean
+          location_label: string | null
+          location_lat: number | null
+          location_lng: number | null
           luogo: string | null
           nome: string
           payment_methods: string[] | null
@@ -44,6 +47,9 @@ export type Database = {
           id?: string
           is_coppia?: boolean
           is_tesseramento?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           luogo?: string | null
           nome: string
           payment_methods?: string[] | null
@@ -63,6 +69,9 @@ export type Database = {
           id?: string
           is_coppia?: boolean
           is_tesseramento?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           luogo?: string | null
           nome?: string
           payment_methods?: string[] | null

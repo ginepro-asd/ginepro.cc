@@ -85,10 +85,21 @@ const EventPage = () => {
               {eventDate}
             </p>
           )}
-          {event.luogo && (
+          {(event.location_label || event.luogo) && (
             <p className="font-display text-sm text-muted-foreground mb-8">
               <MapPin className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-              {event.luogo}
+              {event.location_lat && event.location_lng ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${event.location_lat},${event.location_lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors underline underline-offset-2 decoration-muted-foreground/30 hover:decoration-primary"
+                >
+                  {event.location_label || event.luogo}
+                </a>
+              ) : (
+                <span>{event.location_label || event.luogo}</span>
+              )}
             </p>
           )}
 

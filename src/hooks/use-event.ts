@@ -17,6 +17,9 @@ export interface EventData {
   is_tesseramento: boolean;
   is_coppia: boolean;
   pettorale_start: number | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_label: string | null;
 }
 
 export interface CustomField {
@@ -47,6 +50,9 @@ export function useEvent(slug: string | undefined) {
         is_tesseramento: data.is_tesseramento ?? false,
         is_coppia: (data as any).is_coppia ?? false,
         pettorale_start: (data as any).pettorale_start ?? null,
+        location_lat: (data as any).location_lat ?? null,
+        location_lng: (data as any).location_lng ?? null,
+        location_label: (data as any).location_label ?? null,
       };
     },
     enabled: !!slug,
@@ -71,6 +77,9 @@ export function useEvents() {
         is_tesseramento: e.is_tesseramento ?? false,
         is_coppia: (e as any).is_coppia ?? false,
         pettorale_start: (e as any).pettorale_start ?? null,
+        location_lat: (e as any).location_lat ?? null,
+        location_lng: (e as any).location_lng ?? null,
+        location_label: (e as any).location_label ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
