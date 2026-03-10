@@ -100,8 +100,14 @@ const EventPage = () => {
           >
             <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
-                {formatPrice(event.prezzo)}
+                {event.is_coppia && event.custom_fields.some(f => f.key === 'disciplina')
+                  ? `da ${formatPrice(event.prezzo)}`
+                  : formatPrice(event.prezzo)
+                }
               </span>
+              {event.is_coppia && (
+                <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
+              )}
             </div>
           </motion.div>
 
