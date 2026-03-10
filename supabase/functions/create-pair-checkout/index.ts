@@ -111,6 +111,7 @@ serve(async (req) => {
         pettorale: pettorale,
         pettorale_num: bibNumber,
         pair_suffix: suffix,
+        disciplina: disciplina || null,
       };
 
       const { data: registration, error: dbError } = await supabaseAdmin
