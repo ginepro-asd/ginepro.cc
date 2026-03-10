@@ -51,3 +51,12 @@ verify_jwt = false
 
 [functions.fidal-form-proxy]
 verify_jwt = false
+
+[functions.manage-event]
+verify_jwt = false
+
+[functions.delete-entity]
+verify_jwt = false
+
+[functions.create-pair-checkout]
+verify_jwt = false
