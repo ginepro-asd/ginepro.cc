@@ -93,6 +93,11 @@ const emptyPerson = (): PersonState => ({
   bornAbroad: false, computedCF: null,
 });
 
+const DISCIPLINE_PRICES: Record<string, number> = {
+  "Staffetta": 800,
+  "Eco-camminata": 500,
+};
+
 interface PairRegistrationFormProps {
   event: EventData;
 }
