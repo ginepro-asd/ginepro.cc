@@ -368,26 +368,33 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
     if (!p.cognome.trim()) return `${label}: Cognome è obbligatorio`;
-    if (!p.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return `${label}: Email non valida`;
-    if (!p.telefono.trim() || p.telefono.length < 6) return `${label}: Telefono non valido`;
+    // Skip email/phone validation for returning users (obfuscated)
+    if (!p.returningUserData) {
+      if (!p.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return `${label}: Email non valida`;
+      if (!p.telefono.trim() || p.telefono.length < 6) return `${label}: Telefono non valido`;
+    }
     if (p.identificationType === "birth") {
-      if (!p.birthDate || !p.birthPlace || !p.gender) return `${label}: Compila data, luogo di nascita e sesso`;
+      if (!p.returningUserData && (!p.birthDate || !p.birthPlace || !p.gender)) return `${label}: Compila data, luogo di nascita e sesso`;
     } else {
-      if (!p.codiceFiscale || p.codiceFiscale.length < 11) return `${label}: Codice Fiscale non valido`;
+      if (!p.returningUserData && (!p.codiceFiscale || p.codiceFiscale.length < 11)) return `${label}: Codice Fiscale non valido`;
     }
     return null;
   };
 
-  const buildPayload = (p: PersonState) => ({
-    nome: p.nome.trim(),
-    cognome: p.cognome.trim(),
-    email: p.email.trim(),
-    telefono: `${p.countryCode}${p.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`,
-    identificationType: p.identificationType,
-    birthDate: p.birthDate || null,
-    birthPlace: p.birthPlace || null,
-    codiceFiscale: p.codiceFiscale || p.computedCF || null,
-  });
+  const buildPayload = (p: PersonState) => {
+    const ret = p.returningUserData;
+    return {
+      nome: p.nome.trim(),
+      cognome: p.cognome.trim(),
+      email: ret ? ret.email : p.email.trim(),
+      telefono: ret ? ret.telefono : `${p.countryCode}${p.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`,
+      identificationType: ret ? ret.identification_type : p.identificationType,
+      birthDate: ret ? ret.birth_date : (p.birthDate || null),
+      birthPlace: ret ? ret.birth_place : (p.birthPlace || null),
+      codiceFiscale: ret ? ret.codice_fiscale : (p.codiceFiscale || p.computedCF || null),
+      participantId: ret ? ret.id : undefined,
+    };
+  };
 
   const onSubmit = async () => {
     const errA = validatePerson(personA, "Componente A");
