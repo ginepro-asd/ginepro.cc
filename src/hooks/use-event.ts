@@ -77,6 +77,9 @@ export function useEvents() {
         is_tesseramento: e.is_tesseramento ?? false,
         is_coppia: (e as any).is_coppia ?? false,
         pettorale_start: (e as any).pettorale_start ?? null,
+        location_lat: (e as any).location_lat ?? null,
+        location_lng: (e as any).location_lng ?? null,
+        location_label: (e as any).location_label ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
