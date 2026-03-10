@@ -114,13 +114,14 @@ interface PersonState {
   codiceFiscale: string;
   bornAbroad: boolean;
   computedCF: string | null;
+  returningUserData: MatchedParticipant | null;
 }
 
 const emptyPerson = (): PersonState => ({
   nome: "", cognome: "", email: "", telefono: "",
   countryCode: "+39", identificationType: "birth",
   birthDate: "", birthPlace: "", gender: "", codiceFiscale: "",
-  bornAbroad: false, computedCF: null,
+  bornAbroad: false, computedCF: null, returningUserData: null,
 });
 
 const DISCIPLINE_PRICES: Record<string, number> = {
