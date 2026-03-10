@@ -45,6 +45,8 @@ export function useEvent(slug: string | undefined) {
         custom_fields: (data.custom_fields as unknown as CustomField[]) || [],
         payment_methods: data.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: data.is_tesseramento ?? false,
+        is_coppia: (data as any).is_coppia ?? false,
+        pettorale_start: (data as any).pettorale_start ?? null,
       };
     },
     enabled: !!slug,
