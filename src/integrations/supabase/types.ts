@@ -23,10 +23,12 @@ export type Database = {
           descrizione: string | null
           hero_image: string | null
           id: string
+          is_coppia: boolean
           is_tesseramento: boolean
           luogo: string | null
           nome: string
           payment_methods: string[] | null
+          pettorale_start: number | null
           prezzo: number
           scadenza_iscrizioni: string | null
           slug: string
@@ -40,10 +42,12 @@ export type Database = {
           descrizione?: string | null
           hero_image?: string | null
           id?: string
+          is_coppia?: boolean
           is_tesseramento?: boolean
           luogo?: string | null
           nome: string
           payment_methods?: string[] | null
+          pettorale_start?: number | null
           prezzo?: number
           scadenza_iscrizioni?: string | null
           slug: string
@@ -57,10 +61,12 @@ export type Database = {
           descrizione?: string | null
           hero_image?: string | null
           id?: string
+          is_coppia?: boolean
           is_tesseramento?: boolean
           luogo?: string | null
           nome?: string
           payment_methods?: string[] | null
+          pettorale_start?: number | null
           prezzo?: number
           scadenza_iscrizioni?: string | null
           slug?: string
