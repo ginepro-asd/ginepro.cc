@@ -701,6 +701,7 @@ const Admin = () => {
                      <TableRow>
                        <TableHead className="w-14">Foto</TableHead>
                        <TableHead>Evento</TableHead>
+                       <TableHead>Pett.</TableHead>
                        <TableHead>Nome</TableHead>
                        <TableHead>Email</TableHead>
                        <TableHead>Telefono</TableHead>
