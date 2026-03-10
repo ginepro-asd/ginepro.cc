@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -22,6 +23,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { EventData, CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
 import CodiceFiscale from "codice-fiscale-js";
+
+function obfuscateEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***@***.***";
+  const oLocal = local.length <= 2 ? local[0] + "***" : local[0] + local[1] + "***" + local.slice(-1);
+  const parts = domain.split(".");
+  const oDomain = parts[0].length <= 2 ? parts[0][0] + "***" : parts[0][0] + parts[0][1] + "***" + parts[0].slice(-1);
+  return `${oLocal}@${oDomain}.${parts.slice(1).join(".")}`;
+}
+
+function obfuscatePhone(phone: string): string {
+  if (phone.length <= 6) return "***";
+  return phone.slice(0, phone.length > 10 ? 6 : 3) + "***" + phone.slice(-3);
+}
+
+function obfuscateCF(cf: string | null): string {
+  if (!cf || cf.length < 10) return "***";
+  return cf.slice(0, 3) + "***" + cf.slice(6, 9) + "***" + cf.slice(-2);
+}
+
+interface MatchedParticipant {
+  id: string;
+  email: string;
+  telefono: string;
+  codice_fiscale: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  identification_type: string;
+}
 
 const COUNTRY_CODES = [
   { code: "+39", country: "🇮🇹 IT", label: "Italia" },
@@ -84,13 +114,14 @@ interface PersonState {
   codiceFiscale: string;
   bornAbroad: boolean;
   computedCF: string | null;
+  returningUserData: MatchedParticipant | null;
 }
 
 const emptyPerson = (): PersonState => ({
   nome: "", cognome: "", email: "", telefono: "",
   countryCode: "+39", identificationType: "birth",
   birthDate: "", birthPlace: "", gender: "", codiceFiscale: "",
-  bornAbroad: false, computedCF: null,
+  bornAbroad: false, computedCF: null, returningUserData: null,
 });
 
 const DISCIPLINE_PRICES: Record<string, number> = {
@@ -111,9 +142,16 @@ function PersonFormFields({
   comuni: string[];
   comuniLoading: boolean;
 }) {
+  const [matchedUsers, setMatchedUsers] = useState<MatchedParticipant[]>([]);
+  const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [matchDismissed, setMatchDismissed] = useState(false);
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
+
+  const isReturning = !!person.returningUserData;
+
   const update = (fields: Partial<PersonState>) => {
     const next = { ...person, ...fields };
-    // Auto-compute CF
     if (next.identificationType === "birth" && next.nome && next.cognome && next.birthDate && next.birthPlace && next.gender) {
       next.computedCF = tryComputeCF(next.nome, next.cognome, next.birthDate, next.birthPlace, next.gender as "M" | "F", next.bornAbroad);
       if (next.computedCF) next.codiceFiscale = next.computedCF;
@@ -121,137 +159,192 @@ function PersonFormFields({
     onChange(next);
   };
 
+  useEffect(() => {
+    if (matchDismissed || isReturning) return;
+    if (!person.nome?.trim() || !person.cognome?.trim()) { setMatchedUsers([]); return; }
+    if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current);
+    lookupTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from("participants")
+          .select("id, email, telefono, codice_fiscale, birth_date, birth_place, identification_type")
+          .ilike("nome", person.nome.trim())
+          .ilike("cognome", person.cognome.trim())
+          .limit(10);
+        if (data && data.length > 0) { setMatchedUsers(data); setShowMatchDialog(true); }
+        else { setMatchedUsers([]); }
+      } catch {}
+    }, 800);
+    return () => { if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current); };
+  }, [person.nome, person.cognome, matchDismissed, isReturning]);
+
+  const handleSelectMatch = (match: MatchedParticipant) => {
+    const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
+    const cc = phoneMatch ? COUNTRY_CODES.find(c => c.code === phoneMatch[1])?.code || "+39" : "+39";
+    onChange({
+      ...person,
+      email: obfuscateEmail(match.email),
+      telefono: obfuscatePhone(match.telefono),
+      countryCode: cc,
+      codiceFiscale: match.codice_fiscale ? obfuscateCF(match.codice_fiscale) : person.codiceFiscale,
+      identificationType: match.codice_fiscale ? "fiscal" : person.identificationType,
+      birthDate: match.birth_date || person.birthDate,
+      birthPlace: match.birth_place || person.birthPlace,
+      returningUserData: match,
+    });
+    setShowMatchDialog(false);
+    setMatchDismissed(true);
+    toast({ title: "Dati recuperati!", description: "Abbiamo precompilato il form con i tuoi dati." });
+  };
+
   return (
-    <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="font-display text-lg flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Name */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-sm">Nome *</Label>
-            <Input placeholder="Mario" value={person.nome} onChange={(e) => update({ nome: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Cognome *</Label>
-            <Input placeholder="Rossi" value={person.cognome} onChange={(e) => update({ cognome: e.target.value })} />
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">Email *</Label>
-          <Input type="email" placeholder="mario@email.com" value={person.email} onChange={(e) => update({ email: e.target.value })} />
-        </div>
-
-        {/* Phone */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">Telefono *</Label>
-          <div className="flex gap-2">
-            <select
-              value={person.countryCode}
-              onChange={(e) => update({ countryCode: e.target.value })}
-              className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-[90px] shrink-0"
-            >
-              {COUNTRY_CODES.map((c) => (
-                <option key={c.code} value={c.code}>{c.country} {c.code}</option>
-              ))}
-            </select>
-            <Input type="tel" placeholder="333 1234567" value={person.telefono} onChange={(e) => update({ telefono: e.target.value })} />
-          </div>
-        </div>
-
-        {/* Identification */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Identificazione *</Label>
-          <RadioGroup
-            value={person.identificationType}
-            onValueChange={(v) => update({ identificationType: v as "birth" | "fiscal", computedCF: null })}
-            className="flex gap-4"
-          >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="birth" id={`birth-${label}`} />
-              <Label htmlFor={`birth-${label}`} className="cursor-pointer">Data/Luogo di nascita</Label>
+    <>
+      <Dialog open={showMatchDialog} onOpenChange={(open) => { if (!open) { setShowMatchDialog(false); setMatchDismissed(true); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              <UserCheck className="h-5 w-5 text-primary" />
+              <DialogTitle className="font-display">Ci conosciamo già?</DialogTitle>
             </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="fiscal" id={`fiscal-${label}`} />
-              <Label htmlFor={`fiscal-${label}`} className="cursor-pointer">Codice Fiscale</Label>
-            </div>
-          </RadioGroup>
+            <DialogDescription>
+              Abbiamo trovato {matchedUsers.length > 1 ? "alcune iscrizioni" : "un'iscrizione"} con questo nome. Sei tu?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            {matchedUsers.map((m) => (
+              <button key={m.id} type="button" onClick={() => handleSelectMatch(m)}
+                className="w-full text-left border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 transition-all space-y-1">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Email: </span>
+                  <span className="font-medium font-mono text-foreground">{obfuscateEmail(m.email)}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Telefono: </span>
+                  <span className="font-medium font-mono text-foreground">{obfuscatePhone(m.telefono)}</span>
+                </div>
+                {m.codice_fiscale && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">C.F.: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscateCF(m.codice_fiscale)}</span>
+                  </div>
+                )}
+              </button>
+            ))}
+            <Button variant="ghost" className="w-full text-muted-foreground"
+              onClick={() => { setShowMatchDialog(false); setMatchDismissed(true); }}>
+              No, sono un nuovo iscritto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-          {person.identificationType === "fiscal" ? (
+      <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            {label}
+            {isReturning && (
+              <span className="text-xs font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full ml-auto">
+                <UserCheck className="h-3 w-3 inline mr-1" />Riconosciuto
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Input
-                placeholder="RSSMRA85M01H501Z"
-                maxLength={16}
-                className="uppercase"
-                value={person.codiceFiscale}
-                onChange={(e) => update({ codiceFiscale: e.target.value.toUpperCase() })}
-              />
+              <Label className="text-sm">Nome *</Label>
+              <Input placeholder="Mario" value={person.nome} onChange={(e) => update({ nome: e.target.value })} />
             </div>
-          ) : (
-            <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Cognome *</Label>
+              <Input placeholder="Rossi" value={person.cognome} onChange={(e) => update({ cognome: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Email *</Label>
+            <Input type="email" placeholder="mario@email.com" value={person.email} readOnly={isReturning} onChange={(e) => update({ email: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Telefono *</Label>
+            <div className="flex gap-2">
+              <select value={person.countryCode} onChange={(e) => update({ countryCode: e.target.value })} disabled={isReturning}
+                className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-[90px] shrink-0">
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.country} {c.code}</option>
+                ))}
+              </select>
+              <Input type="tel" placeholder="333 1234567" value={person.telefono} readOnly={isReturning} onChange={(e) => update({ telefono: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Identificazione *</Label>
+            <RadioGroup value={person.identificationType}
+              onValueChange={(v) => !isReturning && update({ identificationType: v as "birth" | "fiscal", computedCF: null })}
+              className="flex gap-4">
               <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`abroad-${label}`}
-                  checked={person.bornAbroad}
-                  onCheckedChange={(checked) => update({ bornAbroad: !!checked, birthPlace: "" })}
-                />
-                <Label htmlFor={`abroad-${label}`} className="cursor-pointer text-sm text-muted-foreground">Nato/a all'estero</Label>
+                <RadioGroupItem value="birth" id={`birth-${label}`} disabled={isReturning} />
+                <Label htmlFor={`birth-${label}`} className="cursor-pointer">Data/Luogo di nascita</Label>
               </div>
-
-              {/* Gender */}
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="fiscal" id={`fiscal-${label}`} disabled={isReturning} />
+                <Label htmlFor={`fiscal-${label}`} className="cursor-pointer">Codice Fiscale</Label>
+              </div>
+            </RadioGroup>
+            {person.identificationType === "fiscal" ? (
               <div className="space-y-1.5">
-                <Label className="text-sm">Sesso *</Label>
-                <RadioGroup value={person.gender} onValueChange={(v) => update({ gender: v as "M" | "F" })} className="flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="M" id={`gender-m-${label}`} />
-                    <Label htmlFor={`gender-m-${label}`} className="cursor-pointer">M</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="F" id={`gender-f-${label}`} />
-                    <Label htmlFor={`gender-f-${label}`} className="cursor-pointer">F</Label>
-                  </div>
-                </RadioGroup>
+                <Input placeholder="RSSMRA85M01H501Z" maxLength={16} className="uppercase"
+                  value={person.codiceFiscale} readOnly={isReturning}
+                  onChange={(e) => update({ codiceFiscale: e.target.value.toUpperCase() })} />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Data di nascita</Label>
-                  <Input type="date" value={person.birthDate} onChange={(e) => update({ birthDate: e.target.value })} />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox id={`abroad-${label}`} checked={person.bornAbroad}
+                    onCheckedChange={(checked) => update({ bornAbroad: !!checked, birthPlace: "" })} />
+                  <Label htmlFor={`abroad-${label}`} className="cursor-pointer text-sm text-muted-foreground">Nato/a all'estero</Label>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">{person.bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</Label>
-                  <SearchableSelect
-                    options={person.bornAbroad ? COUNTRIES : comuni}
-                    value={person.birthPlace}
-                    onChange={(v) => update({ birthPlace: v })}
-                    placeholder={person.bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
-                    searchPlaceholder={person.bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
-                    emptyMessage="Nessun risultato trovato."
-                    loading={!person.bornAbroad && comuniLoading}
-                  />
+                  <Label className="text-sm">Sesso *</Label>
+                  <RadioGroup value={person.gender} onValueChange={(v) => update({ gender: v as "M" | "F" })} className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="M" id={`gender-m-${label}`} />
+                      <Label htmlFor={`gender-m-${label}`} className="cursor-pointer">M</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="F" id={`gender-f-${label}`} />
+                      <Label htmlFor={`gender-f-${label}`} className="cursor-pointer">F</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              </div>
-
-              {person.computedCF && (
-                <div className="bg-muted/50 border border-border rounded-lg p-3">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                    <Calculator className="h-3.5 w-3.5" />
-                    Codice Fiscale calcolato
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Data di nascita</Label>
+                    <Input type="date" value={person.birthDate} onChange={(e) => update({ birthDate: e.target.value })} />
                   </div>
-                  <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{person.computedCF}</p>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">{person.bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</Label>
+                    <SearchableSelect options={person.bornAbroad ? COUNTRIES : comuni} value={person.birthPlace}
+                      onChange={(v) => update({ birthPlace: v })}
+                      placeholder={person.bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
+                      searchPlaceholder={person.bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
+                      emptyMessage="Nessun risultato trovato." loading={!person.bornAbroad && comuniLoading} />
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                {person.computedCF && (
+                  <div className="bg-muted/50 border border-border rounded-lg p-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                      <Calculator className="h-3.5 w-3.5" />Codice Fiscale calcolato
+                    </div>
+                    <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{person.computedCF}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -275,26 +368,33 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
     if (!p.cognome.trim()) return `${label}: Cognome è obbligatorio`;
-    if (!p.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return `${label}: Email non valida`;
-    if (!p.telefono.trim() || p.telefono.length < 6) return `${label}: Telefono non valido`;
+    // Skip email/phone validation for returning users (obfuscated)
+    if (!p.returningUserData) {
+      if (!p.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return `${label}: Email non valida`;
+      if (!p.telefono.trim() || p.telefono.length < 6) return `${label}: Telefono non valido`;
+    }
     if (p.identificationType === "birth") {
-      if (!p.birthDate || !p.birthPlace || !p.gender) return `${label}: Compila data, luogo di nascita e sesso`;
+      if (!p.returningUserData && (!p.birthDate || !p.birthPlace || !p.gender)) return `${label}: Compila data, luogo di nascita e sesso`;
     } else {
-      if (!p.codiceFiscale || p.codiceFiscale.length < 11) return `${label}: Codice Fiscale non valido`;
+      if (!p.returningUserData && (!p.codiceFiscale || p.codiceFiscale.length < 11)) return `${label}: Codice Fiscale non valido`;
     }
     return null;
   };
 
-  const buildPayload = (p: PersonState) => ({
-    nome: p.nome.trim(),
-    cognome: p.cognome.trim(),
-    email: p.email.trim(),
-    telefono: `${p.countryCode}${p.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`,
-    identificationType: p.identificationType,
-    birthDate: p.birthDate || null,
-    birthPlace: p.birthPlace || null,
-    codiceFiscale: p.codiceFiscale || p.computedCF || null,
-  });
+  const buildPayload = (p: PersonState) => {
+    const ret = p.returningUserData;
+    return {
+      nome: p.nome.trim(),
+      cognome: p.cognome.trim(),
+      email: ret ? ret.email : p.email.trim(),
+      telefono: ret ? ret.telefono : `${p.countryCode}${p.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`,
+      identificationType: ret ? ret.identification_type : p.identificationType,
+      birthDate: ret ? ret.birth_date : (p.birthDate || null),
+      birthPlace: ret ? ret.birth_place : (p.birthPlace || null),
+      codiceFiscale: ret ? ret.codice_fiscale : (p.codiceFiscale || p.computedCF || null),
+      participantId: ret ? ret.id : undefined,
+    };
+  };
 
   const onSubmit = async () => {
     const errA = validatePerson(personA, "Componente A");
