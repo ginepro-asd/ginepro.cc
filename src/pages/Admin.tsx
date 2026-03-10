@@ -739,6 +739,11 @@ const Admin = () => {
                                {r.event_nome || "—"}
                              </Badge>
                            </TableCell>
+                           <TableCell>
+                             {r.custom_data?.pettorale ? (
+                               <Badge variant="secondary" className="text-xs font-mono">{r.custom_data.pettorale}</Badge>
+                             ) : "—"}
+                           </TableCell>
                             <TableCell className="font-medium whitespace-nowrap">{r.nome} {r.cognome}</TableCell>
                             <TableCell className="text-sm">{r.email}</TableCell>
                             <TableCell className="text-sm">{r.telefono}</TableCell>
