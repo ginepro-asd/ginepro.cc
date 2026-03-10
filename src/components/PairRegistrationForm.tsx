@@ -93,6 +93,11 @@ const emptyPerson = (): PersonState => ({
   bornAbroad: false, computedCF: null,
 });
 
+const DISCIPLINE_PRICES: Record<string, number> = {
+  "Staffetta": 800,
+  "Eco-camminata": 500,
+};
+
 interface PairRegistrationFormProps {
   event: EventData;
 }
@@ -261,7 +266,11 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
-  const totalPrice = event.prezzo * 2;
+  // Discipline selection (from custom_fields)
+  const disciplinaField = event.custom_fields.find((f) => f.key === "disciplina");
+  const [disciplina, setDisciplina] = useState<string>(disciplinaField?.options?.[0] || "");
+  const unitPrice = disciplina && DISCIPLINE_PRICES[disciplina] ? DISCIPLINE_PRICES[disciplina] : event.prezzo;
+  const totalPrice = unitPrice * 2;
 
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
@@ -300,7 +309,8 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         participantB: buildPayload(personB),
         paymentMethod,
         eventId: event.id,
-        customData: {},
+        customData: { disciplina },
+        disciplina,
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
@@ -363,8 +373,37 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">Iscriviti in coppia</h2>
         <p className="text-center text-muted-foreground mb-8">
           Iscrivi la tua coppia al prezzo di <span className="font-bold text-secondary">{formatPrice(totalPrice)}</span>
-          <span className="text-xs ml-1">({formatPrice(event.prezzo)} × 2)</span>
+          <span className="text-xs ml-1">({formatPrice(unitPrice)} × 2)</span>
         </p>
+
+        {/* Discipline choice */}
+        {disciplinaField && disciplinaField.options && (
+          <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm mb-6">
+            <CardContent className="pt-6 space-y-3">
+              <Label className="text-sm font-medium">{disciplinaField.label} *</Label>
+              <RadioGroup value={disciplina} onValueChange={setDisciplina} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {disciplinaField.options.map((opt) => {
+                  const price = DISCIPLINE_PRICES[opt];
+                  return (
+                    <label
+                      key={opt}
+                      htmlFor={`disc-${opt}`}
+                      className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${disciplina === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                    >
+                      <RadioGroupItem value={opt} id={`disc-${opt}`} />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">{opt}</span>
+                        {price && (
+                          <span className="block text-xs text-muted-foreground">{formatPrice(price)} a partecipante</span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <PersonFormFields label="Componente A" person={personA} onChange={setPersonA} comuni={comuni} comuniLoading={comuniLoading} />
