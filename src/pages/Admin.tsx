@@ -516,6 +516,38 @@ const Admin = () => {
           </div>
         </div>
 
+        {/* Admin tabs */}
+        {isGlobal && (
+          <div className="flex gap-1 border-b border-border">
+            <button
+              onClick={() => setAdminTab("iscrizioni")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                adminTab === "iscrizioni"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Iscrizioni
+            </button>
+            <button
+              onClick={() => setAdminTab("eventi")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                adminTab === "eventi"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Eventi
+            </button>
+          </div>
+        )}
+
+        {adminTab === "eventi" && isGlobal ? (
+          <EventManager password={password} />
+        ) : (
+        <>
+
         {isGlobal && eventCounts && Object.keys(eventCounts).length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {Object.entries(eventCounts).map(([name, count]) => (
