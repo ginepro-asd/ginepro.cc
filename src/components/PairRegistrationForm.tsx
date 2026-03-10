@@ -309,7 +309,8 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         participantB: buildPayload(personB),
         paymentMethod,
         eventId: event.id,
-        customData: {},
+        customData: { disciplina },
+        disciplina,
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
