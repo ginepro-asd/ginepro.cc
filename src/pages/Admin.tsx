@@ -830,6 +830,8 @@ const Admin = () => {
             </div>
           </CardContent>
         </Card>
+        </>
+        )}
 
         {/* Registration detail modal */}
         <Dialog open={!!detailRegistration} onOpenChange={(open) => !open && setDetailRegistration(null)}>
