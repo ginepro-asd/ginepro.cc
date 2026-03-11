@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
 import PairRegistrationForm from "@/components/PairRegistrationForm";
+import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
@@ -189,6 +190,8 @@ const EventPage = () => {
             </Button>
           </div>
         </section>
+      ) : event.is_tesseramento ? (
+        <TesseramentoForm event={event} />
       ) : event.is_coppia ? (
         <PairRegistrationForm event={event} />
       ) : (

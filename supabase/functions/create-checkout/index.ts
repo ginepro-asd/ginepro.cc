@@ -19,6 +19,10 @@ serve(async (req) => {
       nome, cognome, email, telefono,
       identificationType, birthDate, birthPlace, codiceFiscale,
       eventId, customData,
+      // Tesseramento-specific fields
+      photoUrl, photoThumbUrl, signatureUrl,
+      certificatePaths, certificateAnalyses,
+      isTesseramento,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
@@ -38,18 +42,33 @@ serve(async (req) => {
       .single();
 
     if (eventError || !event) throw new Error("Evento non trovato");
-    const eventPrice = resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
+
+    // For tesseramento events, use membership type pricing
+    const MEMBERSHIP_PRICES: Record<string, number> = {
+      "fidal-running": 4000, "fidal-running-uisp-bike": 8000,
+      "socio-sostenitore": 1500, "uisp-bike": 5500,
+      "uisp-running": 2500, "uisp-running-bike": 6500,
+    };
+    const membershipType = customData?.membershipType;
+    const eventPrice = (isTesseramento && membershipType && MEMBERSHIP_PRICES[membershipType])
+      ? MEMBERSHIP_PRICES[membershipType]
+      : resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
 
     // Upsert participant
-    const { data: participant, error: partError } = await supabaseAdmin
-      .from("participants")
-      .upsert({
+    const participantData: any = {
         nome, cognome, email, telefono,
         codice_fiscale: codiceFiscale || null,
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
         identification_type: identificationType,
-      }, { onConflict: "email" })
+      };
+    if (photoUrl) participantData.photo_url = photoUrl;
+    if (photoThumbUrl) participantData.photo_thumb_url = photoThumbUrl;
+    if (signatureUrl) participantData.signature_url = signatureUrl;
+
+    const { data: participant, error: partError } = await supabaseAdmin
+      .from("participants")
+      .upsert(participantData, { onConflict: "email" })
       .select("id")
       .single();
 
@@ -73,6 +92,21 @@ serve(async (req) => {
       .single();
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
+
+    // Save medical certificates if provided
+    if (certificatePaths?.length > 0) {
+      for (let i = 0; i < certificatePaths.length; i++) {
+        const analysis = certificateAnalyses?.[i] || {};
+        await supabaseAdmin.from("medical_certificates").insert({
+          participant_id: participant.id,
+          registration_id: registration.id,
+          file_path: certificatePaths[i],
+          expiry_date: analysis.expiryDate || null,
+          disciplines: analysis.disciplines || [],
+          ai_warning: analysis.warning || null,
+        });
+      }
+    }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-08-27.basil",

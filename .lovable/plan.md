@@ -1,82 +1,75 @@
 
 
-# Piano aggiornato — Fase 1: Form Tesseramento 2026
+# Landing Page — Tredozio Trail by GINEPRO (Early-Bird)
 
-## Nota importante
-Il `TesseramentoForm` deve includere la stessa logica "Ci conosciamo già?" presente in `RegistrationForm`: lookup debounced su `participants` tramite nome+cognome, dialog di selezione profilo, precompilazione con dati offuscati, e uso dei dati reali al submit.
+## Panoramica
+Landing page per iscrizioni early-bird al Tredozio Trail by GINEPRO (11 Aprile 2027) a 14,99€. Offerta valida fino alla mezzanotte del 29 Marzo 2025. Pagamento via Stripe, Satispay o PayPal.
 
-## Strategia per il riutilizzo
+---
 
-La logica condivisa tra `RegistrationForm` e `TesseramentoForm` include:
-- Funzioni di offuscamento (`obfuscateEmail`, `obfuscatePhone`, `obfuscateCF`)
-- L'interfaccia `MatchedRegistration` e il tipo del form base
-- Il lookup debounced su `participants` via nome+cognome con `useEffect`
-- Il dialog "Ci conosciamo già?" con selezione e precompilazione
-- Il calcolo automatico CF da dati anagrafici e viceversa (`tryComputeCF`, `tryInverseCF`)
-- Le costanti `COUNTRY_CODES`, `PAYMENT_ICONS`, `PAYMENT_LABELS`
-- La funzione `stripProvincia` / `extractProvincia`
+## 1. Brand Identity
+- **Colori primari**: Teal scuro e Rosa corallo, dai loghi GINEPRO
+- **Loghi**: Dark e Light mode con i loghi forniti
+- **Grafica topografica**: NON usata direttamente — verrà ricreata come pattern SVG/CSS con linee di livello stilizzate ispirate all'originale, in qualità vettoriale, usata come texture decorativa di sfondo
+- **Elementi decorativi**: triangoli e cerchi dal brand, forme montagna/sole
 
-**Approccio**: Estrarre queste utilità e costanti in un file condiviso `src/lib/registration-utils.ts`, poi importarle sia in `RegistrationForm` che in `TesseramentoForm`. Questo evita duplicazione e garantisce che il comportamento "Ci conosciamo già" sia identico.
+## 2. Hero Section
+- Logo GINEPRO grande
+- Titolo: **Tredozio Trail** — **11 Aprile 2027**
+- Prezzo: **14,99€ Early-Bird**
+- **Countdown timer** fino a mezzanotte del 29 Marzo 2025
+- Sfondo con pattern topografico vettoriale ricreato
+- CTA "Iscriviti ora"
 
-## Struttura dei file
+## 3. Sezione Info Evento
+- Data, luogo (Tredozio), descrizione breve
+- **"Offerta valida fino al 29 Marzo 2025 alle 23:59"**
 
-| File | Azione |
-|---|---|
-| `src/lib/registration-utils.ts` | **Nuovo** — Utilità condivise (offuscamento, CF, costanti, tipo `MatchedRegistration`) |
-| `src/hooks/use-returning-user.ts` | **Nuovo** — Hook custom che incapsula il lookup debounced + stato match + dialog logic |
-| `src/components/RegistrationForm.tsx` | **Refactor** — Importa da `registration-utils` e `use-returning-user` invece di definire tutto inline |
-| `src/components/TesseramentoForm.tsx` | **Nuovo** — Form multi-step che usa gli stessi import |
-| `src/components/SignaturePad.tsx` | **Nuovo** — Canvas firma touch/mouse |
-| `supabase/functions/analyze-certificate/index.ts` | **Nuovo** — Analisi AI certificato medico |
-| DB migration | Crea `membership_cards`, `medical_certificates`, storage buckets, colonne su `participants` |
-| `src/pages/EventPage.tsx` | Condizionale `is_tesseramento` → renderizza `TesseramentoForm` |
+## 4. Form di Iscrizione (bloccato dopo scadenza)
+Campi obbligatori:
+- **Nome**
+- **Cognome**
+- **Email**
+- **Numero di telefono** (necessario per Satispay)
+- **Scelta** tra: Data e luogo di nascita OPPURE Codice fiscale
+- **Metodo di pagamento**: Stripe, Satispay o PayPal
 
-## Hook `use-returning-user`
+Dopo mezzanotte del 29/03/2025: form disabilitato → "Le iscrizioni early-bird sono chiuse"
 
-Encapsula:
-- Stato: `matchedUsers`, `showMatchDialog`, `matchDismissed`, `returningUserData`
-- Effect debounced che chiama `participants` con `ilike` su nome+cognome
-- `handleSelectMatch(match)` che popola il form con dati offuscati
-- `handleDismiss()` per chiudere il dialog
-- Espone `returningUserData` per l'uso al submit (dati reali in chiaro)
+## 5. Pagamento — Tre opzioni
 
-Parametri in input: `watchedNome`, `watchedCognome`, `form` (react-hook-form instance), `setCountryCode`, `setIdentificationType`.
+### 5a. Stripe
+- Redirect a Stripe Checkout per 14,99€, ritorno a pagina di conferma
 
-## Flusso TesseramentoForm
+### 5b. Satispay
+- Creazione pagamento via API Satispay (edge function)
+- **Nessun redirect**: notifica push sull'app Satispay dell'utente
+- Pagina mostra "In attesa di pagamento..." con polling per conferma
+- Al completamento → conferma iscrizione
 
-**Step 1 — Identificazione** (identico a RegistrationForm)
-- Nome, Cognome → trigger "Ci conosciamo già?" via `use-returning-user`
-- Email, Telefono (con prefisso), Sesso
-- Data/Luogo di nascita OPPURE Codice fiscale
-- Calcolo automatico CF ↔ dati anagrafici
+### 5c. PayPal
+- Integrazione PayPal Checkout (SDK JavaScript o redirect)
+- Pagamento one-off di 14,99€
+- Ritorno a pagina di conferma
 
-**Step 2 — Tipologia tesseramento**
-- 6 opzioni radio con prezzo: FIDAL Running (40€), FIDAL Running + UISP Bike (80€), Socio sostenitore (15€), UISP Bike (55€), UISP Running (25€), UISP Running + Bike (65€)
-- Determina discipline richieste per certificato
+## 6. Pagina di Conferma
+- Messaggio di successo con riepilogo: nome, cognome, email, metodo di pagamento
 
-**Step 3 — Fototessera**
-- Upload o selfie, preview, thumbnail 200px client-side
+## 7. Salvataggio Dati
+- Database Supabase con possibilità di esportazione CSV
+- Ogni iscrizione collegata allo stato pagamento (Stripe/Satispay/PayPal)
 
-**Step 4 — Firma**
-- SignaturePad canvas oppure upload immagine
+## 8. Design & Stile
+- Palette natura teal/corallo dal brand
+- Pattern topografico ricreato in SVG/CSS ad alta qualità (ispirato alla grafica originale)
+- Layout responsive mobile-first
+- Countdown con urgenza visiva
+- Dark/Light mode con loghi appropriati
 
-**Step 5 — Certificato medico** (skip per "Socio sostenitore")
-- Upload + analisi AI (Gemini Flash)
-- Se 2 sport → 2 certificati
-- Bottone "Carica dopo" per saltare
-- Warning non bloccante se discipline non corrispondono
-
-**Step 6 — Pagamento**
-- Riepilogo + selezione metodo pagamento
-
-## Database (invariato rispetto al piano precedente)
-
-- Tabelle `membership_cards`, `medical_certificates`
-- Colonne `photo_url`, `photo_thumb_url`, `signature_url` su `participants`
-- Storage buckets: `member-photos`, `member-signatures`, `medical-certificates`
-
-## Fuori scope (Fase 2)
-- Pagina tessera `/card/:id`
-- Area riservata utente
-- Email di conferma con numero tessera
+## Note Tecniche
+- **Lovable Cloud / Supabase** per edge function (Satispay API, salvataggio dati)
+- **Stripe** integrato tramite Lovable
+- **Satispay API key** salvate come secret
+- **PayPal Client ID** salvato come secret
+- I loghi forniti integrati come asset nel progetto
 
