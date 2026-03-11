@@ -36,6 +36,7 @@ export type Database = {
           scadenza_iscrizioni: string | null
           slug: string
           updated_at: string
+          visibile_in_landing: boolean
         }
         Insert: {
           attivo?: boolean
@@ -58,6 +59,7 @@ export type Database = {
           scadenza_iscrizioni?: string | null
           slug: string
           updated_at?: string
+          visibile_in_landing?: boolean
         }
         Update: {
           attivo?: boolean
@@ -80,6 +82,7 @@ export type Database = {
           scadenza_iscrizioni?: string | null
           slug?: string
           updated_at?: string
+          visibile_in_landing?: boolean
         }
         Relationships: []
       }
