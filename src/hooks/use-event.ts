@@ -21,6 +21,7 @@ export interface EventData {
   location_lat: number | null;
   location_lng: number | null;
   location_label: string | null;
+  external_url: string | null;
 }
 
 export interface CustomField {
