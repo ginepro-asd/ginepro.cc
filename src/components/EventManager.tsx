@@ -136,6 +136,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: ev.location_label || "",
         location_address: ev.luogo || "",
         custom_fields: normalizeCustomFields(ev.custom_fields),
+        external_url: ev.external_url || "",
       });
     } else {
       setCreating(true);
