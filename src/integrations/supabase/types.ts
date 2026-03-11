@@ -21,6 +21,7 @@ export type Database = {
           custom_fields: Json | null
           data_evento: string | null
           descrizione: string | null
+          external_url: string | null
           hero_image: string | null
           id: string
           is_coppia: boolean
@@ -44,6 +45,7 @@ export type Database = {
           custom_fields?: Json | null
           data_evento?: string | null
           descrizione?: string | null
+          external_url?: string | null
           hero_image?: string | null
           id?: string
           is_coppia?: boolean
@@ -67,6 +69,7 @@ export type Database = {
           custom_fields?: Json | null
           data_evento?: string | null
           descrizione?: string | null
+          external_url?: string | null
           hero_image?: string | null
           id?: string
           is_coppia?: boolean
