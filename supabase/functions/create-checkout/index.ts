@@ -19,6 +19,10 @@ serve(async (req) => {
       nome, cognome, email, telefono,
       identificationType, birthDate, birthPlace, codiceFiscale,
       eventId, customData,
+      // Tesseramento-specific fields
+      photoUrl, photoThumbUrl, signatureUrl,
+      certificatePaths, certificateAnalyses,
+      isTesseramento,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
