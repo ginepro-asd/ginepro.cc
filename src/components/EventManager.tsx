@@ -197,6 +197,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_lat: editFields.location_lat || null,
         location_lng: editFields.location_lng || null,
         location_label: editFields.location_label || null,
+        external_url: editFields.external_url || null,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
 
