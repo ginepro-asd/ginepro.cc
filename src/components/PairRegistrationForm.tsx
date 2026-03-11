@@ -22,6 +22,10 @@ import { COUNTRIES } from "@/data/countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { EventData, CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
+import {
+  getOptionPrice,
+  getRouteSelectionField,
+} from "@/lib/event-pricing";
 import CodiceFiscale from "codice-fiscale-js";
 
 function obfuscateEmail(email: string): string {
@@ -123,11 +127,6 @@ const emptyPerson = (): PersonState => ({
   birthDate: "", birthPlace: "", gender: "", codiceFiscale: "",
   bornAbroad: false, computedCF: null, returningUserData: null,
 });
-
-const DISCIPLINE_PRICES: Record<string, number> = {
-  "Staffetta": 800,
-  "Eco-camminata": 500,
-};
 
 interface PairRegistrationFormProps {
   event: EventData;
@@ -359,11 +358,14 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
   const { toast } = useToast();
 
-  // Discipline selection (from custom_fields)
-  const disciplinaField = event.custom_fields.find((f) => f.key === "disciplina");
-  const [disciplina, setDisciplina] = useState<string>(disciplinaField?.options?.[0] || "");
-  const unitPrice = disciplina && DISCIPLINE_PRICES[disciplina] ? DISCIPLINE_PRICES[disciplina] : event.prezzo;
+  const routeField = getRouteSelectionField(event.custom_fields);
+  const [routeSelection, setRouteSelection] = useState<string>(routeField?.options?.[0] || "");
+  const unitPrice = getOptionPrice(routeField, routeSelection) ?? event.prezzo;
   const totalPrice = unitPrice * 2;
+
+  useEffect(() => {
+    setRouteSelection(routeField?.options?.[0] || "");
+  }, [routeField?.key, routeField?.options?.join("|")]);
 
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
@@ -409,8 +411,8 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         participantB: buildPayload(personB),
         paymentMethod,
         eventId: event.id,
-        customData: { disciplina },
-        disciplina,
+        customData: routeField && routeSelection ? { [routeField.key]: routeSelection } : {},
+        disciplina: routeField?.key === "disciplina" ? routeSelection : undefined,
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
@@ -477,18 +479,18 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         </p>
 
         {/* Discipline choice */}
-        {disciplinaField && disciplinaField.options && (
+        {routeField && routeField.options && (
           <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm mb-6">
             <CardContent className="pt-6 space-y-3">
-              <Label className="text-sm font-medium">{disciplinaField.label} *</Label>
-              <RadioGroup value={disciplina} onValueChange={setDisciplina} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {disciplinaField.options.map((opt) => {
-                  const price = DISCIPLINE_PRICES[opt];
+              <Label className="text-sm font-medium">{routeField.label} *</Label>
+              <RadioGroup value={routeSelection} onValueChange={setRouteSelection} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {routeField.options.map((opt) => {
+                  const price = getOptionPrice(routeField, opt);
                   return (
                     <label
                       key={opt}
                       htmlFor={`disc-${opt}`}
-                      className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${disciplina === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                      className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${routeSelection === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
                     >
                       <RadioGroupItem value={opt} id={`disc-${opt}`} />
                       <div className="flex-1">

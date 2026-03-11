@@ -1,0 +1,2 @@
+ALTER TABLE public.events
+ADD COLUMN visibile_in_landing boolean NOT NULL DEFAULT true;

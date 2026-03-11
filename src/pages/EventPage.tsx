@@ -9,6 +9,7 @@ import PairRegistrationForm from "@/components/PairRegistrationForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
+import { getStartingPrice, hasVariablePricing } from "@/lib/event-pricing";
 
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -40,6 +41,8 @@ const EventPage = () => {
         year: "numeric",
       })
     : null;
+  const variablePricing = hasVariablePricing(event.custom_fields);
+  const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
@@ -85,7 +88,7 @@ const EventPage = () => {
               {eventDate}
             </p>
           )}
-          {(event.location_label || event.luogo) && (
+          {event.location_label && (
             <p className="font-display text-sm text-muted-foreground mb-8">
               <MapPin className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
               {event.location_lat && event.location_lng ? (
@@ -95,10 +98,10 @@ const EventPage = () => {
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors underline underline-offset-2 decoration-muted-foreground/30 hover:decoration-primary"
                 >
-                  {event.location_label || event.luogo}
+                  {event.location_label}
                 </a>
               ) : (
-                <span>{event.location_label || event.luogo}</span>
+                <span>{event.location_label}</span>
               )}
             </p>
           )}
@@ -107,14 +110,11 @@ const EventPage = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="inline-block mb-8"
+            className="inline-block mb-8 flex flex-col"
           >
             <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
-                {event.is_coppia && event.custom_fields.some(f => f.key === 'disciplina')
-                  ? `da ${formatPrice(event.prezzo)}`
-                  : formatPrice(event.prezzo)
-                }
+                {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
               </span>
               {event.is_coppia && (
                 <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>

@@ -12,7 +12,7 @@ const TOOLS = [
     function: {
       name: "query_database",
       description:
-        "Execute a read-only SQL query on the Supabase database. Tables: events (id, nome, slug, prezzo, attivo, is_tesseramento, data_evento, luogo, scadenza_iscrizioni, payment_methods, custom_fields, hero_image, descrizione, created_at, updated_at), participants (id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, created_at, updated_at), registrations (id, event_id, participant_id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, payment_method, payment_status, payment_id, custom_data, created_at, updated_at). Registrations has FK to events(id) and participants(id).",
+        "Execute a read-only SQL query on the Supabase database. Tables: events (id, nome, slug, prezzo, attivo, visibile_in_landing, is_tesseramento, data_evento, luogo, scadenza_iscrizioni, payment_methods, custom_fields, hero_image, descrizione, created_at, updated_at), participants (id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, created_at, updated_at), registrations (id, event_id, participant_id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, payment_method, payment_status, payment_id, custom_data, created_at, updated_at). Registrations has FK to events(id) and participants(id).",
       parameters: {
         type: "object",
         properties: {
@@ -217,7 +217,7 @@ const TOOLS = [
 const SYSTEM_PROMPT = `Sei un assistente admin per il sistema di gestione iscrizioni GINEPRO. Parla italiano.
 
 Hai accesso a un database PostgreSQL con queste tabelle:
-- **events**: eventi (id uuid, nome text, slug text, prezzo int centesimi, attivo bool, is_tesseramento bool, data_evento date, luogo text, scadenza_iscrizioni timestamptz, payment_methods text[], custom_fields jsonb, hero_image text, descrizione text)
+- **events**: eventi (id uuid, nome text, slug text, prezzo int centesimi, attivo bool, visibile_in_landing bool, is_tesseramento bool, data_evento date, luogo text, scadenza_iscrizioni timestamptz, payment_methods text[], custom_fields jsonb, hero_image text, descrizione text)
 - **participants**: anagrafica partecipanti (id uuid, nome text, cognome text, email text UNIQUE, telefono text, codice_fiscale text, birth_date date, birth_place text, identification_type text)
 - **registrations**: iscrizioni (id uuid, event_id uuid FK events, participant_id uuid FK participants, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type, payment_method text, payment_status text default 'pending', payment_id text, custom_data jsonb)
 

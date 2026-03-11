@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+import { resolveEventPrice } from "../_shared/event-pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,19 +50,18 @@ serve(async (req) => {
     // Fetch event
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, is_coppia, pettorale_start")
+      .select("id, nome, prezzo, slug, is_coppia, pettorale_start, custom_fields")
       .eq("id", eventId)
       .single();
 
     if (eventError || !event) throw new Error("Evento non trovato");
     if (!event.is_coppia) throw new Error("Questo evento non è una gara in coppia");
 
-    // Determine unit price based on discipline
-    const DISCIPLINE_PRICES: Record<string, number> = {
-      "Staffetta": 800,
-      "Eco-camminata": 500,
-    };
-    const unitPrice = disciplina && DISCIPLINE_PRICES[disciplina] ? DISCIPLINE_PRICES[disciplina] : event.prezzo;
+    const selectedOptions = { ...(customData || {}) } as Record<string, unknown>;
+    if (disciplina && selectedOptions.disciplina === undefined) {
+      selectedOptions.disciplina = disciplina;
+    }
+    const unitPrice = resolveEventPrice(event.prezzo, event.custom_fields, selectedOptions);
     const totalPrice = unitPrice * 2;
     const pairId = crypto.randomUUID();
 
@@ -106,7 +106,7 @@ serve(async (req) => {
       if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
 
       const regCustomData = {
-        ...(customData || {}),
+        ...selectedOptions,
         pair_id: pairId,
         pettorale: pettorale,
         pettorale_num: bibNumber,

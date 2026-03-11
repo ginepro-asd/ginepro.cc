@@ -99,6 +99,10 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
@@ -106,5 +110,53 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
+  }
+}
+
+@keyframes hero-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.04);
+  }
+}
+
+@keyframes hero-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.12) 1px, transparent 1px);
+    background-size: 120px 120px;
+    mask-image: radial-gradient(circle at center, black 25%, transparent 90%);
+  }
+
+  .animate-hero-float {
+    animation: hero-float 11s ease-in-out infinite;
+  }
+
+  .animate-hero-float-delayed {
+    animation: hero-float 15s ease-in-out -5s infinite;
+  }
+
+  .animate-hero-pulse {
+    animation: hero-pulse 12s ease-in-out infinite;
   }
 }

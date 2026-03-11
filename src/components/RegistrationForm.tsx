@@ -22,6 +22,13 @@ import { COUNTRIES } from "@/data/countries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { EventData, CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
+import {
+  getOptionPrice,
+  getPricingField,
+  getSelectedPrice,
+  getStartingPrice,
+  hasVariablePricing,
+} from "@/lib/event-pricing";
 import CodiceFiscale from "codice-fiscale-js";
 
 /** Obfuscate email: ma***o@gm***l.com */
@@ -192,6 +199,17 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [returningUserData, setReturningUserData] = useState<MatchedRegistration | null>(null);
   const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
+  const pricingField = getPricingField(event.custom_fields);
+  const hasEventVariablePricing = hasVariablePricing(event.custom_fields);
+  const selectedPrice = getSelectedPrice(event.prezzo, event.custom_fields, customFieldValues);
+  const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
+  const selectedPricingOption = pricingField ? customFieldValues[pricingField.key] : undefined;
+  const displayPrice =
+    hasEventVariablePricing && !selectedPricingOption ? startingPrice : selectedPrice;
+  const displayPriceLabel =
+    hasEventVariablePricing && !selectedPricingOption
+      ? `da ${formatPrice(displayPrice)}`
+      : formatPrice(displayPrice);
 
   const defaultPayment = event.payment_methods[0] || "stripe";
 
@@ -391,7 +409,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
             registrationId={satispayState.registrationId}
             onCancel={() => setSatispayState(null)}
             eventSlug={event.slug}
-            price={event.prezzo}
+            price={selectedPrice}
           />
         </div>
       </section>
@@ -449,7 +467,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
         </Dialog>
         <h2 className="font-display text-3xl sm:text-4xl font-bold text-center mb-2 text-foreground">Iscriviti ora</h2>
         <p className="text-center text-muted-foreground mb-8">
-          Assicurati il posto al prezzo di <span className="font-bold text-secondary">{formatPrice(event.prezzo)}</span>
+          Assicurati il posto al prezzo di <span className="font-bold text-secondary">{displayPriceLabel}</span>
         </p>
 
         <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
@@ -698,7 +716,7 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                       Elaborazione...
                     </>
                   ) : (
-                    `Iscriviti e Paga — ${formatPrice(event.prezzo)}`
+                    `Iscriviti e Paga — ${displayPriceLabel}`
                   )}
                 </Button>
               </form>
@@ -715,6 +733,8 @@ function CustomFieldInput({ field, value, onChange }: { field: CustomField; valu
   const label = `${field.label}${field.required ? " *" : ""}`;
 
   if (field.type === "select" && field.options) {
+    const hasOptionPrices = field.options.some((opt) => getOptionPrice(field, opt) !== null);
+
     return (
       <div className="space-y-1.5">
         <Label className="text-sm">{label}</Label>
@@ -723,11 +743,23 @@ function CustomFieldInput({ field, value, onChange }: { field: CustomField; valu
             <SelectValue placeholder={`Seleziona ${field.label.toLowerCase()}...`} />
           </SelectTrigger>
           <SelectContent>
-            {field.options.map((opt) => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
+            {field.options.map((opt) => {
+              const optionPrice = getOptionPrice(field, opt);
+
+              return (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                  {optionPrice !== null ? ` - ${formatPrice(optionPrice)}` : ""}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
+        {hasOptionPrices && (
+          <p className="text-xs text-muted-foreground">
+            Seleziona l&apos;opzione per aggiornare il prezzo finale.
+          </p>
+        )}
       </div>
     );
   }

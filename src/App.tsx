@@ -9,29 +9,32 @@ import Conferma from "./pages/Conferma";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
+import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<EventsList />} />
-          <Route path="/guidelines" element={<Guidelines />} />
-          <Route path="/:slug" element={<EventPage />} />
-          <Route path="/:slug/conferma" element={<Conferma />} />
-          <Route path="/:slug/admin" element={<Admin />} />
-          {/* Legacy routes for backward compatibility */}
-          <Route path="/conferma" element={<Conferma />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<EventsList />} />
+            <Route path="/guidelines" element={<Guidelines />} />
+            <Route path="/:slug" element={<EventPage />} />
+            <Route path="/:slug/conferma" element={<Conferma />} />
+            <Route path="/:slug/admin" element={<Admin />} />
+            {/* Legacy routes for backward compatibility */}
+            <Route path="/conferma" element={<Conferma />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         "nome", "slug", "descrizione", "data_evento", "luogo", "prezzo",
         "scadenza_iscrizioni", "attivo", "hero_image", "payment_methods",
         "is_tesseramento", "is_coppia", "pettorale_start", "custom_fields",
-        "location_lat", "location_lng", "location_label",
+        "location_lat", "location_lng", "location_label", "visibile_in_landing",
       ];
       const sanitized: Record<string, any> = {};
       for (const [key, val] of Object.entries(fields)) {

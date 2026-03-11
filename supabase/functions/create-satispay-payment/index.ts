@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveEventPrice } from "../_shared/event-pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,11 +34,12 @@ serve(async (req) => {
     // Fetch event for pricing
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug")
+      .select("id, nome, prezzo, slug, custom_fields")
       .eq("id", eventId)
       .single();
 
     if (eventError || !event) throw new Error("Evento non trovato");
+    const eventPrice = resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
 
     // Upsert participant
     const { data: participant, error: partError } = await supabaseAdmin
@@ -80,7 +82,7 @@ serve(async (req) => {
       body: JSON.stringify({
         orderId,
         phoneNumber: telefono,
-        price: event.prezzo,
+        price: eventPrice,
       }),
     });
 

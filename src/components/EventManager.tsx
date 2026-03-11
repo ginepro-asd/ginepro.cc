@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import type { CustomField } from "@/hooks/use-event";
+import { formatPrice } from "@/hooks/use-event";
+import { getStartingPrice, hasVariablePricing } from "@/lib/event-pricing";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -16,7 +19,7 @@ import {
   AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import {
-  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, ExternalLink,
+  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff,
 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
 
@@ -33,14 +36,48 @@ interface EventRecord {
   hero_image: string | null;
   payment_methods: string[] | null;
   is_tesseramento: boolean;
+  visibile_in_landing: boolean;
   is_coppia: boolean;
   pettorale_start: number | null;
-  custom_fields: any;
+  custom_fields: CustomField[] | null;
   location_lat: number | null;
   location_lng: number | null;
   location_label: string | null;
   created_at: string;
 }
+
+const normalizeCustomFields = (customFields: unknown): CustomField[] =>
+  Array.isArray(customFields) ? (customFields as CustomField[]) : [];
+
+const sanitizeCustomFields = (customFields: CustomField[]): CustomField[] =>
+  customFields.map((field) => {
+    if (field.type !== "select" || !field.options?.length) {
+      return field;
+    }
+
+    const optionPrices = Object.fromEntries(
+      field.options
+        .map((option) => {
+          const rawPrice = field.option_prices?.[option];
+          const numericPrice =
+            typeof rawPrice === "number"
+              ? rawPrice
+              : typeof rawPrice === "string" && rawPrice.trim()
+                ? Number(rawPrice)
+                : null;
+
+          return Number.isFinite(numericPrice)
+            ? [option, Math.round(Number(numericPrice))]
+            : null;
+        })
+        .filter((entry): entry is [string, number] => entry !== null),
+    );
+
+    return {
+      ...field,
+      option_prices: Object.keys(optionPrices).length > 0 ? optionPrices : undefined,
+    };
+  });
 
 interface EventManagerProps {
   password: string;
@@ -90,12 +127,14 @@ const EventManager = ({ password }: EventManagerProps) => {
         attivo: ev.attivo,
         hero_image: ev.hero_image || "",
         is_tesseramento: ev.is_tesseramento,
+        visibile_in_landing: ev.visibile_in_landing ?? true,
         is_coppia: ev.is_coppia,
         pettorale_start: ev.pettorale_start ?? "",
         location_lat: ev.location_lat,
         location_lng: ev.location_lng,
         location_label: ev.location_label || "",
         location_address: ev.luogo || "",
+        custom_fields: normalizeCustomFields(ev.custom_fields),
       });
     } else {
       setCreating(true);
@@ -111,12 +150,14 @@ const EventManager = ({ password }: EventManagerProps) => {
         attivo: true,
         hero_image: "",
         is_tesseramento: false,
+        visibile_in_landing: true,
         is_coppia: false,
         pettorale_start: "",
         location_lat: null,
         location_lng: null,
         location_label: "",
         location_address: "",
+        custom_fields: [],
       });
     }
   };
@@ -147,11 +188,13 @@ const EventManager = ({ password }: EventManagerProps) => {
         attivo: editFields.attivo,
         hero_image: editFields.hero_image || null,
         is_tesseramento: editFields.is_tesseramento,
+        visibile_in_landing: editFields.visibile_in_landing ?? true,
         is_coppia: editFields.is_coppia,
         pettorale_start: editFields.pettorale_start ? parseInt(editFields.pettorale_start) : null,
         location_lat: editFields.location_lat || null,
         location_lng: editFields.location_lng || null,
         location_label: editFields.location_label || null,
+        custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
 
       const action = creating ? "create" : "update";
@@ -221,6 +264,19 @@ const EventManager = ({ password }: EventManagerProps) => {
                   </Badge>
                   {ev.is_coppia && <Badge variant="outline" className="shrink-0">Coppia</Badge>}
                   {ev.is_tesseramento && <Badge variant="outline" className="shrink-0">Tesseramento</Badge>}
+                  <Badge variant="outline" className="shrink-0 gap-1">
+                    {ev.visibile_in_landing ? (
+                      <>
+                        <Eye className="h-3 w-3" />
+                        Landing visibile
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="h-3 w-3" />
+                        Landing nascosta
+                      </>
+                    )}
+                  </Badge>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>/{ev.slug}</span>
@@ -236,7 +292,11 @@ const EventManager = ({ password }: EventManagerProps) => {
                       {ev.location_label}
                     </span>
                   )}
-                  <span>{(ev.prezzo / 100).toFixed(2)}€</span>
+                  <span>
+                    {hasVariablePricing(normalizeCustomFields(ev.custom_fields))
+                      ? `da ${formatPrice(getStartingPrice(ev.prezzo, normalizeCustomFields(ev.custom_fields)))}`
+                      : formatPrice(ev.prezzo)}
+                  </span>
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
@@ -334,7 +394,16 @@ const EventManager = ({ password }: EventManagerProps) => {
                   onCheckedChange={(v) => setEditFields(prev => ({ ...prev, is_tesseramento: v }))} />
                 <Label className="text-sm">Tesseramento</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editFields.visibile_in_landing ?? true}
+                  onCheckedChange={(v) => setEditFields(prev => ({ ...prev, visibile_in_landing: v }))} />
+                <Label className="text-sm">Visibile nella landing</Label>
+              </div>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Se disattivato, l&apos;evento sparisce dalla landing ma resta raggiungibile con link diretto e disponibile in area admin.
+            </p>
 
             {editFields.is_coppia && (
               <div className="space-y-1.5">
@@ -363,6 +432,65 @@ const EventManager = ({ password }: EventManagerProps) => {
                 }
               />
             </div>
+
+            {normalizeCustomFields(editFields.custom_fields).some(
+              (field) => field.type === "select" && field.options && field.options.length > 0,
+            ) && (
+              <div className="space-y-3 border-t border-border/50 pt-5">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">Prezzi percorsi / opzioni</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Lascia vuoto un prezzo per continuare a usare il prezzo base dell&apos;evento.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {normalizeCustomFields(editFields.custom_fields)
+                    .filter((field) => field.type === "select" && field.options && field.options.length > 0)
+                    .map((field) => (
+                      <Card key={field.key} className="border-border/50 bg-muted/20">
+                        <CardContent className="pt-5 space-y-3">
+                          <div>
+                            <p className="font-medium text-sm text-foreground">{field.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Prezzo base attuale: {formatPrice(parseInt(editFields.prezzo) || 0)}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {field.options?.map((option) => (
+                              <div key={option} className="space-y-1.5">
+                                <Label className="text-sm">{option}</Label>
+                                <Input
+                                  type="number"
+                                  placeholder={`${editFields.prezzo ?? 0}`}
+                                  value={field.option_prices?.[option] ?? ""}
+                                  onChange={(e) =>
+                                    setEditFields((prev) => ({
+                                      ...prev,
+                                      custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                        customField.key !== field.key
+                                          ? customField
+                                          : {
+                                              ...customField,
+                                              option_prices: {
+                                                ...(customField.option_prices || {}),
+                                                [option]: e.target.value,
+                                              },
+                                            },
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
