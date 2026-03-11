@@ -116,10 +116,28 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
   const watchedGender = form.watch("gender");
   const watchedCF = form.watch("codiceFiscale");
 
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
+
   const {
     matchedUsers, showMatchDialog, setShowMatchDialog,
     returningUserData, existingCertificates, handleSelectMatch, handleDismiss,
   } = useReturningUser({ watchedNome, watchedCognome, form, setCountryCode, setIdentificationType });
+
+  // Check if participant already has a completed registration for this event
+  useEffect(() => {
+    if (!returningUserData?.id) { setAlreadyRegistered(false); return; }
+    const check = async () => {
+      const { data } = await supabase
+        .from("registrations")
+        .select("id")
+        .eq("participant_id", returningUserData.id)
+        .eq("event_id", event.id)
+        .eq("payment_status", "completed")
+        .limit(1);
+      setAlreadyRegistered(!!(data && data.length > 0));
+    };
+    check();
+  }, [returningUserData?.id, event.id]);
 
   // When returning user is selected, pre-populate photo if available
   useEffect(() => {
@@ -376,6 +394,20 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
             <Lock className="h-5 w-5 text-secondary" />
             <AlertTitle className="font-display text-lg">Tesseramento chiuso</AlertTitle>
             <AlertDescription>Il periodo di tesseramento è terminato.</AlertDescription>
+          </Alert>
+        </div>
+      </section>
+    );
+  }
+
+  if (alreadyRegistered) {
+    return (
+      <section id="iscrizione" className="py-16 sm:py-24 px-4">
+        <div className="max-w-lg mx-auto">
+          <Alert className="border-primary bg-primary/10">
+            <Check className="h-5 w-5 text-primary" />
+            <AlertTitle className="font-display text-lg">Già tesserato!</AlertTitle>
+            <AlertDescription>Risulti già tesserato per quest'anno. Se pensi sia un errore, contattaci.</AlertDescription>
           </Alert>
         </div>
       </section>
