@@ -67,39 +67,25 @@ export function useEvents() {
   return useQuery({
     queryKey: ["events"],
     queryFn: async (): Promise<EventData[]> => {
-      type RawEvent = {
-        id: string;
-        slug: string;
-        nome: string;
-        descrizione: string | null;
-        data_evento: string | null;
-        luogo: string | null;
-        prezzo: number;
-        custom_fields: unknown;
-        scadenza_iscrizioni: string | null;
-        attivo: boolean;
-        hero_image: string | null;
-        payment_methods: string[] | null;
-        is_tesseramento: boolean;
-        visibile_in_landing: boolean;
-        is_coppia: boolean;
-        pettorale_start: number | null;
-        location_lat: number | null;
-        location_lng: number | null;
-        location_label: string | null;
-      };
-
       const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("attivo", true)
         .eq("visibile_in_landing", true)
-        .order("data_evento", { ascending: true }) as { data: RawEvent[] | null; error: Error | null };
-      
+        .order("data_evento", { ascending: true }) as any;
       if (error) throw error;
-      return (data || []).map((e) => ({
-        ...e,
-        custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
+      return (data || []).map((e: any) => ({
+        id: e.id,
+        slug: e.slug,
+        nome: e.nome,
+        descrizione: e.descrizione,
+        data_evento: e.data_evento,
+        luogo: e.luogo,
+        prezzo: e.prezzo,
+        custom_fields: (e.custom_fields as CustomField[]) || [],
+        scadenza_iscrizioni: e.scadenza_iscrizioni,
+        attivo: e.attivo,
+        hero_image: e.hero_image,
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: e.is_tesseramento ?? false,
         visibile_in_landing: e.visibile_in_landing ?? true,
