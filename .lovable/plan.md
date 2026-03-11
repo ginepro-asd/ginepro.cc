@@ -1,75 +1,75 @@
 
+# GINEPRO ASD — Piattaforma Eventi e Tesseramento
 
-# Landing Page — Tredozio Trail by GINEPRO (Early-Bird)
+## Stato Attuale (Completato)
 
-## Panoramica
-Landing page per iscrizioni early-bird al Tredozio Trail by GINEPRO (11 Aprile 2027) a 14,99€. Offerta valida fino alla mezzanotte del 29 Marzo 2025. Pagamento via Stripe, Satispay o PayPal.
+### Infrastruttura
+- ✅ Multi-evento dinamico: landing page con lista eventi attivi + archivio eventi passati
+- ✅ Pagina evento singolo con hero, countdown, form iscrizione
+- ✅ 3 metodi di pagamento: Stripe, Satispay, PayPal
+- ✅ Database partecipanti con deduplicazione (returning user)
+- ✅ Email di conferma parametrizzate per evento (Resend)
+- ✅ Pannello admin con login, tabella iscrizioni, export CSV
+- ✅ Event Manager per creare/modificare eventi da admin
+
+### Tipologie Evento
+- ✅ Iscrizione singola standard (es. Tredozio Trail, Castel Raniero)
+- ✅ Iscrizione in coppia con pettorali collegati (es. Rione Rosso)
+- ✅ Tesseramento annuale multi-step (firma, foto, certificato medico, tessera)
+- ✅ Eventi con link esterno (es. IDchronos)
+- ✅ Custom fields con prezzi variabili (percorso/disciplina)
+
+### Design
+- ✅ Dark/Light mode con loghi appropriati
+- ✅ Pattern topografico SVG decorativo
+- ✅ Layout responsive mobile-first
+- ✅ Animazioni Framer Motion
 
 ---
 
-## 1. Brand Identity
-- **Colori primari**: Teal scuro e Rosa corallo, dai loghi GINEPRO
-- **Loghi**: Dark e Light mode con i loghi forniti
-- **Grafica topografica**: NON usata direttamente — verrà ricreata come pattern SVG/CSS con linee di livello stilizzate ispirate all'originale, in qualità vettoriale, usata come texture decorativa di sfondo
-- **Elementi decorativi**: triangoli e cerchi dal brand, forme montagna/sole
+## Fase 2 — Miglioramenti e Nuove Funzionalità
 
-## 2. Hero Section
-- Logo GINEPRO grande
-- Titolo: **Tredozio Trail** — **11 Aprile 2027**
-- Prezzo: **14,99€ Early-Bird**
-- **Countdown timer** fino a mezzanotte del 29 Marzo 2025
-- Sfondo con pattern topografico vettoriale ricreato
-- CTA "Iscriviti ora"
+### 2.1 Pagina di Conferma migliorata
+- Mostrare riepilogo dettagliato: nome evento, data, luogo, prezzo pagato
+- Mostrare numero pettorale (se assegnato)
+- Per tesseramento: mostrare numero tessera
+- CTA per condividere su social o salvare ricevuta
 
-## 3. Sezione Info Evento
-- Data, luogo (Tredozio), descrizione breve
-- **"Offerta valida fino al 29 Marzo 2025 alle 23:59"**
+### 2.2 Dashboard Admin avanzata
+- Statistiche riassuntive: totale iscritti, incasso, breakdown per metodo di pagamento
+- Grafici andamento iscrizioni nel tempo
+- Filtri avanzati per stato pagamento, data, metodo
+- Gestione partecipanti: modifica dati, rimborsi
+- Visualizzazione certificati medici con avvisi AI
 
-## 4. Form di Iscrizione (bloccato dopo scadenza)
-Campi obbligatori:
-- **Nome**
-- **Cognome**
-- **Email**
-- **Numero di telefono** (necessario per Satispay)
-- **Scelta** tra: Data e luogo di nascita OPPURE Codice fiscale
-- **Metodo di pagamento**: Stripe, Satispay o PayPal
+### 2.3 Notifiche e comunicazioni
+- Notifiche push/email all'admin per nuove iscrizioni
+- Email di promemoria pre-evento ai partecipanti
+- Email personalizzabili per evento dall'admin
 
-Dopo mezzanotte del 29/03/2025: form disabilitato → "Le iscrizioni early-bird sono chiuse"
+### 2.4 SEO e Performance
+- Meta tag dinamici per ogni evento (Open Graph, Twitter Card)
+- Sitemap dinamica
+- Lazy loading immagini
+- Ottimizzazione Core Web Vitals
 
-## 5. Pagamento — Tre opzioni
+### 2.5 Esperienza Utente
+- Pagina "I miei eventi" per utenti registrati (lookup per email)
+- Download ricevuta PDF post-iscrizione
+- Migliorare la pagina 404
+- Breadcrumb navigation
 
-### 5a. Stripe
-- Redirect a Stripe Checkout per 14,99€, ritorno a pagina di conferma
+### 2.6 Funzionalità Avanzate
+- Lista d'attesa per eventi sold-out
+- Codici sconto / promo
+- Iscrizioni di gruppo (>2 persone)
+- QR code per check-in il giorno dell'evento
 
-### 5b. Satispay
-- Creazione pagamento via API Satispay (edge function)
-- **Nessun redirect**: notifica push sull'app Satispay dell'utente
-- Pagina mostra "In attesa di pagamento..." con polling per conferma
-- Al completamento → conferma iscrizione
-
-### 5c. PayPal
-- Integrazione PayPal Checkout (SDK JavaScript o redirect)
-- Pagamento one-off di 14,99€
-- Ritorno a pagina di conferma
-
-## 6. Pagina di Conferma
-- Messaggio di successo con riepilogo: nome, cognome, email, metodo di pagamento
-
-## 7. Salvataggio Dati
-- Database Supabase con possibilità di esportazione CSV
-- Ogni iscrizione collegata allo stato pagamento (Stripe/Satispay/PayPal)
-
-## 8. Design & Stile
-- Palette natura teal/corallo dal brand
-- Pattern topografico ricreato in SVG/CSS ad alta qualità (ispirato alla grafica originale)
-- Layout responsive mobile-first
-- Countdown con urgenza visiva
-- Dark/Light mode con loghi appropriati
+---
 
 ## Note Tecniche
-- **Lovable Cloud / Supabase** per edge function (Satispay API, salvataggio dati)
-- **Stripe** integrato tramite Lovable
-- **Satispay API key** salvate come secret
-- **PayPal Client ID** salvato come secret
-- I loghi forniti integrati come asset nel progetto
-
+- **Lovable Cloud** per edge functions e database
+- **Stripe, Satispay, PayPal** per pagamenti
+- **Resend** per email transazionali
+- **Gemini Flash** per analisi certificati medici
+- Secrets già configurati: Stripe, Satispay, PayPal, Resend, Firebase, FIDAL
