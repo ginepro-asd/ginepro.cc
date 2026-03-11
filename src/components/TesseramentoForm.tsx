@@ -20,7 +20,7 @@ import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
 import type { EventData } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, ExistingCertificate } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import SignaturePad from "@/components/SignaturePad";
@@ -87,9 +87,11 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
   const [membershipType, setMembershipType] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [useExistingPhoto, setUseExistingPhoto] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [certificates, setCertificates] = useState<{ file: File; discipline: string; analysis?: any; analyzing?: boolean }[]>([]);
   const [skipCertificate, setSkipCertificate] = useState(false);
+  const [keptCertificates, setKeptCertificates] = useState<Record<string, ExistingCertificate>>({}); // discipline -> existing cert
 
   const selectedOption = MEMBERSHIP_OPTIONS.find((o) => o.value === membershipType);
   const requiredDisciplines = selectedOption?.disciplines || [];
@@ -116,8 +118,30 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
 
   const {
     matchedUsers, showMatchDialog, setShowMatchDialog,
-    returningUserData, handleSelectMatch, handleDismiss,
+    returningUserData, existingCertificates, handleSelectMatch, handleDismiss,
   } = useReturningUser({ watchedNome, watchedCognome, form, setCountryCode, setIdentificationType });
+
+  // When returning user is selected, pre-populate photo if available
+  useEffect(() => {
+    if (returningUserData?.photo_thumb_url || returningUserData?.photo_url) {
+      setPhotoPreview(returningUserData.photo_thumb_url || returningUserData.photo_url);
+      setUseExistingPhoto(true);
+    }
+  }, [returningUserData]);
+
+  // When returning user has valid certificates, auto-keep them for matching disciplines
+  useEffect(() => {
+    if (existingCertificates.length > 0 && requiredDisciplines.length > 0) {
+      const kept: Record<string, ExistingCertificate> = {};
+      for (const discipline of requiredDisciplines) {
+        const match = existingCertificates.find(
+          (c) => c.disciplines?.some((d) => d.toLowerCase() === discipline.toLowerCase())
+        );
+        if (match) kept[discipline] = match;
+      }
+      setKeptCertificates(kept);
+    }
+  }, [existingCertificates, membershipType]);
 
   // Auto-compute CF from birth data
   useEffect(() => {
@@ -225,9 +249,13 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         }
         return !!(values.codiceFiscale && values.codiceFiscale.length >= 11);
       case 1: return !!membershipType;
-      case 2: return !!photoFile;
+      case 2: return !!photoFile || useExistingPhoto;
       case 3: return !!signatureData;
-      case 4: return skipCertificate || certificates.length >= requiredDisciplines.length;
+      case 4: {
+        if (skipCertificate) return true;
+        // Each required discipline must have either a new upload or a kept existing cert
+        return requiredDisciplines.every((d) => certificates.some((c) => c.discipline === d) || keptCertificates[d]);
+      }
       case 5: return true;
       default: return false;
     }
@@ -245,7 +273,7 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
       const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
       const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
-      // Upload photo
+      // Upload photo (or reuse existing)
       let photoUrl = "";
       let photoThumbUrl = "";
       if (photoFile) {
@@ -262,6 +290,9 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         await supabase.storage.from("member-photos").upload(thumbPath, thumbBlob);
         const { data: thumbUrlData } = supabase.storage.from("member-photos").getPublicUrl(thumbPath);
         photoThumbUrl = thumbUrlData.publicUrl;
+      } else if (useExistingPhoto && returningUserData) {
+        photoUrl = returningUserData.photo_url || "";
+        photoThumbUrl = returningUserData.photo_thumb_url || "";
       }
 
       // Upload signature
@@ -295,12 +326,21 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         },
         photoUrl, photoThumbUrl, signatureUrl,
         certificatePaths: certPaths,
-        certificateAnalyses: certificates.map((c) => ({
-          discipline: c.discipline,
-          expiryDate: c.analysis?.expiry_date || null,
-          disciplines: c.analysis?.disciplines || [],
-          warning: c.analysis?.warning || c.analysis?.ai_warning || null,
-        })),
+        certificateAnalyses: [
+          ...certificates.map((c) => ({
+            discipline: c.discipline,
+            expiryDate: c.analysis?.expiry_date || null,
+            disciplines: c.analysis?.disciplines || [],
+            warning: c.analysis?.warning || c.analysis?.ai_warning || null,
+          })),
+          ...Object.entries(keptCertificates).map(([discipline, kc]) => ({
+            discipline,
+            expiryDate: kc.expiry_date || null,
+            disciplines: kc.disciplines || [],
+            warning: kc.ai_warning || null,
+            existingCertificateId: kc.id,
+          })),
+        ],
         isTesseramento: true,
       };
 
@@ -493,16 +533,41 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
                 {/* Step 2: Photo */}
                 {realStep === 2 && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Carica una fototessera o scatta un selfie.</p>
-                    <Input type="file" accept="image/*" capture="user" onChange={handlePhotoChange} className="cursor-pointer" />
-                    {photoPreview && (
-                      <div className="flex items-center gap-4">
-                        <img src={photoPreview} alt="Anteprima foto" className="w-24 h-24 object-cover rounded-lg border border-border" />
-                        <div className="flex items-center gap-1.5 text-sm text-primary">
-                          <Check className="h-4 w-4" />
-                          Foto caricata
+                    {useExistingPhoto && !photoFile ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">Abbiamo trovato la tua fototessera precedente. Vuoi mantenerla o aggiornala?</p>
+                        <div className="flex items-center gap-4">
+                          <img src={photoPreview!} alt="Foto attuale" className="w-24 h-24 object-cover rounded-lg border border-primary" />
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5 text-sm text-primary">
+                              <Check className="h-4 w-4" />
+                              Foto attuale
+                            </div>
+                            <Button type="button" variant="outline" size="sm" onClick={() => { setUseExistingPhoto(false); setPhotoPreview(null); }}>
+                              <Camera className="h-4 w-4 mr-1" />Aggiorna foto
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">Carica una fototessera o scatta un selfie.</p>
+                        {useExistingPhoto && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setUseExistingPhoto(true); setPhotoFile(null); setPhotoPreview(returningUserData?.photo_thumb_url || returningUserData?.photo_url || null); }}>
+                            ← Usa la foto precedente
+                          </Button>
+                        )}
+                        <Input type="file" accept="image/*" capture="user" onChange={handlePhotoChange} className="cursor-pointer" />
+                        {photoPreview && (
+                          <div className="flex items-center gap-4">
+                            <img src={photoPreview} alt="Anteprima foto" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                            <div className="flex items-center gap-1.5 text-sm text-primary">
+                              <Check className="h-4 w-4" />
+                              Foto caricata
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -529,10 +594,55 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
                     </p>
                     {requiredDisciplines.map((discipline) => {
                       const cert = certificates.find((c) => c.discipline === discipline);
+                      const kept = keptCertificates[discipline];
                       return (
                         <div key={discipline} className="border border-border rounded-lg p-4 space-y-3">
                           <Label className="text-sm font-medium capitalize">{discipline}</Label>
-                          <Input type="file" accept="image/*,.pdf" onChange={handleCertificateUpload(discipline)} className="cursor-pointer" />
+
+                          {/* Show existing valid certificate if available and no new upload */}
+                          {kept && !cert && (
+                            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm space-y-2">
+                              <div className="flex items-center gap-1.5 text-primary">
+                                <FileCheck className="h-4 w-4" />
+                                Certificato già in archivio
+                              </div>
+                              {kept.expiry_date && (
+                                <div><span className="text-muted-foreground">Scadenza: </span><span className="font-medium">{new Date(kept.expiry_date).toLocaleDateString("it-IT")}</span></div>
+                              )}
+                              {kept.disciplines && kept.disciplines.length > 0 && (
+                                <div><span className="text-muted-foreground">Discipline: </span><span className="font-medium">{kept.disciplines.join(", ")}</span></div>
+                              )}
+                              {kept.ai_warning && (
+                                <div className="flex items-start gap-1.5 text-yellow-600">
+                                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                                  <span>{kept.ai_warning}</span>
+                                </div>
+                              )}
+                              <Button type="button" variant="outline" size="sm" onClick={() => {
+                                setKeptCertificates((prev) => { const next = { ...prev }; delete next[discipline]; return next; });
+                              }}>
+                                <Upload className="h-4 w-4 mr-1" />Carica un nuovo certificato
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* File upload (shown when no kept cert, or user chose to replace) */}
+                          {!kept && (
+                            <>
+                              {existingCertificates.length > 0 && existingCertificates.some((c) => c.disciplines?.some((d) => d.toLowerCase() === discipline.toLowerCase())) && (
+                                <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                  const match = existingCertificates.find((c) => c.disciplines?.some((d) => d.toLowerCase() === discipline.toLowerCase()));
+                                  if (match) setKeptCertificates((prev) => ({ ...prev, [discipline]: match }));
+                                  // Remove any new upload for this discipline
+                                  setCertificates((prev) => prev.filter((c) => c.discipline !== discipline));
+                                }}>
+                                  ← Usa il certificato precedente
+                                </Button>
+                              )}
+                              <Input type="file" accept="image/*,.pdf" onChange={handleCertificateUpload(discipline)} className="cursor-pointer" />
+                            </>
+                          )}
+
                           {cert?.analyzing && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin" />Analisi in corso...
@@ -579,11 +689,12 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
                         <div><span className="text-muted-foreground">Nome: </span><span className="font-medium">{watchedNome} {watchedCognome}</span></div>
                         <div><span className="text-muted-foreground">Tipologia: </span><span className="font-medium">{selectedOption?.label}</span></div>
                         <div><span className="text-muted-foreground">Totale: </span><span className="font-bold text-secondary">{selectedOption ? formatPrice(selectedOption.price) : ""}</span></div>
-                        <div className="flex gap-3 pt-1">
-                          {photoPreview && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Foto</span>}
+                        <div className="flex gap-3 pt-1 flex-wrap">
+                          {photoPreview && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Foto{useExistingPhoto && !photoFile ? " (esistente)" : ""}</span>}
                           {signatureData && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Firma</span>}
-                          {certificates.length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{certificates.length} certificat{certificates.length > 1 ? "i" : "o"}</span>}
-                          {skipCertificate && certificates.length === 0 && <span className="text-xs text-yellow-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Certificato non caricato</span>}
+                          {certificates.length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{certificates.length} certificat{certificates.length > 1 ? "i" : "o"} nuov{certificates.length > 1 ? "i" : "o"}</span>}
+                          {Object.keys(keptCertificates).length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{Object.keys(keptCertificates).length} certificat{Object.keys(keptCertificates).length > 1 ? "i" : "o"} in archivio</span>}
+                          {skipCertificate && certificates.length === 0 && Object.keys(keptCertificates).length === 0 && <span className="text-xs text-yellow-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Certificato non caricato</span>}
                         </div>
                       </div>
                     </div>

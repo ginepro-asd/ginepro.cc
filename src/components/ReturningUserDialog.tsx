@@ -32,20 +32,27 @@ const ReturningUserDialog = ({ open, onOpenChange, matchedUsers, onSelect, onDis
               onClick={() => onSelect(m)}
               className="w-full text-left border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 transition-all space-y-1"
             >
-              <div className="text-sm">
-                <span className="text-muted-foreground">Email: </span>
-                <span className="font-medium font-mono text-foreground">{obfuscateEmail(m.email)}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Telefono: </span>
-                <span className="font-medium font-mono text-foreground">{obfuscatePhone(m.telefono)}</span>
-              </div>
-              {m.codice_fiscale && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">C.F.: </span>
-                  <span className="font-medium font-mono text-foreground">{obfuscateCF(m.codice_fiscale)}</span>
+              <div className="flex items-start gap-3">
+                {m.photo_thumb_url && (
+                  <img src={m.photo_thumb_url} alt="" className="w-12 h-12 rounded-lg object-cover border border-border shrink-0" />
+                )}
+                <div className="space-y-1 min-w-0">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Email: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscateEmail(m.email)}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Telefono: </span>
+                    <span className="font-medium font-mono text-foreground">{obfuscatePhone(m.telefono)}</span>
+                  </div>
+                  {m.codice_fiscale && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">C.F.: </span>
+                      <span className="font-medium font-mono text-foreground">{obfuscateCF(m.codice_fiscale)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </button>
           ))}
           <Button variant="ghost" className="w-full text-muted-foreground" onClick={onDismiss}>

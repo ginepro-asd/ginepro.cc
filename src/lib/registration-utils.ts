@@ -36,6 +36,17 @@ export interface MatchedRegistration {
   birth_date: string | null;
   birth_place: string | null;
   identification_type: string;
+  photo_url: string | null;
+  photo_thumb_url: string | null;
+}
+
+export interface ExistingCertificate {
+  id: string;
+  file_path: string;
+  expiry_date: string | null;
+  disciplines: string[] | null;
+  ai_warning: string | null;
+  uploaded_at: string;
 }
 
 // === Codice Fiscale helpers ===
