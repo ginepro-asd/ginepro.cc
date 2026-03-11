@@ -1,4 +1,5 @@
-import { SupabaseClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+type SupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Creates a membership card for a tesseramento registration.
