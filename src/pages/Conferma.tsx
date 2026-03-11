@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Loader2, XCircle, CreditCard } from "lucide-react";
+import { CheckCircle, Loader2, XCircle, CreditCard, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoDark from "@/assets/icon-mountain.png";
