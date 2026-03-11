@@ -67,12 +67,13 @@ export function useEvents() {
   return useQuery({
     queryKey: ["events"],
     queryFn: async (): Promise<EventData[]> => {
-      const { data, error } = await supabase
+      const query = supabase
         .from("events")
-        .select("*")
+        .select("*") as any;
+      const { data, error } = await query
         .eq("attivo", true)
         .eq("visibile_in_landing", true)
-        .order("data_evento", { ascending: true }) as any;
+        .order("data_evento", { ascending: true });
       if (error) throw error;
       return (data || []).map((e: any) => ({
         id: e.id,
