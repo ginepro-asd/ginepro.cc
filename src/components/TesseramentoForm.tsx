@@ -521,16 +521,41 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
                 {/* Step 2: Photo */}
                 {realStep === 2 && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">Carica una fototessera o scatta un selfie.</p>
-                    <Input type="file" accept="image/*" capture="user" onChange={handlePhotoChange} className="cursor-pointer" />
-                    {photoPreview && (
-                      <div className="flex items-center gap-4">
-                        <img src={photoPreview} alt="Anteprima foto" className="w-24 h-24 object-cover rounded-lg border border-border" />
-                        <div className="flex items-center gap-1.5 text-sm text-primary">
-                          <Check className="h-4 w-4" />
-                          Foto caricata
+                    {useExistingPhoto && !photoFile ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">Abbiamo trovato la tua fototessera precedente. Vuoi mantenerla o aggiornala?</p>
+                        <div className="flex items-center gap-4">
+                          <img src={photoPreview!} alt="Foto attuale" className="w-24 h-24 object-cover rounded-lg border border-primary" />
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5 text-sm text-primary">
+                              <Check className="h-4 w-4" />
+                              Foto attuale
+                            </div>
+                            <Button type="button" variant="outline" size="sm" onClick={() => { setUseExistingPhoto(false); setPhotoPreview(null); }}>
+                              <Camera className="h-4 w-4 mr-1" />Aggiorna foto
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">Carica una fototessera o scatta un selfie.</p>
+                        {useExistingPhoto && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setUseExistingPhoto(true); setPhotoFile(null); setPhotoPreview(returningUserData?.photo_thumb_url || returningUserData?.photo_url || null); }}>
+                            ← Usa la foto precedente
+                          </Button>
+                        )}
+                        <Input type="file" accept="image/*" capture="user" onChange={handlePhotoChange} className="cursor-pointer" />
+                        {photoPreview && (
+                          <div className="flex items-center gap-4">
+                            <img src={photoPreview} alt="Anteprima foto" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                            <div className="flex items-center gap-1.5 text-sm text-primary">
+                              <Check className="h-4 w-4" />
+                              Foto caricata
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
