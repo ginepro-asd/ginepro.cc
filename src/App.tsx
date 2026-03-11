@@ -9,6 +9,7 @@ import Conferma from "./pages/Conferma";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
+import MemberCard from "./pages/MemberCard";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
