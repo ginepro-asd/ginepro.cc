@@ -63,3 +63,9 @@ verify_jwt = false
 
 [functions.analyze-certificate]
 verify_jwt = false
+
+[functions.setup-account]
+verify_jwt = false
+
+[functions.resolve-login]
+verify_jwt = false

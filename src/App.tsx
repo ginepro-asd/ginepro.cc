@@ -28,6 +28,9 @@ const App = () => (
             <Route path="/" element={<EventsList />} />
             <Route path="/guidelines" element={<Guidelines />} />
             <Route path="/card/:id" element={<MemberCard />} />
+            <Route path="/area-riservata" element={<AreaRiservataLogin />} />
+            <Route path="/area-riservata/setup" element={<AreaRiservataSetup />} />
+            <Route path="/area-riservata/dashboard" element={<AreaRiservataDashboard />} />
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
             <Route path="/:slug/admin" element={<Admin />} />

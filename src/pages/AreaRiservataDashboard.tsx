@@ -65,10 +65,10 @@ const AreaRiservataDashboard = () => {
       const authUserId = session.user.id;
 
       // Get participant linked to this auth user
-      const { data: part } = await supabase
+      const { data: part } = await (supabase
         .from("participants")
-        .select("id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, photo_thumb_url")
-        .eq("auth_user_id" as any, authUserId)
+        .select("id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, photo_thumb_url") as any)
+        .eq("auth_user_id", authUserId)
         .single();
 
       if (!part) {
