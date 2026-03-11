@@ -89,6 +89,96 @@ export type Database = {
         }
         Relationships: []
       }
+      medical_certificates: {
+        Row: {
+          ai_warning: string | null
+          disciplines: string[] | null
+          expiry_date: string | null
+          file_path: string
+          id: string
+          participant_id: string
+          registration_id: string | null
+          uploaded_at: string
+        }
+        Insert: {
+          ai_warning?: string | null
+          disciplines?: string[] | null
+          expiry_date?: string | null
+          file_path: string
+          id?: string
+          participant_id: string
+          registration_id?: string | null
+          uploaded_at?: string
+        }
+        Update: {
+          ai_warning?: string | null
+          disciplines?: string[] | null
+          expiry_date?: string | null
+          file_path?: string
+          id?: string
+          participant_id?: string
+          registration_id?: string | null
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_certificates_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_certificates_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_cards: {
+        Row: {
+          card_number: string
+          created_at: string
+          id: string
+          participant_id: string
+          registration_id: string
+          year: number
+        }
+        Insert: {
+          card_number: string
+          created_at?: string
+          id?: string
+          participant_id: string
+          registration_id: string
+          year?: number
+        }
+        Update: {
+          card_number?: string
+          created_at?: string
+          id?: string
+          participant_id?: string
+          registration_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_cards_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_cards_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       participants: {
         Row: {
           birth_date: string | null
@@ -101,6 +191,9 @@ export type Database = {
           id: string
           identification_type: string
           nome: string
+          photo_thumb_url: string | null
+          photo_url: string | null
+          signature_url: string | null
           telefono: string
           updated_at: string
         }
@@ -115,6 +208,9 @@ export type Database = {
           id?: string
           identification_type?: string
           nome: string
+          photo_thumb_url?: string | null
+          photo_url?: string | null
+          signature_url?: string | null
           telefono: string
           updated_at?: string
         }
@@ -129,6 +225,9 @@ export type Database = {
           id?: string
           identification_type?: string
           nome?: string
+          photo_thumb_url?: string | null
+          photo_url?: string | null
+          signature_url?: string | null
           telefono?: string
           updated_at?: string
         }
