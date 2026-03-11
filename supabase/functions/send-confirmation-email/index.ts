@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { nome, cognome, email, payment_method, registration_id, event, card } = await req.json();
+    const { nome, cognome, email, payment_method, registration_id, event, card, participant_id } = await req.json();
 
     if (!email || !nome || !cognome) {
       throw new Error("Missing required fields: nome, cognome, email");
