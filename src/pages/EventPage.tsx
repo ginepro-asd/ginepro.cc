@@ -190,6 +190,8 @@ const EventPage = () => {
             </Button>
           </div>
         </section>
+      ) : event.is_tesseramento ? (
+        <TesseramentoForm event={event} />
       ) : event.is_coppia ? (
         <PairRegistrationForm event={event} />
       ) : (
