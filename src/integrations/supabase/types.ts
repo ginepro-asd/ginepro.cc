@@ -181,6 +181,7 @@ export type Database = {
       }
       participants: {
         Row: {
+          auth_user_id: string | null
           birth_date: string | null
           birth_place: string | null
           codice_fiscale: string | null
@@ -198,6 +199,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_user_id?: string | null
           birth_date?: string | null
           birth_place?: string | null
           codice_fiscale?: string | null
@@ -215,6 +217,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_user_id?: string | null
           birth_date?: string | null
           birth_place?: string | null
           codice_fiscale?: string | null
