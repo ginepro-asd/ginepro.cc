@@ -41,7 +41,7 @@ const Conferma = () => {
         try {
           const { data, error } = await supabase
             .from("registrations")
-            .select("nome, cognome, email, payment_method")
+            .select("nome, cognome, email, payment_method, participant_id")
             .eq("id", registrationId)
             .single();
           if (error) throw error;
