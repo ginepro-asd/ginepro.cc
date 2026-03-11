@@ -72,19 +72,28 @@ export function useEvents() {
         .select("*")
         .eq("attivo", true)
         .eq("visibile_in_landing", true)
-        .order("data_evento", { ascending: true });
+        .order("data_evento", { ascending: true }) as any;
       if (error) throw error;
-      return (data || []).map((e) => ({
-        ...e,
-        custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
+      return (data || []).map((e: any) => ({
+        id: e.id,
+        slug: e.slug,
+        nome: e.nome,
+        descrizione: e.descrizione,
+        data_evento: e.data_evento,
+        luogo: e.luogo,
+        prezzo: e.prezzo,
+        custom_fields: (e.custom_fields as CustomField[]) || [],
+        scadenza_iscrizioni: e.scadenza_iscrizioni,
+        attivo: e.attivo,
+        hero_image: e.hero_image,
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: e.is_tesseramento ?? false,
-        visibile_in_landing: (e as any).visibile_in_landing ?? true,
-        is_coppia: (e as any).is_coppia ?? false,
-        pettorale_start: (e as any).pettorale_start ?? null,
-        location_lat: (e as any).location_lat ?? null,
-        location_lng: (e as any).location_lng ?? null,
-        location_label: (e as any).location_label ?? null,
+        visibile_in_landing: e.visibile_in_landing ?? true,
+        is_coppia: e.is_coppia ?? false,
+        pettorale_start: e.pettorale_start ?? null,
+        location_lat: e.location_lat ?? null,
+        location_lng: e.location_lng ?? null,
+        location_label: e.location_label ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
