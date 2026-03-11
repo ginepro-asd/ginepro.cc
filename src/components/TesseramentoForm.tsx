@@ -273,7 +273,7 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
       const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
       const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
-      // Upload photo
+      // Upload photo (or reuse existing)
       let photoUrl = "";
       let photoThumbUrl = "";
       if (photoFile) {
@@ -290,6 +290,9 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         await supabase.storage.from("member-photos").upload(thumbPath, thumbBlob);
         const { data: thumbUrlData } = supabase.storage.from("member-photos").getPublicUrl(thumbPath);
         photoThumbUrl = thumbUrlData.publicUrl;
+      } else if (useExistingPhoto && returningUserData) {
+        photoUrl = returningUserData.photo_url || "";
+        photoThumbUrl = returningUserData.photo_thumb_url || "";
       }
 
       // Upload signature
