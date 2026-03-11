@@ -87,9 +87,11 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
   const [membershipType, setMembershipType] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [useExistingPhoto, setUseExistingPhoto] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [certificates, setCertificates] = useState<{ file: File; discipline: string; analysis?: any; analyzing?: boolean }[]>([]);
   const [skipCertificate, setSkipCertificate] = useState(false);
+  const [keptCertificates, setKeptCertificates] = useState<Record<string, ExistingCertificate>>({}); // discipline -> existing cert
 
   const selectedOption = MEMBERSHIP_OPTIONS.find((o) => o.value === membershipType);
   const requiredDisciplines = selectedOption?.disciplines || [];
