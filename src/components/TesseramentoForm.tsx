@@ -326,12 +326,21 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         },
         photoUrl, photoThumbUrl, signatureUrl,
         certificatePaths: certPaths,
-        certificateAnalyses: certificates.map((c) => ({
-          discipline: c.discipline,
-          expiryDate: c.analysis?.expiry_date || null,
-          disciplines: c.analysis?.disciplines || [],
-          warning: c.analysis?.warning || c.analysis?.ai_warning || null,
-        })),
+        certificateAnalyses: [
+          ...certificates.map((c) => ({
+            discipline: c.discipline,
+            expiryDate: c.analysis?.expiry_date || null,
+            disciplines: c.analysis?.disciplines || [],
+            warning: c.analysis?.warning || c.analysis?.ai_warning || null,
+          })),
+          ...Object.entries(keptCertificates).map(([discipline, kc]) => ({
+            discipline,
+            expiryDate: kc.expiry_date || null,
+            disciplines: kc.disciplines || [],
+            warning: kc.ai_warning || null,
+            existingCertificateId: kc.id,
+          })),
+        ],
         isTesseramento: true,
       };
 
