@@ -60,3 +60,6 @@ verify_jwt = false
 
 [functions.create-pair-checkout]
 verify_jwt = false
+
+[functions.analyze-certificate]
+verify_jwt = false

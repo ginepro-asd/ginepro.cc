@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
 import PairRegistrationForm from "@/components/PairRegistrationForm";
+import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
