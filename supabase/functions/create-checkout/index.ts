@@ -45,15 +45,20 @@ serve(async (req) => {
     const eventPrice = resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
 
     // Upsert participant
-    const { data: participant, error: partError } = await supabaseAdmin
-      .from("participants")
-      .upsert({
+    const participantData: any = {
         nome, cognome, email, telefono,
         codice_fiscale: codiceFiscale || null,
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
         identification_type: identificationType,
-      }, { onConflict: "email" })
+      };
+    if (photoUrl) participantData.photo_url = photoUrl;
+    if (photoThumbUrl) participantData.photo_thumb_url = photoThumbUrl;
+    if (signatureUrl) participantData.signature_url = signatureUrl;
+
+    const { data: participant, error: partError } = await supabaseAdmin
+      .from("participants")
+      .upsert(participantData, { onConflict: "email" })
       .select("id")
       .single();
 
