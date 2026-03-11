@@ -93,6 +93,21 @@ serve(async (req) => {
 
     if (dbError) throw new Error(`Database error: ${dbError.message}`);
 
+    // Save medical certificates if provided
+    if (certificatePaths?.length > 0) {
+      for (let i = 0; i < certificatePaths.length; i++) {
+        const analysis = certificateAnalyses?.[i] || {};
+        await supabaseAdmin.from("medical_certificates").insert({
+          participant_id: participant.id,
+          registration_id: registration.id,
+          file_path: certificatePaths[i],
+          expiry_date: analysis.expiryDate || null,
+          disciplines: analysis.disciplines || [],
+          ai_warning: analysis.warning || null,
+        });
+      }
+    }
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-08-27.basil",
     });
