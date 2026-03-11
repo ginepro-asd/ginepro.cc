@@ -67,24 +67,47 @@ export function useEvents() {
   return useQuery({
     queryKey: ["events"],
     queryFn: async (): Promise<EventData[]> => {
+      type RawEvent = {
+        id: string;
+        slug: string;
+        nome: string;
+        descrizione: string | null;
+        data_evento: string | null;
+        luogo: string | null;
+        prezzo: number;
+        custom_fields: unknown;
+        scadenza_iscrizioni: string | null;
+        attivo: boolean;
+        hero_image: string | null;
+        payment_methods: string[] | null;
+        is_tesseramento: boolean;
+        visibile_in_landing: boolean;
+        is_coppia: boolean;
+        pettorale_start: number | null;
+        location_lat: number | null;
+        location_lng: number | null;
+        location_label: string | null;
+      };
+
       const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("attivo", true)
         .eq("visibile_in_landing", true)
-        .order("data_evento", { ascending: true });
+        .order("data_evento", { ascending: true }) as { data: RawEvent[] | null; error: Error | null };
+      
       if (error) throw error;
       return (data || []).map((e) => ({
         ...e,
         custom_fields: (e.custom_fields as unknown as CustomField[]) || [],
         payment_methods: e.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: e.is_tesseramento ?? false,
-        visibile_in_landing: (e as any).visibile_in_landing ?? true,
-        is_coppia: (e as any).is_coppia ?? false,
-        pettorale_start: (e as any).pettorale_start ?? null,
-        location_lat: (e as any).location_lat ?? null,
-        location_lng: (e as any).location_lng ?? null,
-        location_label: (e as any).location_label ?? null,
+        visibile_in_landing: e.visibile_in_landing ?? true,
+        is_coppia: e.is_coppia ?? false,
+        pettorale_start: e.pettorale_start ?? null,
+        location_lat: e.location_lat ?? null,
+        location_lng: e.location_lng ?? null,
+        location_label: e.location_label ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
