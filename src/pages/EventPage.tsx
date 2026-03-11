@@ -111,16 +111,18 @@ const EventPage = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="inline-block mb-8 flex flex-col"
+            className="mb-8 flex flex-col"
           >
+            {startingPrice > 0 ? (
             <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
                 {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
-              </span>
+                </span>
               {event.is_coppia && (
                 <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
               )}
             </div>
+              ) : undefined }
           </motion.div>
 
           {event.scadenza_iscrizioni && (
