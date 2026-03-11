@@ -114,6 +114,7 @@ serve(async (req) => {
                 registration_id,
                 event,
                 card: card ? { id: card.id, card_number: card.card_number } : null,
+                participant_id: registration.participant_id,
               }),
             }
           );
