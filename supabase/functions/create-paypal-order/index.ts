@@ -44,7 +44,7 @@ serve(async (req) => {
     const {
       nome, cognome, email, telefono,
       identificationType, birthDate, birthPlace, codiceFiscale,
-      eventId, customData,
+      eventId, customData, isTesseramento,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
@@ -65,7 +65,16 @@ serve(async (req) => {
 
     if (eventError || !event) throw new Error("Evento non trovato");
 
-    const eventPrice = resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
+    // For tesseramento events, use membership type pricing
+    const MEMBERSHIP_PRICES: Record<string, number> = {
+      "fidal-running": 4000, "fidal-running-uisp-bike": 8000,
+      "socio-sostenitore": 1500, "uisp-bike": 5500,
+      "uisp-running": 2500, "uisp-running-bike": 6500,
+    };
+    const membershipType = customData?.membershipType;
+    const eventPrice = (isTesseramento && membershipType && MEMBERSHIP_PRICES[membershipType])
+      ? MEMBERSHIP_PRICES[membershipType]
+      : resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
     const priceEur = (eventPrice / 100).toFixed(2);
 
     // Upsert participant
