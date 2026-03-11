@@ -381,6 +381,15 @@ const EventManager = ({ password }: EventManagerProps) => {
                 onChange={(e) => setEditFields(prev => ({ ...prev, hero_image: e.target.value }))} />
             </div>
 
+            <div className="space-y-1.5">
+              <Label className="text-sm">URL iscrizione esterna</Label>
+              <Input value={editFields.external_url || ""} placeholder="https://..."
+                onChange={(e) => setEditFields(prev => ({ ...prev, external_url: e.target.value }))} />
+              <p className="text-xs text-muted-foreground">
+                Se compilato, la pagina evento mostrerà un link esterno invece del form di iscrizione.
+              </p>
+            </div>
+
             {/* Toggles */}
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center gap-2">

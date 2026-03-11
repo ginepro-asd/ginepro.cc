@@ -97,6 +97,7 @@ export function useEvents() {
         location_lat: e.location_lat ?? null,
         location_lng: e.location_lng ?? null,
         location_label: e.location_label ?? null,
+        external_url: (e as any).external_url ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,
