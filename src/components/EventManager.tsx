@@ -160,6 +160,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: "",
         location_address: "",
         custom_fields: [],
+        external_url: "",
       });
     }
   };
