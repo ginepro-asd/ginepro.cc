@@ -45,13 +45,23 @@ serve(async (req) => {
 
       const { data: registration } = await supabaseAdmin
         .from("registrations")
-        .select("nome, cognome, email, payment_method")
+        .select("nome, cognome, email, payment_method, event_id")
         .eq("id", registration_id)
         .single();
 
       // Send confirmation email (fire-and-forget)
       if (registration) {
         try {
+          let event = null;
+          if (registration.event_id) {
+            const { data: eventData } = await supabaseAdmin
+              .from("events")
+              .select("nome, data_evento, luogo")
+              .eq("id", registration.event_id)
+              .single();
+            event = eventData;
+          }
+
           const emailRes = await fetch(
             `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-confirmation-email`,
             {
@@ -66,6 +76,7 @@ serve(async (req) => {
                 email: registration.email,
                 payment_method: registration.payment_method,
                 registration_id,
+                event,
               }),
             },
           );
