@@ -118,8 +118,30 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
 
   const {
     matchedUsers, showMatchDialog, setShowMatchDialog,
-    returningUserData, handleSelectMatch, handleDismiss,
+    returningUserData, existingCertificates, handleSelectMatch, handleDismiss,
   } = useReturningUser({ watchedNome, watchedCognome, form, setCountryCode, setIdentificationType });
+
+  // When returning user is selected, pre-populate photo if available
+  useEffect(() => {
+    if (returningUserData?.photo_thumb_url || returningUserData?.photo_url) {
+      setPhotoPreview(returningUserData.photo_thumb_url || returningUserData.photo_url);
+      setUseExistingPhoto(true);
+    }
+  }, [returningUserData]);
+
+  // When returning user has valid certificates, auto-keep them for matching disciplines
+  useEffect(() => {
+    if (existingCertificates.length > 0 && requiredDisciplines.length > 0) {
+      const kept: Record<string, ExistingCertificate> = {};
+      for (const discipline of requiredDisciplines) {
+        const match = existingCertificates.find(
+          (c) => c.disciplines?.some((d) => d.toLowerCase() === discipline.toLowerCase())
+        );
+        if (match) kept[discipline] = match;
+      }
+      setKeptCertificates(kept);
+    }
+  }, [existingCertificates, membershipType]);
 
   // Auto-compute CF from birth data
   useEffect(() => {
