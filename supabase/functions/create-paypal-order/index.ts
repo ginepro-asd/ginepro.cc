@@ -83,6 +83,14 @@ serve(async (req) => {
 
     if (partError) throw new Error(`Participant error: ${partError.message}`);
 
+    // Remove any existing non-completed registration for this participant+event
+    await supabaseAdmin
+      .from("registrations")
+      .delete()
+      .eq("participant_id", participant.id)
+      .eq("event_id", eventId)
+      .neq("payment_status", "completed");
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
