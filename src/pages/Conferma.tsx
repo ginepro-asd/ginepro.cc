@@ -158,12 +158,20 @@ const Conferma = () => {
               </div>
 
               {memberCard && (
-                <Button asChild className="w-full">
-                  <Link to={`/card/${memberCard.id}`}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Visualizza la tua tessera
-                  </Link>
-                </Button>
+                <>
+                  <Button asChild className="w-full">
+                    <Link to={`/card/${memberCard.id}`}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Visualizza la tua tessera
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link to={`/area-riservata/setup?participant_id=${searchParams.get("registration_id")}`}>
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      Configura la tua area riservata
+                    </Link>
+                  </Button>
+                </>
               )}
             </>
           )}
