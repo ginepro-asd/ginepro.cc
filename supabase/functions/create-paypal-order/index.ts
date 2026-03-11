@@ -44,7 +44,7 @@ serve(async (req) => {
     const {
       nome, cognome, email, telefono,
       identificationType, birthDate, birthPlace, codiceFiscale,
-      eventId, customData,
+      eventId, customData, isTesseramento,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
