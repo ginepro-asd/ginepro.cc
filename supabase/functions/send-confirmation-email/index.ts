@@ -125,11 +125,11 @@ serve(async (req) => {
                     <tr>
                       <td style="padding:6px 0;color:#888;font-size:13px;">Pagamento</td>
                       <td style="padding:6px 0;color:#1a3a3a;font-size:14px;">${paymentLabel}</td>
-                    </tr>${cardRow}
+                    </tr>${cardRow}${!isTesseramento ? `
                     <tr>
-                      <td style="padding:6px 0;color:#888;font-size:13px;">${isTesseramento ? "Anno" : "Evento"}</td>
+                      <td style="padding:6px 0;color:#888;font-size:13px;">Evento</td>
                       <td style="padding:6px 0;color:#1a3a3a;font-size:14px;font-weight:600;">${eventDate}</td>
-                    </tr>${locationRow}
+                    </tr>` : ""}${locationRow}
                   </table>
                 </td>
               </tr>
