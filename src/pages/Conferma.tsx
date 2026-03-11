@@ -11,6 +11,7 @@ interface RegistrationData {
   cognome: string;
   email: string;
   payment_method: string;
+  participant_id?: string | null;
 }
 
 interface CardData {
