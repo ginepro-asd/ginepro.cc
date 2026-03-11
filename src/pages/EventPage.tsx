@@ -169,8 +169,27 @@ const EventPage = () => {
         </section>
       )}
 
-      {/* Registration Form */}
-      {event.is_coppia ? (
+      {/* Registration Form or External Link */}
+      {event.external_url ? (
+        <section id="iscrizione" className="relative py-16 sm:py-24 px-4">
+          <div className="max-w-xl mx-auto text-center">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4 text-foreground">Iscrizione</h2>
+            <p className="text-muted-foreground mb-8">
+              Le iscrizioni per questo evento sono gestite su una piattaforma esterna.
+            </p>
+            <Button
+              size="lg"
+              className="font-display font-semibold text-lg px-10 h-13 shadow-lg hover:shadow-xl transition-shadow"
+              asChild
+            >
+              <a href={event.external_url} target="_blank" rel="noopener noreferrer">
+                Iscriviti su IDchronos
+                <ArrowDown className="ml-2 h-4 w-4 rotate-[-135deg]" />
+              </a>
+            </Button>
+          </div>
+        </section>
+      ) : event.is_coppia ? (
         <PairRegistrationForm event={event} />
       ) : (
         <RegistrationForm event={event} />

@@ -43,6 +43,7 @@ interface EventRecord {
   location_lat: number | null;
   location_lng: number | null;
   location_label: string | null;
+  external_url: string | null;
   created_at: string;
 }
 
@@ -135,6 +136,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: ev.location_label || "",
         location_address: ev.luogo || "",
         custom_fields: normalizeCustomFields(ev.custom_fields),
+        external_url: ev.external_url || "",
       });
     } else {
       setCreating(true);
@@ -158,6 +160,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: "",
         location_address: "",
         custom_fields: [],
+        external_url: "",
       });
     }
   };
@@ -194,6 +197,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_lat: editFields.location_lat || null,
         location_lng: editFields.location_lng || null,
         location_label: editFields.location_label || null,
+        external_url: editFields.external_url || null,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
 
@@ -375,6 +379,15 @@ const EventManager = ({ password }: EventManagerProps) => {
               <Label className="text-sm">Immagine hero (URL)</Label>
               <Input value={editFields.hero_image || ""} placeholder="/images/..."
                 onChange={(e) => setEditFields(prev => ({ ...prev, hero_image: e.target.value }))} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">URL iscrizione esterna</Label>
+              <Input value={editFields.external_url || ""} placeholder="https://..."
+                onChange={(e) => setEditFields(prev => ({ ...prev, external_url: e.target.value }))} />
+              <p className="text-xs text-muted-foreground">
+                Se compilato, la pagina evento mostrerà un link esterno invece del form di iscrizione.
+              </p>
             </div>
 
             {/* Toggles */}

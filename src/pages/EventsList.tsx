@@ -625,14 +625,16 @@ const EventsList = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl bg-muted px-4 py-3 text-center">
-                        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                          Iscritti
-                        </p>
-                        <p className="mt-2 font-display text-2xl font-bold text-foreground">
-                          {event.registration_count}
-                        </p>
-                      </div>
+                      {event.registration_count > 0 && (
+                        <div className="rounded-2xl bg-muted px-4 py-3 text-center">
+                          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                            Iscritti
+                          </p>
+                          <p className="mt-2 font-display text-2xl font-bold text-foreground">
+                            {event.registration_count}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
