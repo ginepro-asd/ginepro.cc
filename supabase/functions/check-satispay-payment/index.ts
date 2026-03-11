@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createMembershipCardIfNeeded } from "../_shared/membership-card.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,6 @@ serve(async (req) => {
       throw new Error("Missing payment_id or registration_id");
     }
 
-    // Check payment state via xpay service
     const res = await fetch(`${XPAY_BASE}/paymentState/${payment_id}`);
 
     if (!res.ok) {
@@ -43,6 +43,9 @@ serve(async (req) => {
         .update({ payment_status: "completed" })
         .eq("id", registration_id);
 
+      // Create membership card if tesseramento
+      const card = await createMembershipCardIfNeeded(supabaseAdmin, registration_id);
+
       const { data: registration } = await supabaseAdmin
         .from("registrations")
         .select("nome, cognome, email, payment_method, event_id")
@@ -56,7 +59,7 @@ serve(async (req) => {
           if (registration.event_id) {
             const { data: eventData } = await supabaseAdmin
               .from("events")
-              .select("nome, data_evento, luogo")
+              .select("nome, data_evento, luogo, is_tesseramento")
               .eq("id", registration.event_id)
               .single();
             event = eventData;
@@ -77,6 +80,7 @@ serve(async (req) => {
                 payment_method: registration.payment_method,
                 registration_id,
                 event,
+                card: card ? { id: card.id, card_number: card.card_number } : null,
               }),
             },
           );
@@ -89,7 +93,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ status: "completed", registration }),
+        JSON.stringify({ status: "completed", registration, card }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     }

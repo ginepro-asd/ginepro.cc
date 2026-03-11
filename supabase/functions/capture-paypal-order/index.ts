@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+import { createMembershipCardIfNeeded } from "../_shared/membership-card.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +49,6 @@ serve(async (req) => {
 
     const accessToken = await getAccessToken();
 
-    // Capture the PayPal order
     const captureRes = await fetch(`${PAYPAL_API_URL}/v2/checkout/orders/${order_id}/capture`, {
       method: "POST",
       headers: {
@@ -76,6 +76,9 @@ serve(async (req) => {
         .update({ payment_status: "completed", payment_id: order_id })
         .eq("id", registration_id);
 
+      // Create membership card if tesseramento
+      const card = await createMembershipCardIfNeeded(supabaseAdmin, registration_id);
+
       const { data: registration } = await supabaseAdmin
         .from("registrations")
         .select("nome, cognome, email, payment_method, event_id")
@@ -89,7 +92,7 @@ serve(async (req) => {
           if (registration.event_id) {
             const { data: eventData } = await supabaseAdmin
               .from("events")
-              .select("nome, data_evento, luogo")
+              .select("nome, data_evento, luogo, is_tesseramento")
               .eq("id", registration.event_id)
               .single();
             event = eventData;
@@ -110,6 +113,7 @@ serve(async (req) => {
                 payment_method: registration.payment_method,
                 registration_id,
                 event,
+                card: card ? { id: card.id, card_number: card.card_number } : null,
               }),
             }
           );
@@ -123,7 +127,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ status: "completed", registration }),
+        JSON.stringify({ status: "completed", registration, card }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
