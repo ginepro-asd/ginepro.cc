@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const RESEND_API_URL = "https://api.resend.com/emails";
+const APP_URL = "https://ginepro.lovable.app";
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "Da definire";
@@ -21,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { nome, cognome, email, payment_method, registration_id, event } = await req.json();
+    const { nome, cognome, email, payment_method, registration_id, event, card } = await req.json();
 
     if (!email || !nome || !cognome) {
       throw new Error("Missing required fields: nome, cognome, email");
@@ -36,6 +37,7 @@ serve(async (req) => {
     const eventName = event?.nome || "Evento Ginepro";
     const eventDate = event?.data_evento ? formatDate(event.data_evento) : "Da definire";
     const eventLocation = event?.luogo || "";
+    const isTesseramento = event?.is_tesseramento || false;
 
     const paymentLabel =
       payment_method === "stripe" ? "Carta di credito" :
@@ -47,6 +49,43 @@ serve(async (req) => {
                       <td style="padding:6px 0;color:#888;font-size:13px;">Luogo</td>
                       <td style="padding:6px 0;color:#1a3a3a;font-size:14px;">${eventLocation}</td>
                     </tr>` : "";
+
+    // Membership card row (only for tesseramento)
+    const cardRow = card?.card_number ? `
+                    <tr>
+                      <td style="padding:6px 0;color:#888;font-size:13px;">N° Tessera</td>
+                      <td style="padding:6px 0;color:#1a3a3a;font-size:14px;font-weight:600;">${card.card_number}</td>
+                    </tr>` : "";
+
+    // Card CTA button (only for tesseramento with card)
+    const cardLink = card?.id ? `${APP_URL}/card/${card.id}` : "";
+    const cardSection = cardLink ? `
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+              <tr><td align="center">
+                <a href="${cardLink}" style="display:inline-block;background:linear-gradient(135deg,#1a3a3a,#2d5a5a);color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.5px;">
+                  🪪 Visualizza la tua tessera
+                </a>
+              </td></tr>
+            </table>` : "";
+
+    // Private area CTA (only for tesseramento)
+    const privateAreaSection = isTesseramento ? `
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;">
+              <tr><td align="center">
+                <a href="${APP_URL}/area-riservata" style="display:inline-block;background-color:#f8fafa;color:#1a3a3a;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;border:1px solid #e8eeee;">
+                  Accedi alla tua area riservata →
+                </a>
+              </td></tr>
+            </table>` : "";
+
+    // Adjust body text for tesseramento vs regular event
+    const bodyText = isTesseramento
+      ? `Ciao <strong>${nome}</strong>, il tuo tesseramento <strong>${eventName}</strong> è stato completato con successo.`
+      : `Ciao <strong>${nome}</strong>, la tua iscrizione a <strong>${eventName}</strong> è stata completata con successo.`;
+
+    const footerText = isTesseramento
+      ? `Conserva questa email come ricevuta del tuo tesseramento. Puoi accedere alla tua tessera digitale e alla tua area riservata in qualsiasi momento dai link sopra.`
+      : `Conserva questa email come ricevuta della tua iscrizione. Ti contatteremo con ulteriori dettagli sull'evento.`;
 
     const htmlBody = `
 <!DOCTYPE html>
@@ -66,9 +105,9 @@ serve(async (req) => {
         <!-- Body -->
         <tr>
           <td style="padding:40px;">
-            <h2 style="margin:0 0 8px;color:#1a3a3a;font-size:20px;">Iscrizione confermata! ✅</h2>
+            <h2 style="margin:0 0 8px;color:#1a3a3a;font-size:20px;">${isTesseramento ? "Tesseramento completato! ✅" : "Iscrizione confermata! ✅"}</h2>
             <p style="margin:0 0 24px;color:#666;font-size:15px;line-height:1.6;">
-              Ciao <strong>${nome}</strong>, la tua iscrizione a <strong>${eventName}</strong> è stata completata con successo.
+              ${bodyText}
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafa;border-radius:8px;border:1px solid #e8eeee;">
               <tr>
@@ -85,17 +124,17 @@ serve(async (req) => {
                     <tr>
                       <td style="padding:6px 0;color:#888;font-size:13px;">Pagamento</td>
                       <td style="padding:6px 0;color:#1a3a3a;font-size:14px;">${paymentLabel}</td>
-                    </tr>
+                    </tr>${cardRow}
                     <tr>
-                      <td style="padding:6px 0;color:#888;font-size:13px;">Evento</td>
+                      <td style="padding:6px 0;color:#888;font-size:13px;">${isTesseramento ? "Anno" : "Evento"}</td>
                       <td style="padding:6px 0;color:#1a3a3a;font-size:14px;font-weight:600;">${eventDate}</td>
                     </tr>${locationRow}
                   </table>
                 </td>
               </tr>
-            </table>
+            </table>${cardSection}${privateAreaSection}
             <p style="margin:24px 0 0;color:#666;font-size:14px;line-height:1.6;">
-              Conserva questa email come ricevuta della tua iscrizione. Ti contatteremo con ulteriori dettagli sull'evento.
+              ${footerText}
             </p>
           </td>
         </tr>
@@ -104,7 +143,7 @@ serve(async (req) => {
           <td style="padding:24px 40px;background-color:#f8fafa;border-top:1px solid #e8eeee;text-align:center;">
             <p style="margin:0;color:#999;font-size:12px;">
               © ${new Date().getFullYear()} GINEPRO ASD<br>
-              <a href="https://ginepro.lovable.app" style="color:#2d5a5a;text-decoration:none;">ginepro.lovable.app</a>
+              <a href="${APP_URL}" style="color:#2d5a5a;text-decoration:none;">ginepro.lovable.app</a>
             </p>
           </td>
         </tr>
@@ -113,6 +152,10 @@ serve(async (req) => {
   </table>
 </body>
 </html>`;
+
+    const subject = isTesseramento
+      ? `Tesseramento completato — ${eventName}`
+      : `Iscrizione confermata — ${eventName}`;
 
     const res = await fetch(RESEND_API_URL, {
       method: "POST",
@@ -123,7 +166,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "Ginepro ASD <info@ginepro.cc>",
         to: [email],
-        subject: `Iscrizione confermata — ${eventName}`,
+        subject,
         html: htmlBody,
       }),
     });

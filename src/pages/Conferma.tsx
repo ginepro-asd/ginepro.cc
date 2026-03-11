@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, XCircle, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoDark from "@/assets/icon-mountain.png";
@@ -13,11 +13,17 @@ interface RegistrationData {
   payment_method: string;
 }
 
+interface CardData {
+  id: string;
+  card_number: string;
+}
+
 const Conferma = () => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<"loading" | "paid" | "error">("loading");
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
+  const [memberCard, setMemberCard] = useState<CardData | null>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -39,6 +45,13 @@ const Conferma = () => {
             .single();
           if (error) throw error;
           setRegistration(data);
+          // Check for membership card
+          const { data: cards } = await supabase
+            .from("membership_cards")
+            .select("id, card_number")
+            .eq("registration_id", registrationId)
+            .limit(1);
+          if (cards && cards.length > 0) setMemberCard(cards[0]);
           setStatus("paid");
         } catch {
           setStatus("error");
@@ -60,6 +73,7 @@ const Conferma = () => {
           if (data.status === "completed") {
             setStatus("paid");
             setRegistration(data.registration);
+            if (data.card) setMemberCard(data.card);
           } else {
             setStatus("error");
           }
@@ -85,6 +99,7 @@ const Conferma = () => {
         if (data.status === "completed") {
           setStatus("paid");
           setRegistration(data.registration);
+          if (data.card) setMemberCard(data.card);
         } else {
           setStatus("error");
         }
@@ -114,8 +129,12 @@ const Conferma = () => {
             <>
               <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
               <div>
-                <h1 className="font-display text-2xl font-bold text-foreground mb-2">Iscrizione confermata!</h1>
-                <p className="text-muted-foreground mb-6">Grazie per esserti iscritto.</p>
+                <h1 className="font-display text-2xl font-bold text-foreground mb-2">
+                  {memberCard ? "Tesseramento completato!" : "Iscrizione confermata!"}
+                </h1>
+                <p className="text-muted-foreground mb-6">
+                  {memberCard ? "Benvenuto in GINEPRO ASD!" : "Grazie per esserti iscritto."}
+                </p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
                 <p className="text-sm">
@@ -130,7 +149,22 @@ const Conferma = () => {
                   <span className="text-muted-foreground">Pagamento:</span>{" "}
                   <strong className="text-foreground capitalize">{registration.payment_method}</strong>
                 </p>
+                {memberCard && (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">N° Tessera:</span>{" "}
+                    <strong className="text-foreground font-mono">{memberCard.card_number}</strong>
+                  </p>
+                )}
               </div>
+
+              {memberCard && (
+                <Button asChild className="w-full">
+                  <Link to={`/card/${memberCard.id}`}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Visualizza la tua tessera
+                  </Link>
+                </Button>
+              )}
             </>
           )}
 

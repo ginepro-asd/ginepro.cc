@@ -9,6 +9,7 @@ import Conferma from "./pages/Conferma";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
+import MemberCard from "./pages/MemberCard";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<EventsList />} />
             <Route path="/guidelines" element={<Guidelines />} />
+            <Route path="/card/:id" element={<MemberCard />} />
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
             <Route path="/:slug/admin" element={<Admin />} />
