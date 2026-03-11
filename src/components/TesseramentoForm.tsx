@@ -20,7 +20,7 @@ import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
 import type { EventData } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, ExistingCertificate } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import SignaturePad from "@/components/SignaturePad";
