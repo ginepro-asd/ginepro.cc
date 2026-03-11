@@ -10,6 +10,9 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
 import MemberCard from "./pages/MemberCard";
+import AreaRiservataLogin from "./pages/AreaRiservataLogin";
+import AreaRiservataSetup from "./pages/AreaRiservataSetup";
+import AreaRiservataDashboard from "./pages/AreaRiservataDashboard";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
