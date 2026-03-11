@@ -689,11 +689,12 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
                         <div><span className="text-muted-foreground">Nome: </span><span className="font-medium">{watchedNome} {watchedCognome}</span></div>
                         <div><span className="text-muted-foreground">Tipologia: </span><span className="font-medium">{selectedOption?.label}</span></div>
                         <div><span className="text-muted-foreground">Totale: </span><span className="font-bold text-secondary">{selectedOption ? formatPrice(selectedOption.price) : ""}</span></div>
-                        <div className="flex gap-3 pt-1">
-                          {photoPreview && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Foto</span>}
+                        <div className="flex gap-3 pt-1 flex-wrap">
+                          {photoPreview && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Foto{useExistingPhoto && !photoFile ? " (esistente)" : ""}</span>}
                           {signatureData && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />Firma</span>}
-                          {certificates.length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{certificates.length} certificat{certificates.length > 1 ? "i" : "o"}</span>}
-                          {skipCertificate && certificates.length === 0 && <span className="text-xs text-yellow-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Certificato non caricato</span>}
+                          {certificates.length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{certificates.length} certificat{certificates.length > 1 ? "i" : "o"} nuov{certificates.length > 1 ? "i" : "o"}</span>}
+                          {Object.keys(keptCertificates).length > 0 && <span className="text-xs text-primary flex items-center gap-1"><Check className="h-3 w-3" />{Object.keys(keptCertificates).length} certificat{Object.keys(keptCertificates).length > 1 ? "i" : "o"} in archivio</span>}
+                          {skipCertificate && certificates.length === 0 && Object.keys(keptCertificates).length === 0 && <span className="text-xs text-yellow-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />Certificato non caricato</span>}
                         </div>
                       </div>
                     </div>
