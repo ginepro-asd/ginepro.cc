@@ -249,9 +249,13 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
         }
         return !!(values.codiceFiscale && values.codiceFiscale.length >= 11);
       case 1: return !!membershipType;
-      case 2: return !!photoFile;
+      case 2: return !!photoFile || useExistingPhoto;
       case 3: return !!signatureData;
-      case 4: return skipCertificate || certificates.length >= requiredDisciplines.length;
+      case 4: {
+        if (skipCertificate) return true;
+        // Each required discipline must have either a new upload or a kept existing cert
+        return requiredDisciplines.every((d) => certificates.some((c) => c.discipline === d) || keptCertificates[d]);
+      }
       case 5: return true;
       default: return false;
     }
