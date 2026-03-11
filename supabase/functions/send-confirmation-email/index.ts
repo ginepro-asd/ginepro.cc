@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { nome, cognome, email, payment_method, registration_id, event, card } = await req.json();
+    const { nome, cognome, email, payment_method, registration_id, event, card, participant_id } = await req.json();
 
     if (!email || !nome || !cognome) {
       throw new Error("Missing required fields: nome, cognome, email");
@@ -69,11 +69,12 @@ serve(async (req) => {
             </table>` : "";
 
     // Private area CTA (only for tesseramento)
+    const setupLink = participant_id ? `${APP_URL}/area-riservata/setup?participant_id=${participant_id}` : `${APP_URL}/area-riservata`;
     const privateAreaSection = isTesseramento ? `
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;">
               <tr><td align="center">
-                <a href="${APP_URL}/area-riservata" style="display:inline-block;background-color:#f8fafa;color:#1a3a3a;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;border:1px solid #e8eeee;">
-                  Accedi alla tua area riservata →
+                <a href="${setupLink}" style="display:inline-block;background-color:#f8fafa;color:#1a3a3a;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;border:1px solid #e8eeee;">
+                  🔐 Configura la tua area riservata →
                 </a>
               </td></tr>
             </table>` : "";

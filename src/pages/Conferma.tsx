@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, Loader2, XCircle, CreditCard } from "lucide-react";
+import { CheckCircle, Loader2, XCircle, CreditCard, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoDark from "@/assets/icon-mountain.png";
@@ -11,6 +11,7 @@ interface RegistrationData {
   cognome: string;
   email: string;
   payment_method: string;
+  participant_id?: string | null;
 }
 
 interface CardData {
@@ -40,7 +41,7 @@ const Conferma = () => {
         try {
           const { data, error } = await supabase
             .from("registrations")
-            .select("nome, cognome, email, payment_method")
+            .select("nome, cognome, email, payment_method, participant_id")
             .eq("id", registrationId)
             .single();
           if (error) throw error;
@@ -158,12 +159,22 @@ const Conferma = () => {
               </div>
 
               {memberCard && (
-                <Button asChild className="w-full">
-                  <Link to={`/card/${memberCard.id}`}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Visualizza la tua tessera
-                  </Link>
-                </Button>
+                <>
+                  <Button asChild className="w-full">
+                    <Link to={`/card/${memberCard.id}`}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Visualizza la tua tessera
+                    </Link>
+                  </Button>
+                  {registration.participant_id && (
+                    <Button asChild variant="outline" className="w-full">
+                      <Link to={`/area-riservata/setup?participant_id=${registration.participant_id}`}>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Configura la tua area riservata
+                      </Link>
+                    </Button>
+                  )}
+                </>
               )}
             </>
           )}

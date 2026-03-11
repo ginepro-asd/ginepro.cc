@@ -10,6 +10,9 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
 import MemberCard from "./pages/MemberCard";
+import AreaRiservataLogin from "./pages/AreaRiservataLogin";
+import AreaRiservataSetup from "./pages/AreaRiservataSetup";
+import AreaRiservataDashboard from "./pages/AreaRiservataDashboard";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -25,6 +28,9 @@ const App = () => (
             <Route path="/" element={<EventsList />} />
             <Route path="/guidelines" element={<Guidelines />} />
             <Route path="/card/:id" element={<MemberCard />} />
+            <Route path="/area-riservata" element={<AreaRiservataLogin />} />
+            <Route path="/area-riservata/setup" element={<AreaRiservataSetup />} />
+            <Route path="/area-riservata/dashboard" element={<AreaRiservataDashboard />} />
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
             <Route path="/:slug/admin" element={<Admin />} />
