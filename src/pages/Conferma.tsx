@@ -166,12 +166,14 @@ const Conferma = () => {
                       Visualizza la tua tessera
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link to={`/area-riservata/setup?participant_id=${searchParams.get("registration_id")}`}>
-                      <ShieldCheck className="h-4 w-4 mr-2" />
-                      Configura la tua area riservata
-                    </Link>
-                  </Button>
+                  {registration.participant_id && (
+                    <Button asChild variant="outline" className="w-full">
+                      <Link to={`/area-riservata/setup?participant_id=${registration.participant_id}`}>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Configura la tua area riservata
+                      </Link>
+                    </Button>
+                  )}
                 </>
               )}
             </>
