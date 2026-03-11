@@ -31,7 +31,7 @@ serve(async (req) => {
     // Query registrations with linked event + participant metadata in one request
     let registrationsQuery = supabaseAdmin
       .from("registrations")
-      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data)")
+      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data, photo_thumb_url, photo_url)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
@@ -47,6 +47,8 @@ serve(async (req) => {
       event_nome: r.events?.nome || "—",
       event_slug: r.events?.slug || "",
       canonical_participant: r.participants || null,
+      photo_thumb_url: r.participants?.photo_thumb_url || null,
+      photo_url: r.participants?.photo_url || null,
     }));
 
     // Group by participant_id (fallback to normalized email) for the admin view
@@ -66,6 +68,8 @@ serve(async (req) => {
           birth_place: canonical?.birth_place ?? r.birth_place,
           participant_id: r.participant_id || null,
           fidal_data: canonical?.fidal_data || null,
+          photo_thumb_url: canonical?.photo_thumb_url || null,
+          photo_url: canonical?.photo_url || null,
           registrations: [],
         };
       }
@@ -80,6 +84,8 @@ serve(async (req) => {
         payment_id: r.payment_id,
         custom_data: r.custom_data,
         created_at: r.created_at,
+        photo_thumb_url: r.photo_thumb_url,
+        photo_url: r.photo_url,
       });
     }
 

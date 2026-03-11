@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface PhotoAvatarProps {
   photoUrl: string | null;
+  previewUrl?: string | null;
   name: string;
   surname: string;
 }
@@ -24,24 +25,36 @@ const SIZES = [
   { label: "Originale", size: 0 },
 ];
 
-export default function PhotoAvatar({ photoUrl, name, surname }: PhotoAvatarProps) {
+export default function PhotoAvatar({ photoUrl, previewUrl, name, surname }: PhotoAvatarProps) {
   const [downloading, setDownloading] = useState(false);
   const initials = `${name?.charAt(0) || ""}${surname?.charAt(0) || ""}`;
+  const displayUrl = previewUrl || photoUrl;
+  const downloadUrl = photoUrl || previewUrl || null;
 
-  const downloadResized = async (targetSize: number) => {
-    if (!photoUrl) return;
-    setDownloading(true);
-    try {
+  const fetchPhotoBlob = async (url: string) => {
+    if (url.includes("firebasestorage.googleapis.com")) {
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-photo`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: photoUrl }),
+          body: JSON.stringify({ url }),
         }
       );
       if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
+      return res.blob();
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Download failed");
+    return res.blob();
+  };
+
+  const downloadResized = async (targetSize: number) => {
+    if (!downloadUrl) return;
+    setDownloading(true);
+    try {
+      const blob = await fetchPhotoBlob(downloadUrl);
 
       if (targetSize === 0) {
         // Original size - direct download
@@ -101,7 +114,7 @@ export default function PhotoAvatar({ photoUrl, name, surname }: PhotoAvatarProp
     document.body.removeChild(a);
   };
 
-  if (!photoUrl) {
+  if (!displayUrl) {
     return (
       <Avatar className="h-10 w-10">
         <AvatarFallback className="text-xs bg-muted">{initials}</AvatarFallback>
@@ -114,7 +127,7 @@ export default function PhotoAvatar({ photoUrl, name, surname }: PhotoAvatarProp
       <DropdownMenuTrigger asChild>
         <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={photoUrl} alt={`${name} ${surname}`} className="object-cover" />
+            <AvatarImage src={displayUrl} alt={`${name} ${surname}`} className="object-cover" />
             <AvatarFallback className="text-xs bg-muted">{initials}</AvatarFallback>
           </Avatar>
         </button>

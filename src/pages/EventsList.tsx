@@ -304,7 +304,7 @@ const EventsList = () => {
                       <div className={cn("flex items-center gap-2", heroSoftClass)}>
                         <Compass className="h-4 w-4" />
                         <span className="text-xs uppercase tracking-[0.22em]">
-                          Attivi
+                          Eventi
                         </span>
                       </div>
                       <p className="mt-3 font-display text-3xl font-bold">
@@ -315,7 +315,7 @@ const EventsList = () => {
                       <div className={cn("flex items-center gap-2", heroSoftClass)}>
                         <Users className="h-4 w-4" />
                         <span className="text-xs uppercase tracking-[0.22em]">
-                          Archivio
+                          Persone
                         </span>
                       </div>
                       <p className="mt-3 font-display text-3xl font-bold">
@@ -381,14 +381,12 @@ const EventsList = () => {
                 Sezione eventi
               </p>
               <h2 className="mt-3 font-display text-4xl font-black tracking-tight text-foreground sm:text-5xl">
-                Tutto quello che puoi aprire adesso.
+                Tutto quello che bolle in pentola.
               </h2>
             </div>
 
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              La CTA principale porta al tesseramento attivo; qui sotto rimane
-              l'elenco completo degli eventi aperti, con accesso diretto alle
-              rispettive pagine di iscrizione.
+              Un breve sguardo alle nostre prossime avventure, con tutte le informazioni essenziali per partecipare e vivere l'esperienza GINEPRO al massimo.
             </p>
           </div>
 
@@ -399,9 +397,7 @@ const EventsList = () => {
                   Nessun evento attivo al momento.
                 </p>
                 <p className="mt-3 max-w-xl text-muted-foreground">
-                  La hero resta pronta; appena verra pubblicato il prossimo
-                  evento, apparira automaticamente in questa sezione e la CTA
-                  principale si aggiornera di conseguenza.
+                  Resta sintonizzato! Stiamo preparando nuove esperienze che saranno presto disponibili. Nel frattempo, puoi esplorare il nostro archivio di eventi passati o iscriverti alla newsletter per ricevere aggiornamenti in tempo reale.
                 </p>
               </CardContent>
             </Card>
@@ -496,7 +492,7 @@ const EventsList = () => {
                               className={cn(
                                 "mt-3 text-sm leading-6 sm:text-base",
                                 hasHeroImage || event.is_tesseramento
-                                  ? "text-white/78"
+                                  ? "text-white/80"
                                   : "text-muted-foreground",
                               )}
                             >
@@ -532,28 +528,28 @@ const EventsList = () => {
 
                             <div className="flex items-end gap-4">
                               <div className="text-right">
-                                <p
+                                {eventPrice ? <><p
                                   className={cn(
                                     "text-xs uppercase tracking-[0.24em]",
                                     hasHeroImage || event.is_tesseramento
                                       ? "text-white/55"
-                                      : "text-muted-foreground/70",
+                                      : "text-muted-foreground/70"
                                   )}
                                 >
-                                  Quota
-                                </p>
-                                <p
+                                  Quota da
+                                </p><p
                                   className={cn(
                                     "mt-2 font-display text-3xl font-bold",
                                     hasHeroImage || event.is_tesseramento
                                       ? "text-white"
-                                      : "text-foreground",
+                                      : "text-foreground"
                                   )}
                                 >
-                                  {eventHasVariablePricing
-                                    ? `da ${formatPrice(eventPrice)}`
-                                    : formatPrice(eventPrice)}
-                                </p>
+                                    {eventHasVariablePricing
+                                      ? `da ${formatPrice(eventPrice)}`
+                                      : formatPrice(eventPrice)}
+                                  </p></> : undefined
+                                }
                               </div>
 
                               <span

@@ -1,22 +1,84 @@
-/* Card animation styles */
+/* Card page overrides */
+html.card-page-active,
+body.card-page-active {
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  background: #020202;
+}
+
+body.card-page-active #root {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: initial;
+}
+
 .card-container {
+  position: relative;
   width: 100%;
   min-height: 100dvh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #035C67;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(122, 219, 212, 0.15), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(250, 117, 152, 0.12), transparent 28%),
+    linear-gradient(135deg, #010101 0%, #050607 48%, #020202 100%);
+}
+
+.card-container::before,
+.card-container::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  border-radius: 999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.card-container::before {
+  width: 24rem;
+  height: 24rem;
+  top: -8rem;
+  right: -5rem;
+  background: rgba(122, 219, 212, 0.16);
+}
+
+.card-container::after {
+  width: 22rem;
+  height: 22rem;
+  bottom: -8rem;
+  left: -5rem;
+  background: rgba(250, 117, 152, 0.14);
 }
 
 .card-container svg {
+  position: relative;
+  z-index: 1;
   opacity: 0;
-  max-width: 600px;
-  width: 90vw;
+  width: min(92vw, 700px);
   height: auto;
   cursor: pointer;
+  filter: drop-shadow(0 32px 80px rgba(0, 0, 0, 0.55));
 }
 
 .card-container svg text {
-  font-family: 'Outfit', sans-serif;
+  font-family: "Outfit", sans-serif;
+}
+
+.card-container svg .card-mono {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+@media (max-width: 640px) {
+  .card-container {
+    padding: 1.5rem;
+  }
+
+  .card-container svg {
+    width: min(96vw, 700px);
+  }
 }

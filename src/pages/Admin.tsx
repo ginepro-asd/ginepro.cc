@@ -36,6 +36,8 @@ interface EventRegistration {
   payment_id: string | null;
   custom_data: Record<string, any> | null;
   created_at: string;
+  photo_thumb_url?: string | null;
+  photo_url?: string | null;
 }
 
 interface Participant {
@@ -48,6 +50,8 @@ interface Participant {
   birth_place: string | null;
   participant_id: string | null;
   fidal_data: Record<string, any> | null;
+  photo_thumb_url: string | null;
+  photo_url: string | null;
   registrations: EventRegistration[];
 }
 
@@ -66,6 +70,8 @@ interface FlatRegistration {
   created_at: string;
   event_nome?: string;
   event_slug?: string;
+  photo_thumb_url: string | null;
+  photo_url: string | null;
 }
 
 interface FirestoreEvent {
@@ -115,6 +121,8 @@ const Admin = () => {
 
   // Helper: get photo URL from participant's registrations
   const getParticipantPhoto = (p: Participant): string | null => {
+    if (p.photo_thumb_url) return p.photo_thumb_url;
+    if (p.photo_url) return p.photo_url;
     for (const reg of p.registrations) {
       const cd = reg.custom_data;
       if (cd?.photoUrlThumb) return cd.photoUrlThumb;
@@ -125,20 +133,21 @@ const Admin = () => {
 
   // Helper: get original photo URL (for download)
   const getParticipantOriginalPhoto = (p: Participant): string | null => {
+    if (p.photo_url) return p.photo_url;
     for (const reg of p.registrations) {
       const cd = reg.custom_data;
       if (cd?.photoUrl) return cd.photoUrl;
     }
-    return null;
+    return p.photo_thumb_url || null;
   };
 
   // Helper: get photo from flat registration
   const getRegistrationPhoto = (r: FlatRegistration): string | null => {
-    return r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
+    return r.photo_thumb_url || r.photo_url || r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
   };
 
   const getRegistrationOriginalPhoto = (r: FlatRegistration): string | null => {
-    return r.custom_data?.photoUrl || null;
+    return r.photo_url || r.custom_data?.photoUrl || r.photo_thumb_url || r.custom_data?.photoUrlThumb || null;
   };
 
   const isGlobal = !slug;
@@ -664,6 +673,7 @@ const Admin = () => {
                            <TableCell className="w-14">
                              <PhotoAvatar
                                photoUrl={getParticipantOriginalPhoto(p)}
+                               previewUrl={getParticipantPhoto(p)}
                                name={p.nome}
                                surname={p.cognome}
                              />
@@ -764,6 +774,7 @@ const Admin = () => {
                            <TableCell className="w-14">
                              <PhotoAvatar
                                photoUrl={getRegistrationOriginalPhoto(r)}
+                               previewUrl={getRegistrationPhoto(r)}
                                name={r.nome}
                                surname={r.cognome}
                              />
