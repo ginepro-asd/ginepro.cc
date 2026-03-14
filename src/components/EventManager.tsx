@@ -94,6 +94,10 @@ const EventManager = ({ password }: EventManagerProps) => {
   const [deleteEvent, setDeleteEvent] = useState<EventRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
+  const [regUploading, setRegUploading] = useState(false);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+  const regInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const fetchEvents = async () => {
