@@ -167,6 +167,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_address: "",
         custom_fields: [],
         external_url: "",
+        regulation_url: "",
       });
     }
   };
