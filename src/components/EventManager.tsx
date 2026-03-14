@@ -44,6 +44,7 @@ interface EventRecord {
   location_lng: number | null;
   location_label: string | null;
   external_url: string | null;
+  regulation_url: string | null;
   created_at: string;
 }
 
