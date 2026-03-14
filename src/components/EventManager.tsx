@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import {
-  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff,
+  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, Upload, Image, FileText, Link as LinkIcon,
 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
 
