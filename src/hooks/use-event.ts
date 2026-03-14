@@ -22,6 +22,7 @@ export interface EventData {
   location_lng: number | null;
   location_label: string | null;
   external_url: string | null;
+  regulation_url: string | null;
 }
 
 export interface CustomField {
