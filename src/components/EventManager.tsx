@@ -383,10 +383,105 @@ const EventManager = ({ password }: EventManagerProps) => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-sm">Immagine hero (URL)</Label>
-              <Input value={editFields.hero_image || ""} placeholder="/images/..."
-                onChange={(e) => setEditFields(prev => ({ ...prev, hero_image: e.target.value }))} />
+            {/* Hero image upload */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <Image className="h-4 w-4 text-primary" />
+                Immagine hero
+              </Label>
+              {editFields.hero_image && (
+                <div className="relative rounded-lg overflow-hidden border border-border/50 max-h-32">
+                  <img src={editFields.hero_image} alt="Hero" className="w-full h-32 object-cover" />
+                  <Button size="sm" variant="destructive" className="absolute top-2 right-2 h-7 text-xs"
+                    onClick={() => setEditFields(prev => ({ ...prev, hero_image: "" }))}>
+                    Rimuovi
+                  </Button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input ref={heroInputRef} type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setHeroUploading(true);
+                    try {
+                      const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "")}`;
+                      const { error } = await supabase.storage.from("heroes").upload(path, file);
+                      if (error) throw error;
+                      const { data } = supabase.storage.from("heroes").getPublicUrl(path);
+                      setEditFields(prev => ({ ...prev, hero_image: data.publicUrl }));
+                      toast({ title: "Immagine caricata" });
+                    } catch (err: any) {
+                      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+                    } finally {
+                      setHeroUploading(false);
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm" disabled={heroUploading}
+                  onClick={() => heroInputRef.current?.click()}>
+                  {heroUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Carica immagine
+                </Button>
+                <span className="text-xs text-muted-foreground self-center">oppure</span>
+                <Input value={editFields.hero_image || ""} placeholder="URL immagine..."
+                  className="flex-1 h-9 text-sm"
+                  onChange={(e) => setEditFields(prev => ({ ...prev, hero_image: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Regulation */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <FileText className="h-4 w-4 text-primary" />
+                Regolamento
+              </Label>
+              {editFields.regulation_url && (
+                <div className="flex items-center gap-2 bg-muted/30 rounded-lg px-3 py-2">
+                  <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a href={editFields.regulation_url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline truncate flex-1">
+                    {editFields.regulation_url}
+                  </a>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive"
+                    onClick={() => setEditFields(prev => ({ ...prev, regulation_url: "" }))}>
+                    Rimuovi
+                  </Button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input ref={regInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setRegUploading(true);
+                    try {
+                      const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "")}`;
+                      const { error } = await supabase.storage.from("regulations").upload(path, file);
+                      if (error) throw error;
+                      const { data } = supabase.storage.from("regulations").getPublicUrl(path);
+                      setEditFields(prev => ({ ...prev, regulation_url: data.publicUrl }));
+                      toast({ title: "Regolamento caricato" });
+                    } catch (err: any) {
+                      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+                    } finally {
+                      setRegUploading(false);
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="sm" disabled={regUploading}
+                  onClick={() => regInputRef.current?.click()}>
+                  {regUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Carica PDF
+                </Button>
+                <span className="text-xs text-muted-foreground self-center">oppure</span>
+                <Input value={editFields.regulation_url || ""} placeholder="https://link-al-regolamento..."
+                  className="flex-1 h-9 text-sm"
+                  onChange={(e) => setEditFields(prev => ({ ...prev, regulation_url: e.target.value }))} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Il link al regolamento verrà mostrato nella pagina pubblica dell'evento.
+              </p>
             </div>
 
             <div className="space-y-1.5">
