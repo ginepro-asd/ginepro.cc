@@ -59,6 +59,7 @@ export function useEvent(slug: string | undefined) {
         location_lng: (data as any).location_lng ?? null,
         location_label: (data as any).location_label ?? null,
         external_url: (data as any).external_url ?? null,
+        regulation_url: (data as any).regulation_url ?? null,
       };
     },
     enabled: !!slug,
