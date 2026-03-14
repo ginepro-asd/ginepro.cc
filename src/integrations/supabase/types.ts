@@ -34,6 +34,7 @@ export type Database = {
           payment_methods: string[] | null
           pettorale_start: number | null
           prezzo: number
+          regulation_url: string | null
           scadenza_iscrizioni: string | null
           slug: string
           updated_at: string
@@ -58,6 +59,7 @@ export type Database = {
           payment_methods?: string[] | null
           pettorale_start?: number | null
           prezzo?: number
+          regulation_url?: string | null
           scadenza_iscrizioni?: string | null
           slug: string
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
           payment_methods?: string[] | null
           pettorale_start?: number | null
           prezzo?: number
+          regulation_url?: string | null
           scadenza_iscrizioni?: string | null
           slug?: string
           updated_at?: string

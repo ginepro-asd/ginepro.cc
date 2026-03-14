@@ -22,6 +22,7 @@ export interface EventData {
   location_lng: number | null;
   location_label: string | null;
   external_url: string | null;
+  regulation_url: string | null;
 }
 
 export interface CustomField {
@@ -58,6 +59,7 @@ export function useEvent(slug: string | undefined) {
         location_lng: (data as any).location_lng ?? null,
         location_label: (data as any).location_label ?? null,
         external_url: (data as any).external_url ?? null,
+        regulation_url: (data as any).regulation_url ?? null,
       };
     },
     enabled: !!slug,
@@ -98,6 +100,7 @@ export function useEvents() {
         location_lng: e.location_lng ?? null,
         location_label: e.location_label ?? null,
         external_url: (e as any).external_url ?? null,
+        regulation_url: (e as any).regulation_url ?? null,
       }));
     },
     staleTime: 5 * 60 * 1000,

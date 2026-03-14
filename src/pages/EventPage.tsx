@@ -144,14 +144,28 @@ const EventPage = () => {
       </section>
 
       {/* Info Section */}
-      {event.descrizione && (
+      {(event.descrizione || event.regulation_url) && (
         <section className="relative py-16 sm:py-24 px-4 bg-muted/30">
           <div className="max-w-3xl mx-auto text-center">
             <Mountain className="h-10 w-10 mx-auto mb-6 text-primary" />
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-6 text-foreground">L'evento</h2>
-            <p className="text-muted-foreground text-lg leading-relaxed mb-6 max-w-2xl mx-auto">
-              {event.descrizione}
-            </p>
+            {event.descrizione && (
+              <p className="text-muted-foreground text-lg leading-relaxed mb-6 max-w-2xl mx-auto">
+                {event.descrizione}
+              </p>
+            )}
+            {event.regulation_url && (
+              <div className="mb-6">
+                <a
+                  href={event.regulation_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+                >
+                  📄 Consulta il regolamento
+                </a>
+              </div>
+            )}
             {event.scadenza_iscrizioni && (
               <div className="inline-block bg-secondary/10 border border-secondary/25 rounded-lg px-5 py-3">
                 <p className="text-sm font-medium text-secondary">
