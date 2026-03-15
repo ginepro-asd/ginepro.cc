@@ -16,6 +16,7 @@ import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Us
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
+import DualSatispayWaiting from "@/components/DualSatispayWaiting";
 import SearchableSelect from "@/components/SearchableSelect";
 import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";

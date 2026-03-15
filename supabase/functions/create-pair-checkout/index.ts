@@ -36,7 +36,7 @@ serve(async (req) => {
   }
 
   try {
-    const { participantA, participantB, paymentMethod, eventId, customData, disciplina } = await req.json();
+    const { participantA, participantB, paymentMethod, eventId, customData, disciplina, satispayPayer } = await req.json();
 
     if (!participantA || !participantB || !paymentMethod || !eventId) {
       throw new Error("Campi obbligatori mancanti");
