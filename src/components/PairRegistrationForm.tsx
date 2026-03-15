@@ -414,6 +414,7 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         eventId: event.id,
         customData: routeField && routeSelection ? { [routeField.key]: routeSelection } : {},
         disciplina: routeField?.key === "disciplina" ? routeSelection : undefined,
+        ...(paymentMethod === "satispay" ? { satispayPayer } : {}),
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
