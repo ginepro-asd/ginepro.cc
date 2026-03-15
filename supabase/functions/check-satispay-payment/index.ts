@@ -113,6 +113,13 @@ serve(async (req) => {
         .update({ payment_status: "cancelled" })
         .eq("id", registration_id);
 
+      // Also cancel any paired registration sharing the same payment_id
+      await supabaseAdmin
+        .from("registrations")
+        .update({ payment_status: "cancelled" })
+        .eq("payment_id", payment_id)
+        .neq("id", registration_id);
+
       return new Response(
         JSON.stringify({ status: "cancelled" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
