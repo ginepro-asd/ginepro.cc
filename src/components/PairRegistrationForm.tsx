@@ -560,6 +560,69 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
               </RadioGroup>
             </div>
 
+            {/* Satispay payer selection */}
+            {paymentMethod === "satispay" && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Chi paga? *</Label>
+                <RadioGroup value={satispayPayer} onValueChange={(v) => setSatispayPayer(v as "each" | "a" | "b")} className="space-y-2">
+                  <label
+                    htmlFor="payer-each"
+                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${satispayPayer === "each" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                  >
+                    <RadioGroupItem value="each" id="payer-each" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">Ognuno paga la sua quota</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Verranno inviate due richieste Satispay da {formatPrice(unitPrice)} ciascuna
+                      </span>
+                    </div>
+                  </label>
+                  <label
+                    htmlFor="payer-a"
+                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${satispayPayer === "a" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                  >
+                    <RadioGroupItem value="a" id="payer-a" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">
+                        Paga tutto {personA.nome || "Componente A"} {personA.cognome || ""}
+                      </span>
+                      {personA.telefono && !personA.returningUserData && (
+                        <span className="block text-xs text-muted-foreground font-mono">
+                          {obfuscatePhone(`${personA.countryCode}${personA.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`)}
+                        </span>
+                      )}
+                      {personA.returningUserData && (
+                        <span className="block text-xs text-muted-foreground font-mono">
+                          {obfuscatePhone(personA.returningUserData.telefono)}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                  <label
+                    htmlFor="payer-b"
+                    className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${satispayPayer === "b" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                  >
+                    <RadioGroupItem value="b" id="payer-b" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">
+                        Paga tutto {personB.nome || "Componente B"} {personB.cognome || ""}
+                      </span>
+                      {personB.telefono && !personB.returningUserData && (
+                        <span className="block text-xs text-muted-foreground font-mono">
+                          {obfuscatePhone(`${personB.countryCode}${personB.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`)}
+                        </span>
+                      )}
+                      {personB.returningUserData && (
+                        <span className="block text-xs text-muted-foreground font-mono">
+                          {obfuscatePhone(personB.returningUserData.telefono)}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
+            )}
+
             <Button
               size="lg"
               className="w-full font-display font-semibold text-lg h-12"
