@@ -461,6 +461,27 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   }
 
   if (satispayState) {
+    // Dual payment flow: each pays their share
+    if (satispayState.paymentIdB && satispayState.registrationIdB) {
+      return (
+        <section id="iscrizione" className="py-16 sm:py-24 px-4">
+          <div className="max-w-xl mx-auto">
+            <DualSatispayWaiting
+              paymentIdA={satispayState.paymentId}
+              registrationIdA={satispayState.registrationId}
+              paymentIdB={satispayState.paymentIdB}
+              registrationIdB={satispayState.registrationIdB}
+              onCancel={() => setSatispayState(null)}
+              eventSlug={event.slug}
+              priceEach={unitPrice}
+              nameA={`${personA.nome} ${personA.cognome}`}
+              nameB={`${personB.nome} ${personB.cognome}`}
+            />
+          </div>
+        </section>
+      );
+    }
+    // Single payer flow
     return (
       <section id="iscrizione" className="py-16 sm:py-24 px-4">
         <div className="max-w-xl mx-auto">
