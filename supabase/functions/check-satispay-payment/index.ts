@@ -38,10 +38,18 @@ serve(async (req) => {
     );
 
     if (payment.status === "ACCEPTED") {
+      // Update the main registration
       await supabaseAdmin
         .from("registrations")
         .update({ payment_status: "completed" })
         .eq("id", registration_id);
+
+      // Also update any paired registration sharing the same payment_id
+      await supabaseAdmin
+        .from("registrations")
+        .update({ payment_status: "completed" })
+        .eq("payment_id", payment_id)
+        .neq("id", registration_id);
 
       // Create membership card if tesseramento
       const card = await createMembershipCardIfNeeded(supabaseAdmin, registration_id);
@@ -104,6 +112,13 @@ serve(async (req) => {
         .from("registrations")
         .update({ payment_status: "cancelled" })
         .eq("id", registration_id);
+
+      // Also cancel any paired registration sharing the same payment_id
+      await supabaseAdmin
+        .from("registrations")
+        .update({ payment_status: "cancelled" })
+        .eq("payment_id", payment_id)
+        .neq("id", registration_id);
 
       return new Response(
         JSON.stringify({ status: "cancelled" }),
