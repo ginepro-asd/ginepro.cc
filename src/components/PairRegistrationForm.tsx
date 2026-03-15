@@ -354,8 +354,9 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const [personA, setPersonA] = useState<PersonState>(emptyPerson());
   const [personB, setPersonB] = useState<PersonState>(emptyPerson());
   const [paymentMethod, setPaymentMethod] = useState<string>(event.payment_methods[0] || "stripe");
+  const [satispayPayer, setSatispayPayer] = useState<"each" | "a" | "b">("each");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
+  const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string; paymentIdB?: string; registrationIdB?: string } | null>(null);
   const { toast } = useToast();
 
   const routeField = getRouteSelectionField(event.custom_fields);
