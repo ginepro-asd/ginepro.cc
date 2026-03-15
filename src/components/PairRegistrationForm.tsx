@@ -429,7 +429,12 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
         }
       } else if (paymentMethod === "satispay") {
         if (result?.payment_id && result?.registration_id) {
-          setSatispayState({ paymentId: result.payment_id, registrationId: result.registration_id });
+          setSatispayState({
+            paymentId: result.payment_id,
+            registrationId: result.registration_id,
+            paymentIdB: result.payment_id_b,
+            registrationIdB: result.registration_id_b,
+          });
         } else {
           throw new Error("Errore Satispay");
         }
