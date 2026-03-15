@@ -36,7 +36,7 @@ serve(async (req) => {
   }
 
   try {
-    const { participantA, participantB, paymentMethod, eventId, customData, disciplina } = await req.json();
+    const { participantA, participantB, paymentMethod, eventId, customData, disciplina, satispayPayer } = await req.json();
 
     if (!participantA || !participantB || !paymentMethod || !eventId) {
       throw new Error("Campi obbligatori mancanti");
@@ -178,30 +178,81 @@ serve(async (req) => {
     }
 
     if (paymentMethod === "satispay") {
-      const orderId = `${event.nome} Coppia ${bibNumber}`;
-      const res = await fetch(`${XPAY_BASE}/payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          phoneNumber: participantA.telefono,
-          price: totalPrice,
-        }),
-      });
+      const payer = satispayPayer || "a"; // default: first participant pays all
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Satispay error: ${res.status} - ${errText}`);
+      if (payer === "each") {
+        // Two separate payments, one per participant
+        const orderIdA = `${event.nome} Coppia ${bibNumber} - ${participantA.cognome}`;
+        const orderIdB = `${event.nome} Coppia ${bibNumber} - ${participantB.cognome}`;
+        const halfPrice = unitPrice;
+
+        const phoneA = participantA.telefono || participantA.phoneNumber;
+        const phoneB = participantB.telefono || participantB.phoneNumber;
+
+        const [resA, resB] = await Promise.all([
+          fetch(`${XPAY_BASE}/payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: orderIdA, phoneNumber: phoneA, price: halfPrice }),
+          }),
+          fetch(`${XPAY_BASE}/payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: orderIdB, phoneNumber: phoneB, price: halfPrice }),
+          }),
+        ]);
+
+        if (!resA.ok) {
+          const errText = await resA.text();
+          throw new Error(`Satispay error A: ${resA.status} - ${errText}`);
+        }
+        if (!resB.ok) {
+          const errText = await resB.text();
+          throw new Error(`Satispay error B: ${resB.status} - ${errText}`);
+        }
+
+        const { paymentId: paymentIdA } = await resA.json();
+        const { paymentId: paymentIdB } = await resB.json();
+
+        await supabaseAdmin.from("registrations").update({ payment_id: paymentIdA }).eq("id", regA.id);
+        await supabaseAdmin.from("registrations").update({ payment_id: paymentIdB }).eq("id", regB.id);
+
+        return new Response(
+          JSON.stringify({
+            payment_id: paymentIdA,
+            registration_id: regA.id,
+            payment_id_b: paymentIdB,
+            registration_id_b: regB.id,
+            pair: true,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      } else {
+        // Single payer: "a" or "b"
+        const payerData = payer === "b" ? participantB : participantA;
+        const phoneNumber = payerData.telefono || payerData.phoneNumber;
+        const orderId = `${event.nome} Coppia ${bibNumber}`;
+
+        const res = await fetch(`${XPAY_BASE}/payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId, phoneNumber, price: totalPrice }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Satispay error: ${res.status} - ${errText}`);
+        }
+
+        const { paymentId } = await res.json();
+        await supabaseAdmin.from("registrations").update({ payment_id: paymentId }).eq("id", regA.id);
+        await supabaseAdmin.from("registrations").update({ payment_id: paymentId }).eq("id", regB.id);
+
+        return new Response(
+          JSON.stringify({ payment_id: paymentId, registration_id: regA.id, pair: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
       }
-
-      const { paymentId } = await res.json();
-      await supabaseAdmin.from("registrations").update({ payment_id: paymentId }).eq("id", regA.id);
-      await supabaseAdmin.from("registrations").update({ payment_id: paymentId }).eq("id", regB.id);
-
-      return new Response(
-        JSON.stringify({ payment_id: paymentId, registration_id: regA.id, pair: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-      );
     }
 
     if (paymentMethod === "paypal") {
