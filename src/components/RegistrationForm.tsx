@@ -83,7 +83,13 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(() => {
+    if (preselectedDiscipline) {
+      const rf = getPricingField(event.custom_fields) || getRouteSelectionField(event.custom_fields);
+      if (rf) return { [rf.key]: preselectedDiscipline };
+    }
+    return {};
+  });
   const [computedCF, setComputedCF] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
   const { toast } = useToast();
