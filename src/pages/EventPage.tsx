@@ -225,10 +225,50 @@ const EventPage = () => {
         </section>
       ) : event.is_tesseramento ? (
         <TesseramentoForm event={event} />
-      ) : event.is_coppia ? (
-        <PairRegistrationForm event={event} />
       ) : (
-        <RegistrationForm event={event} />
+        <>
+          {/* Discipline selector for mixed coppia events */}
+          {showDisciplineSelector && routeField && (
+            <section className="py-8 px-4">
+              <div className="max-w-xl mx-auto">
+                <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
+                  <CardContent className="pt-6 space-y-3">
+                    <Label className="text-sm font-medium">{routeField.label} *</Label>
+                    <RadioGroup value={selectedDiscipline} onValueChange={setSelectedDiscipline} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {routeField.options.map((opt) => {
+                        const price = getOptionPrice(routeField, opt);
+                        const coppia = isOptionCoppia(routeField, opt);
+                        return (
+                          <label
+                            key={opt}
+                            htmlFor={`disc-ev-${opt}`}
+                            className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${selectedDiscipline === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                          >
+                            <RadioGroupItem value={opt} id={`disc-ev-${opt}`} />
+                            <div className="flex-1">
+                              <span className="text-sm font-medium">{opt}</span>
+                              {coppia && <span className="ml-1.5 text-xs text-secondary font-medium">(in coppia)</span>}
+                              {price !== null && (
+                                <span className="block text-xs text-muted-foreground">
+                                  {formatPrice(price)}{coppia ? " a partecipante" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+          )}
+          {isCoppiaForSelected ? (
+            <PairRegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+          ) : (
+            <RegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+          )}
+        </>
       )}
 
       {/* Footer */}
