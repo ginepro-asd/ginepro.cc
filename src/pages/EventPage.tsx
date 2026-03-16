@@ -135,7 +135,7 @@ const EventPage = () => {
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
                 {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
                 </span>
-              {event.is_coppia && (
+              {(event.is_coppia || hasMixedCoppia) && (
                 <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
               )}
             </div>
