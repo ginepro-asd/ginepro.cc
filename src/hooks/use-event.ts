@@ -32,6 +32,7 @@ export interface CustomField {
   required?: boolean;
   options?: string[];
   option_prices?: Record<string, number | string>;
+  option_coppia?: Record<string, boolean>;
   placeholder?: string;
 }
 
