@@ -512,8 +512,8 @@ const PairRegistrationForm = ({ event, preselectedDiscipline }: PairRegistration
           <span className="text-xs ml-1">({formatPrice(unitPrice)} × 2)</span>
         </p>
 
-        {/* Discipline choice */}
-        {routeField && routeField.options && (
+        {/* Discipline choice — only if not preselected from EventPage */}
+        {!preselectedDiscipline && routeField && routeField.options && (
           <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm mb-6">
             <CardContent className="pt-6 space-y-3">
               <Label className="text-sm font-medium">{routeField.label} *</Label>
