@@ -74,7 +74,7 @@ interface RegistrationFormProps {
   preselectedDiscipline?: string;
 }
 
-const RegistrationForm = ({ event }: RegistrationFormProps) => {
+const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProps) => {
   const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
