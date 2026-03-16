@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
 import PairRegistrationForm from "@/components/PairRegistrationForm";
@@ -10,7 +13,7 @@ import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
-import { getStartingPrice, hasVariablePricing } from "@/lib/event-pricing";
+import { getStartingPrice, hasVariablePricing, getRouteSelectionField, isOptionCoppia, hasCoppiaOptions, getOptionPrice } from "@/lib/event-pricing";
 
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
