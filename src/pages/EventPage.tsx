@@ -48,6 +48,20 @@ const EventPage = () => {
   const variablePricing = hasVariablePricing(event.custom_fields);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
 
+  // Discipline-based coppia detection
+  const routeField = getRouteSelectionField(event.custom_fields);
+  const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
+  const allCoppia = event.is_coppia && !hasMixedCoppia;
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
+
+  useEffect(() => {
+    if (routeField?.options?.length) {
+      setSelectedDiscipline(routeField.options[0]);
+    }
+  }, [routeField?.options?.join("|")]);
+
+  const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
+
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
   const firstWord = nameParts[0];
