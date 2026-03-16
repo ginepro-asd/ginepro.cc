@@ -18,6 +18,7 @@ import { getStartingPrice, hasVariablePricing, getRouteSelectionField, isOptionC
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: event, isLoading, error } = useEvent(slug);
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
 
   React.useEffect(() => {
     if (event) {
@@ -25,6 +26,14 @@ const EventPage = () => {
     }
     return () => { document.title = "Ginepro"; };
   }, [event?.nome]);
+
+  const routeField = event ? getRouteSelectionField(event.custom_fields) : null;
+
+  useEffect(() => {
+    if (routeField?.options?.length) {
+      setSelectedDiscipline(routeField.options[0]);
+    }
+  }, [routeField?.options?.join("|")]);
 
   if (isLoading) {
     return (
@@ -48,19 +57,10 @@ const EventPage = () => {
   const variablePricing = hasVariablePricing(event.custom_fields);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
 
-  // Discipline-based coppia detection
-  const routeField = getRouteSelectionField(event.custom_fields);
   const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
   const allCoppia = event.is_coppia && !hasMixedCoppia;
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
-
-  useEffect(() => {
-    if (routeField?.options?.length) {
-      setSelectedDiscipline(routeField.options[0]);
-    }
-  }, [routeField?.options?.join("|")]);
-
   const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
+  const showDisciplineSelector = hasMixedCoppia && routeField;
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
