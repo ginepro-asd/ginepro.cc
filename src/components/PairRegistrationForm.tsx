@@ -131,6 +131,7 @@ const emptyPerson = (): PersonState => ({
 
 interface PairRegistrationFormProps {
   event: EventData;
+  preselectedDiscipline?: string;
 }
 
 function PersonFormFields({

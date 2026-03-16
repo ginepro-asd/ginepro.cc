@@ -71,6 +71,7 @@ type FormData = z.infer<typeof formSchema>;
 
 interface RegistrationFormProps {
   event: EventData;
+  preselectedDiscipline?: string;
 }
 
 const RegistrationForm = ({ event }: RegistrationFormProps) => {
