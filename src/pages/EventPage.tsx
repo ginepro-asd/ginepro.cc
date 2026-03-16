@@ -161,7 +161,7 @@ const EventPage = () => {
       </section>
 
       {/* Info Section */}
-      {(event.descrizione || event.regulation_url) && (
+      {(!event.is_tesseramento &&  (event.descrizione || event.regulation_url)) && (
         <section className="relative py-16 sm:py-24 px-4 bg-muted/30">
           <div className="max-w-3xl mx-auto text-center">
             <Mountain className="h-10 w-10 mx-auto mb-6 text-primary" />

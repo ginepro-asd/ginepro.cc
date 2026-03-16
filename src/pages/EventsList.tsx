@@ -237,12 +237,7 @@ const EventsList = () => {
                   <span className={cn("font-semibold", heroChipStrongClass)}>
                     {activeEvents.length}
                   </span>{" "}
-                  appuntamenti aperti
-                </div>
-                <div className={cn("rounded-full px-4 py-2 text-sm backdrop-blur-md", heroChipClass)}>
-                  {tesseramentoEvent
-                    ? "Tesseramento attivo ora"
-                    : "Tesseramento in aggiornamento"}
+                  eventi aperti
                 </div>
                 {featuredLocation && (
                   <div className={cn("rounded-full px-4 py-2 text-sm backdrop-blur-md", heroChipClass)}>
@@ -279,47 +274,17 @@ const EventsList = () => {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                  <div className={cn("rounded-[24px] p-5 backdrop-blur-md", heroInsetCardClass)}>
-                    <p className={cn("text-xs uppercase tracking-[0.28em]", heroSoftClass)}>
-                      {tesseramentoEvent
-                        ? "Tesseramento attivo"
-                        : "In primo piano"}
-                    </p>
-                    <p className="mt-3 font-display text-2xl font-semibold">
-                      {tesseramentoEvent?.nome ||
-                        featuredEvent?.nome ||
-                        "Calendario in aggiornamento"}
-                    </p>
-                    <p className={cn("mt-2 text-sm leading-relaxed", heroMutedClass)}>
-                      {tesseramentoEvent
-                        ? `Accesso diretto al tesseramento attivo${tesseramentoEvent.data_evento ? ` - ${formatEventDate(tesseramentoEvent.data_evento)}` : ""}.`
-                        : featuredEvent
-                          ? `${featuredLocation || "Location da confermare"} - ${formatEventDate(featuredEvent.data_evento)}.`
-                          : "La prossima esperienza verra pubblicata qui."}
-                    </p>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div >
                     <div className={cn("rounded-[24px] p-4 backdrop-blur-md", heroInsetCardClass)}>
                       <div className={cn("flex items-center gap-2", heroSoftClass)}>
                         <Compass className="h-4 w-4" />
                         <span className="text-xs uppercase tracking-[0.22em]">
-                          Eventi
+                          Eventi attivi
                         </span>
                       </div>
                       <p className="mt-3 font-display text-3xl font-bold">
                         {activeEvents.length}
-                      </p>
-                    </div>
-                    <div className={cn("rounded-[24px] p-4 backdrop-blur-md", heroInsetCardClass)}>
-                      <div className={cn("flex items-center gap-2", heroSoftClass)}>
-                        <Users className="h-4 w-4" />
-                        <span className="text-xs uppercase tracking-[0.22em]">
-                          Persone
-                        </span>
-                      </div>
-                      <p className="mt-3 font-display text-3xl font-bold">
-                        {archivedParticipants}
                       </p>
                     </div>
                   </div>
