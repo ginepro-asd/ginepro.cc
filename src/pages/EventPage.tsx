@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import Countdown from "@/components/Countdown";
 import RegistrationForm from "@/components/RegistrationForm";
 import PairRegistrationForm from "@/components/PairRegistrationForm";
@@ -10,11 +13,12 @@ import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
-import { getStartingPrice, hasVariablePricing } from "@/lib/event-pricing";
+import { getStartingPrice, hasVariablePricing, getRouteSelectionField, isOptionCoppia, hasCoppiaOptions, getOptionPrice } from "@/lib/event-pricing";
 
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: event, isLoading, error } = useEvent(slug);
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
 
   React.useEffect(() => {
     if (event) {
@@ -22,6 +26,14 @@ const EventPage = () => {
     }
     return () => { document.title = "Ginepro"; };
   }, [event?.nome]);
+
+  const routeField = event ? getRouteSelectionField(event.custom_fields) : null;
+
+  useEffect(() => {
+    if (routeField?.options?.length) {
+      setSelectedDiscipline(routeField.options[0]);
+    }
+  }, [routeField?.options?.join("|")]);
 
   if (isLoading) {
     return (
@@ -44,6 +56,11 @@ const EventPage = () => {
     : null;
   const variablePricing = hasVariablePricing(event.custom_fields);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
+
+  const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
+  const allCoppia = event.is_coppia && !hasMixedCoppia;
+  const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
+  const showDisciplineSelector = hasMixedCoppia && routeField;
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
@@ -118,7 +135,7 @@ const EventPage = () => {
               <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
                 {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
                 </span>
-              {event.is_coppia && (
+              {(event.is_coppia || hasMixedCoppia) && (
                 <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
               )}
             </div>
@@ -208,10 +225,50 @@ const EventPage = () => {
         </section>
       ) : event.is_tesseramento ? (
         <TesseramentoForm event={event} />
-      ) : event.is_coppia ? (
-        <PairRegistrationForm event={event} />
       ) : (
-        <RegistrationForm event={event} />
+        <>
+          {/* Discipline selector for mixed coppia events */}
+          {showDisciplineSelector && routeField && (
+            <section className="py-8 px-4">
+              <div className="max-w-xl mx-auto">
+                <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
+                  <CardContent className="pt-6 space-y-3">
+                    <Label className="text-sm font-medium">{routeField.label} *</Label>
+                    <RadioGroup value={selectedDiscipline} onValueChange={setSelectedDiscipline} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {routeField.options.map((opt) => {
+                        const price = getOptionPrice(routeField, opt);
+                        const coppia = isOptionCoppia(routeField, opt);
+                        return (
+                          <label
+                            key={opt}
+                            htmlFor={`disc-ev-${opt}`}
+                            className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${selectedDiscipline === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                          >
+                            <RadioGroupItem value={opt} id={`disc-ev-${opt}`} />
+                            <div className="flex-1">
+                              <span className="text-sm font-medium">{opt}</span>
+                              {coppia && <span className="ml-1.5 text-xs text-secondary font-medium">(in coppia)</span>}
+                              {price !== null && (
+                                <span className="block text-xs text-muted-foreground">
+                                  {formatPrice(price)}{coppia ? " a partecipante" : ""}
+                                </span>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+          )}
+          {isCoppiaForSelected ? (
+            <PairRegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+          ) : (
+            <RegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+          )}
+        </>
       )}
 
       {/* Footer */}

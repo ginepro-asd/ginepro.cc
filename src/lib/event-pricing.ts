@@ -72,6 +72,20 @@ export function getStartingPrice(basePrice: number, customFields: CustomField[])
   return prices.length > 0 ? Math.min(...prices) : basePrice;
 }
 
+export function isOptionCoppia(
+  field: CustomField | null | undefined,
+  option: string | null | undefined,
+): boolean {
+  if (!field || !option) return false;
+  return !!field.option_coppia?.[option];
+}
+
+export function hasCoppiaOptions(customFields: CustomField[]): boolean {
+  const routeField = getRouteSelectionField(customFields);
+  if (!routeField) return false;
+  return routeField.options.some((opt) => isOptionCoppia(routeField, opt));
+}
+
 export function getSelectedPrice(
   basePrice: number,
   customFields: CustomField[],

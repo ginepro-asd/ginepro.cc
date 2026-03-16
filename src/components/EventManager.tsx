@@ -598,6 +598,28 @@ const EventManager = ({ password }: EventManagerProps) => {
                                     }))
                                   }
                                 />
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Switch
+                                    checked={field.option_coppia?.[option] ?? false}
+                                    onCheckedChange={(v) =>
+                                      setEditFields((prev) => ({
+                                        ...prev,
+                                        custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                          customField.key !== field.key
+                                            ? customField
+                                            : {
+                                                ...customField,
+                                                option_coppia: {
+                                                  ...(customField.option_coppia || {}),
+                                                  [option]: v,
+                                                },
+                                              },
+                                        ),
+                                      }))
+                                    }
+                                  />
+                                  <Label className="text-xs text-muted-foreground">Iscrizione in coppia</Label>
+                                </div>
                               </div>
                             ))}
                           </div>

@@ -27,6 +27,7 @@ import {
   getSelectedPrice,
   getStartingPrice,
   hasVariablePricing,
+  getRouteSelectionField,
 } from "@/lib/event-pricing";
 import {
   COUNTRY_CODES,
@@ -71,9 +72,10 @@ type FormData = z.infer<typeof formSchema>;
 
 interface RegistrationFormProps {
   event: EventData;
+  preselectedDiscipline?: string;
 }
 
-const RegistrationForm = ({ event }: RegistrationFormProps) => {
+const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProps) => {
   const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
@@ -82,7 +84,13 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bornAbroad, setBornAbroad] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string } | null>(null);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(() => {
+    if (preselectedDiscipline) {
+      const rf = getPricingField(event.custom_fields) || getRouteSelectionField(event.custom_fields);
+      if (rf) return { [rf.key]: preselectedDiscipline };
+    }
+    return {};
+  });
   const [computedCF, setComputedCF] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
   const { toast } = useToast();
@@ -347,10 +355,23 @@ const RegistrationForm = ({ event }: RegistrationFormProps) => {
                 </div>
 
                 {/* Custom fields */}
-                {event.custom_fields.length > 0 && (
+                {event.custom_fields.filter((cf) => {
+                  // Hide the discipline field if preselected from EventPage
+                  if (preselectedDiscipline && cf.type === "select") {
+                    const rf = getRouteSelectionField(event.custom_fields);
+                    if (rf && rf.key === cf.key) return false;
+                  }
+                  return true;
+                }).length > 0 && (
                   <div className="space-y-4 border-t border-border/50 pt-5">
                     <Label className="text-sm font-medium">Informazioni aggiuntive</Label>
-                    {event.custom_fields.map((cf) => (
+                    {event.custom_fields.filter((cf) => {
+                      if (preselectedDiscipline && cf.type === "select") {
+                        const rf = getRouteSelectionField(event.custom_fields);
+                        if (rf && rf.key === cf.key) return false;
+                      }
+                      return true;
+                    }).map((cf) => (
                       <CustomFieldInput key={cf.key} field={cf} value={customFieldValues[cf.key] || ""} onChange={(v) => setCustomFieldValues((prev) => ({ ...prev, [cf.key]: v }))} />
                     ))}
                   </div>

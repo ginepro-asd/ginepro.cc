@@ -55,7 +55,7 @@ serve(async (req) => {
       .single();
 
     if (eventError || !event) throw new Error("Evento non trovato");
-    if (!event.is_coppia) throw new Error("Questo evento non è una gara in coppia");
+    // Allow pair checkout if event is_coppia OR if discipline has option_coppia
 
     const selectedOptions = { ...(customData || {}) } as Record<string, unknown>;
     if (disciplina && selectedOptions.disciplina === undefined) {

@@ -131,6 +131,7 @@ const emptyPerson = (): PersonState => ({
 
 interface PairRegistrationFormProps {
   event: EventData;
+  preselectedDiscipline?: string;
 }
 
 function PersonFormFields({
@@ -348,7 +349,7 @@ function PersonFormFields({
   );
 }
 
-const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
+const PairRegistrationForm = ({ event, preselectedDiscipline }: PairRegistrationFormProps) => {
   const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
@@ -361,13 +362,17 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
   const { toast } = useToast();
 
   const routeField = getRouteSelectionField(event.custom_fields);
-  const [routeSelection, setRouteSelection] = useState<string>(routeField?.options?.[0] || "");
-  const unitPrice = getOptionPrice(routeField, routeSelection) ?? event.prezzo;
+  const [routeSelection, setRouteSelection] = useState<string>(preselectedDiscipline || routeField?.options?.[0] || "");
+  const unitPrice = getOptionPrice(routeField, preselectedDiscipline || routeSelection) ?? event.prezzo;
   const totalPrice = unitPrice * 2;
 
   useEffect(() => {
-    setRouteSelection(routeField?.options?.[0] || "");
-  }, [routeField?.key, routeField?.options?.join("|")]);
+    if (preselectedDiscipline) {
+      setRouteSelection(preselectedDiscipline);
+    } else {
+      setRouteSelection(routeField?.options?.[0] || "");
+    }
+  }, [preselectedDiscipline, routeField?.key, routeField?.options?.join("|")]);
 
   const validatePerson = (p: PersonState, label: string): string | null => {
     if (!p.nome.trim()) return `${label}: Nome è obbligatorio`;
@@ -507,8 +512,8 @@ const PairRegistrationForm = ({ event }: PairRegistrationFormProps) => {
           <span className="text-xs ml-1">({formatPrice(unitPrice)} × 2)</span>
         </p>
 
-        {/* Discipline choice */}
-        {routeField && routeField.options && (
+        {/* Discipline choice — only if not preselected from EventPage */}
+        {!preselectedDiscipline && routeField && routeField.options && (
           <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm mb-6">
             <CardContent className="pt-6 space-y-3">
               <Label className="text-sm font-medium">{routeField.label} *</Label>
