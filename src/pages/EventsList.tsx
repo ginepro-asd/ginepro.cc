@@ -6,17 +6,7 @@ import { formatPrice, useEvents, usePastEvents } from "@/hooks/use-event";
 import { getStartingPrice, hasVariablePricing } from "@/lib/event-pricing";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import {
-  ArrowDown,
-  ArrowUpRight,
-  CalendarDays,
-  Clock3,
-  Compass,
-  Loader2,
-  MapPin,
-  Ticket,
-  Users,
-} from "lucide-react";
+import { ArrowDown, ArrowUpRight, CalendarDays, Clock3, Compass, Loader2, MapPin, Ticket, Users } from "lucide-react";
 import { useTheme } from "next-themes";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -36,9 +26,8 @@ const summarize = (text: string | null, fallback: string) => {
   return text.length > 150 ? `${text.slice(0, 147).trim()}...` : text;
 };
 
-const getLocationLabel = (
-  event: { location_label?: string | null } | null | undefined,
-) => event?.location_label?.trim() || null;
+const getLocationLabel = (event: { location_label?: string | null } | null | undefined) =>
+  event?.location_label?.trim() || null;
 
 const EventsList = () => {
   const { resolvedTheme } = useTheme();
@@ -67,36 +56,21 @@ const EventsList = () => {
   }
 
   const activeEvents = events || [];
-  const tesseramentoEvent =
-    activeEvents.find((event) => event.is_tesseramento) || null;
+  const tesseramentoEvent = activeEvents.find((event) => event.is_tesseramento) || null;
   const featuredEvent =
-    activeEvents.find((event) => !event.is_tesseramento) ||
-    tesseramentoEvent ||
-    activeEvents[0] ||
-    null;
+    activeEvents.find((event) => !event.is_tesseramento) || tesseramentoEvent || activeEvents[0] || null;
   const registrationHref = tesseramentoEvent
     ? `/${tesseramentoEvent.slug}`
     : featuredEvent
       ? `/${featuredEvent.slug}`
       : null;
-  const archivedParticipants = (pastEvents || []).reduce(
-    (total, event) => total + event.registration_count,
-    0,
-  );
+  const archivedParticipants = (pastEvents || []).reduce((total, event) => total + event.registration_count, 0);
   const featuredLocation = getLocationLabel(featuredEvent);
-  const featuredPrice = featuredEvent
-    ? getStartingPrice(featuredEvent.prezzo, featuredEvent.custom_fields)
-    : null;
-  const featuredHasVariablePricing = featuredEvent
-    ? hasVariablePricing(featuredEvent.custom_fields)
-    : false;
+  const featuredPrice = featuredEvent ? getStartingPrice(featuredEvent.prezzo, featuredEvent.custom_fields) : null;
+  const featuredHasVariablePricing = featuredEvent ? hasVariablePricing(featuredEvent.custom_fields) : false;
   const isDarkTheme = mounted ? resolvedTheme !== "light" : true;
-  const heroLogoSrc = isDarkTheme
-    ? "/logos/ginepro-logo-chiaro-02.svg"
-    : "/logos/ginepro-logo-chiaro-01.svg";
-  const heroGlassClass = isDarkTheme
-    ? "border border-white/15 bg-black/30"
-    : "border border-white/70 bg-white/62";
+  const heroLogoSrc = isDarkTheme ? "/logos/ginepro-logo-chiaro-02.svg" : "/logos/ginepro-logo-chiaro-01.svg";
+  const heroGlassClass = isDarkTheme ? "border border-white/15 bg-black/30" : "border border-white/70 bg-white/62";
   const heroTitleClass = isDarkTheme ? "text-white" : "text-[#08181b]";
   const heroMutedClass = isDarkTheme ? "text-white/72" : "text-[#08181b]/72";
   const heroSoftClass = isDarkTheme ? "text-white/55" : "text-[#08181b]/58";
@@ -110,11 +84,8 @@ const EventsList = () => {
   const heroAsideClass = isDarkTheme
     ? "border border-white/12 bg-white/10 text-white"
     : "border border-white/65 bg-white/38 text-[#08181b]";
-  const heroInsetCardClass = isDarkTheme
-    ? "border border-white/12 bg-black/18"
-    : "border border-black/10 bg-white/48";
-  const scrollToEvents = () =>
-    document.getElementById("eventi")?.scrollIntoView({ behavior: "smooth" });
+  const heroInsetCardClass = isDarkTheme ? "border border-white/12 bg-black/18" : "border border-black/10 bg-white/48";
+  const scrollToEvents = () => document.getElementById("eventi")?.scrollIntoView({ behavior: "smooth" });
 
   return (
     <div className="min-h-screen bg-background">
@@ -169,11 +140,7 @@ const EventsList = () => {
                 heroGlassClass,
               )}
             >
-              <img
-                src={heroLogoSrc}
-                alt="GINEPRO"
-                className="h-10 w-auto object-contain sm:h-12"
-              />
+              <img src={heroLogoSrc} alt="GINEPRO" className="h-10 w-auto object-contain sm:h-12" />
             </div>
 
             <ThemeSelector inverted={isDarkTheme} className="shrink-0" />
@@ -203,7 +170,7 @@ const EventsList = () => {
                     className="h-14 rounded-full bg-white px-8 text-base font-semibold text-[#08262a] shadow-[0_20px_60px_rgba(0,0,0,0.28)] hover:bg-white/90"
                   >
                     <Link to={registrationHref}>
-                      Iscriviti a GINEPRO
+                      Tesserati con GINEPRO
                       <ArrowUpRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -213,7 +180,7 @@ const EventsList = () => {
                     className="h-14 rounded-full bg-white px-8 text-base font-semibold text-[#08262a] shadow-[0_20px_60px_rgba(0,0,0,0.28)] hover:bg-white/90"
                     onClick={scrollToEvents}
                   >
-                    Iscriviti a GINEPRO
+                    Tesserati con GINEPRO
                     <ArrowUpRight className="h-4 w-4" />
                   </Button>
                 )}
@@ -222,10 +189,7 @@ const EventsList = () => {
                   size="lg"
                   variant="outline"
                   onClick={scrollToEvents}
-                  className={cn(
-                    "h-14 rounded-full px-8 text-base",
-                    heroOutlineButtonClass,
-                  )}
+                  className={cn("h-14 rounded-full px-8 text-base", heroOutlineButtonClass)}
                 >
                   Vedi tutti gli eventi
                   <ArrowDown className="h-4 w-4" />
@@ -234,17 +198,11 @@ const EventsList = () => {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <div className={cn("rounded-full px-4 py-2 text-sm backdrop-blur-md", heroChipClass)}>
-                  <span className={cn("font-semibold", heroChipStrongClass)}>
-                    {activeEvents.length}
-                  </span>{" "}
-                  eventi aperti
+                  <span className={cn("font-semibold", heroChipStrongClass)}>{activeEvents.length}</span> eventi aperti
                 </div>
                 {featuredLocation && (
                   <div className={cn("rounded-full px-4 py-2 text-sm backdrop-blur-md", heroChipClass)}>
-                    Prossima tappa:{" "}
-                    <span className={cn("font-semibold", heroChipStrongClass)}>
-                      {featuredLocation}
-                    </span>
+                    Prossima tappa: <span className={cn("font-semibold", heroChipStrongClass)}>{featuredLocation}</span>
                   </div>
                 )}
               </div>
@@ -263,29 +221,20 @@ const EventsList = () => {
               <div className="relative">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className={cn("text-xs uppercase tracking-[0.28em]", heroSoftClass)}>
-                      live now
-                    </p>
-                    <h2 className="mt-3 font-display text-3xl font-bold">
-                      Stagione GINEPRO
-                    </h2>
+                    <p className={cn("text-xs uppercase tracking-[0.28em]", heroSoftClass)}>live now</p>
+                    <h2 className="mt-3 font-display text-3xl font-bold">Stagione GINEPRO</h2>
                   </div>
                   <Ticket className={cn("mt-1 h-5 w-5", heroMutedClass)} />
                 </div>
 
                 <div className="mt-6 space-y-4">
-
-                  <div >
+                  <div>
                     <div className={cn("rounded-[24px] p-4 backdrop-blur-md", heroInsetCardClass)}>
                       <div className={cn("flex items-center gap-2", heroSoftClass)}>
                         <Compass className="h-4 w-4" />
-                        <span className="text-xs uppercase tracking-[0.22em]">
-                          Eventi attivi
-                        </span>
+                        <span className="text-xs uppercase tracking-[0.22em]">Eventi attivi</span>
                       </div>
-                      <p className="mt-3 font-display text-3xl font-bold">
-                        {activeEvents.length}
-                      </p>
+                      <p className="mt-3 font-display text-3xl font-bold">{activeEvents.length}</p>
                     </div>
                   </div>
 
@@ -293,12 +242,8 @@ const EventsList = () => {
                     <div className={cn("rounded-[24px] p-5 backdrop-blur-md", heroInsetCardClass)}>
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className={cn("text-xs uppercase tracking-[0.24em]", heroSoftClass)}>
-                            Prossimo evento
-                          </p>
-                          <p className="mt-2 font-display text-xl font-semibold">
-                            {featuredEvent.nome}
-                          </p>
+                          <p className={cn("text-xs uppercase tracking-[0.24em]", heroSoftClass)}>Prossimo evento</p>
+                          <p className="mt-2 font-display text-xl font-semibold">{featuredEvent.nome}</p>
                         </div>
                         <span
                           className={cn(
@@ -335,34 +280,30 @@ const EventsList = () => {
         </div>
       </section>
 
-      <section
-        id="eventi"
-        className="scroll-mt-24 px-4 pb-24 pt-20 sm:px-6 lg:px-8"
-      >
+      <section id="eventi" className="scroll-mt-24 px-4 pb-24 pt-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-primary/70">
-                Sezione eventi
-              </p>
+              <p className="text-sm font-medium uppercase tracking-[0.24em] text-primary/70">Sezione eventi</p>
               <h2 className="mt-3 font-display text-4xl font-black tracking-tight text-foreground sm:text-5xl">
                 Tutto quello che bolle in pentola.
               </h2>
             </div>
 
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Un breve sguardo alle nostre prossime avventure, con tutte le informazioni essenziali per partecipare e vivere l'esperienza GINEPRO al massimo.
+              Un breve sguardo alle nostre prossime avventure, con tutte le informazioni essenziali per partecipare e
+              vivere l'esperienza GINEPRO al massimo.
             </p>
           </div>
 
           {activeEvents.length === 0 ? (
             <Card className="mt-10 overflow-hidden rounded-[32px] border-border/60 bg-card/80 shadow-xl">
               <CardContent className="p-8 sm:p-10">
-                <p className="font-display text-2xl font-bold text-foreground">
-                  Nessun evento attivo al momento.
-                </p>
+                <p className="font-display text-2xl font-bold text-foreground">Nessun evento attivo al momento.</p>
                 <p className="mt-3 max-w-xl text-muted-foreground">
-                  Resta sintonizzato! Stiamo preparando nuove esperienze che saranno presto disponibili. Nel frattempo, puoi esplorare il nostro archivio di eventi passati o iscriverti alla newsletter per ricevere aggiornamenti in tempo reale.
+                  Resta sintonizzato! Stiamo preparando nuove esperienze che saranno presto disponibili. Nel frattempo,
+                  puoi esplorare il nostro archivio di eventi passati o iscriverti alla newsletter per ricevere
+                  aggiornamenti in tempo reale.
                 </p>
               </CardContent>
             </Card>
@@ -386,9 +327,7 @@ const EventsList = () => {
                       <article
                         className={cn(
                           "relative flex h-full flex-col overflow-hidden rounded-[32px] border shadow-[0_18px_45px_rgba(3,22,25,0.08)] transition-transform duration-300 group-hover:-translate-y-1",
-                          event.is_tesseramento
-                            ? "border-secondary/50 bg-card"
-                            : "border-border/70 bg-card",
+                          event.is_tesseramento ? "border-secondary/50 bg-card" : "border-border/70 bg-card",
                         )}
                       >
                         {hasHeroImage ? (
@@ -414,9 +353,7 @@ const EventsList = () => {
                         <div className="relative flex h-full flex-col justify-between gap-8 p-6 sm:p-8">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge
-                              variant={
-                                event.is_tesseramento ? "secondary" : "outline"
-                              }
+                              variant={event.is_tesseramento ? "secondary" : "outline"}
                               className={cn(
                                 "rounded-full px-3 py-1 text-xs",
                                 event.is_tesseramento
@@ -426,9 +363,7 @@ const EventsList = () => {
                                     : "border-border/80 bg-background/80 text-foreground",
                               )}
                             >
-                              {event.is_tesseramento
-                                ? "Tesseramento"
-                                : "Evento attivo"}
+                              {event.is_tesseramento ? "Tesseramento" : "Evento attivo"}
                             </Badge>
                             <span
                               className={cn(
@@ -446,9 +381,7 @@ const EventsList = () => {
                             <h3
                               className={cn(
                                 "font-display text-3xl font-bold tracking-tight sm:text-[2.1rem]",
-                                hasHeroImage || event.is_tesseramento
-                                  ? "text-white"
-                                  : "text-foreground",
+                                hasHeroImage || event.is_tesseramento ? "text-white" : "text-foreground",
                               )}
                             >
                               {event.nome}
@@ -456,9 +389,7 @@ const EventsList = () => {
                             <p
                               className={cn(
                                 "mt-3 text-sm leading-6 sm:text-base",
-                                hasHeroImage || event.is_tesseramento
-                                  ? "text-white/80"
-                                  : "text-muted-foreground",
+                                hasHeroImage || event.is_tesseramento ? "text-white/80" : "text-muted-foreground",
                               )}
                             >
                               {summarize(
@@ -474,9 +405,7 @@ const EventsList = () => {
                             <div
                               className={cn(
                                 "flex flex-wrap gap-4 text-sm",
-                                hasHeroImage || event.is_tesseramento
-                                  ? "text-white/75"
-                                  : "text-muted-foreground",
+                                hasHeroImage || event.is_tesseramento ? "text-white/75" : "text-muted-foreground",
                               )}
                             >
                               {eventLocation && (
@@ -493,28 +422,30 @@ const EventsList = () => {
 
                             <div className="flex items-end gap-4">
                               <div className="text-right">
-                                {eventPrice ? <><p
-                                  className={cn(
-                                    "text-xs uppercase tracking-[0.24em]",
-                                    hasHeroImage || event.is_tesseramento
-                                      ? "text-white/55"
-                                      : "text-muted-foreground/70"
-                                  )}
-                                >
-                                  Quota da
-                                </p><p
-                                  className={cn(
-                                    "mt-2 font-display text-3xl font-bold",
-                                    hasHeroImage || event.is_tesseramento
-                                      ? "text-white"
-                                      : "text-foreground"
-                                  )}
-                                >
-                                    {eventHasVariablePricing
-                                      ? `da ${formatPrice(eventPrice)}`
-                                      : formatPrice(eventPrice)}
-                                  </p></> : undefined
-                                }
+                                {eventPrice ? (
+                                  <>
+                                    <p
+                                      className={cn(
+                                        "text-xs uppercase tracking-[0.24em]",
+                                        hasHeroImage || event.is_tesseramento
+                                          ? "text-white/55"
+                                          : "text-muted-foreground/70",
+                                      )}
+                                    >
+                                      Quota da
+                                    </p>
+                                    <p
+                                      className={cn(
+                                        "mt-2 font-display text-3xl font-bold",
+                                        hasHeroImage || event.is_tesseramento ? "text-white" : "text-foreground",
+                                      )}
+                                    >
+                                      {eventHasVariablePricing
+                                        ? `da ${formatPrice(eventPrice)}`
+                                        : formatPrice(eventPrice)}
+                                    </p>
+                                  </>
+                                ) : undefined}
                               </div>
 
                               <span
@@ -525,9 +456,7 @@ const EventsList = () => {
                                     : "bg-primary text-primary-foreground",
                                 )}
                               >
-                                {event.is_tesseramento
-                                  ? "Apri tesseramento"
-                                  : "Apri evento"}
+                                {event.is_tesseramento ? "Apri tesseramento" : "Apri evento"}
                                 <ArrowUpRight className="h-4 w-4" />
                               </span>
                             </div>
@@ -548,9 +477,7 @@ const EventsList = () => {
           <div className="mx-auto max-w-7xl">
             <div className="flex items-center gap-3">
               <Clock3 className="h-5 w-5 text-muted-foreground" />
-              <h2 className="font-display text-2xl font-bold text-foreground">
-                Archivio recente
-              </h2>
+              <h2 className="font-display text-2xl font-bold text-foreground">Archivio recente</h2>
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -563,9 +490,7 @@ const EventsList = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-display text-lg font-semibold text-foreground">
-                            {event.nome}
-                          </h3>
+                          <h3 className="font-display text-lg font-semibold text-foreground">{event.nome}</h3>
                           {event.is_tesseramento && (
                             <Badge variant="secondary" className="rounded-full">
                               Tesseramento
@@ -588,9 +513,7 @@ const EventsList = () => {
 
                       {event.registration_count > 0 && (
                         <div className="rounded-2xl bg-muted px-4 py-3 text-center">
-                          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                            Iscritti
-                          </p>
+                          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Iscritti</p>
                           <p className="mt-2 font-display text-2xl font-bold text-foreground">
                             {event.registration_count}
                           </p>
