@@ -61,7 +61,7 @@ const EventsList = () => {
     activeEvents.find((event) => !event.is_tesseramento) || tesseramentoEvent || activeEvents[0] || null;
   const registrationHref = tesseramentoEvent
     ? `/${tesseramentoEvent.slug}`
-    : featuredEvent
+    : featuredEvent?.slug?.includes("tesseramento")
       ? `/${featuredEvent.slug}`
       : null;
   const archivedParticipants = (pastEvents || []).reduce((total, event) => total + event.registration_count, 0);
