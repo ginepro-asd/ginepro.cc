@@ -59,11 +59,7 @@ const EventsList = () => {
   const tesseramentoEvent = activeEvents.find((event) => event.is_tesseramento) || null;
   const featuredEvent =
     activeEvents.find((event) => !event.is_tesseramento) || tesseramentoEvent || activeEvents[0] || null;
-  const registrationHref = tesseramentoEvent
-    ? `/${tesseramentoEvent.slug}`
-    : featuredEvent?.slug?.includes("tesseramento")
-      ? `/${featuredEvent.slug}`
-      : null;
+  const registrationHref = "/tesseramento-2026";
   const archivedParticipants = (pastEvents || []).reduce((total, event) => total + event.registration_count, 0);
   const featuredLocation = getLocationLabel(featuredEvent);
   const featuredPrice = featuredEvent ? getStartingPrice(featuredEvent.prezzo, featuredEvent.custom_fields) : null;
