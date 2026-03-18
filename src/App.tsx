@@ -13,6 +13,7 @@ import MemberCard from "./pages/MemberCard";
 import AreaRiservataLogin from "./pages/AreaRiservataLogin";
 import AreaRiservataSetup from "./pages/AreaRiservataSetup";
 import AreaRiservataDashboard from "./pages/AreaRiservataDashboard";
+import NewsletterLanding from "./pages/NewsletterLanding";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
