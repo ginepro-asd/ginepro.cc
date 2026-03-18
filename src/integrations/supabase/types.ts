@@ -182,6 +182,66 @@ export type Database = {
           },
         ]
       }
+      newsletter_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          newsletter_id: string
+          participant_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          newsletter_id: string
+          participant_id: string
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          newsletter_id?: string
+          participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_clicks_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_clicks_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletters: {
+        Row: {
+          created_at: string
+          cta_url: string
+          id: string
+          slug: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          cta_url: string
+          id?: string
+          slug: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          cta_url?: string
+          id?: string
+          slug?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       participants: {
         Row: {
           auth_user_id: string | null
@@ -194,6 +254,7 @@ export type Database = {
           fidal_data: Json | null
           id: string
           identification_type: string
+          newsletter: boolean
           nome: string
           photo_thumb_url: string | null
           photo_url: string | null
@@ -212,6 +273,7 @@ export type Database = {
           fidal_data?: Json | null
           id?: string
           identification_type?: string
+          newsletter?: boolean
           nome: string
           photo_thumb_url?: string | null
           photo_url?: string | null
@@ -230,6 +292,7 @@ export type Database = {
           fidal_data?: Json | null
           id?: string
           identification_type?: string
+          newsletter?: boolean
           nome?: string
           photo_thumb_url?: string | null
           photo_url?: string | null
