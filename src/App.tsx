@@ -32,6 +32,7 @@ const App = () => (
             <Route path="/area-riservata" element={<AreaRiservataLogin />} />
             <Route path="/area-riservata/setup" element={<AreaRiservataSetup />} />
             <Route path="/area-riservata/dashboard" element={<AreaRiservataDashboard />} />
+            <Route path="/newsletter/:slug" element={<NewsletterLanding />} />
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
             <Route path="/:slug/admin" element={<Admin />} />
