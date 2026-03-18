@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const APP_URL = "https://ginepro.lovable.app";
+const APP_URL = "https://ginepro.cc";
 
 function buildEmailHtml(nome: string, participantId: string, newsletter: { slug: string; subject: string; cta_url: string }) {
   const ctaLink = `${APP_URL}/newsletter/${newsletter.slug}?action=cta&pid=${participantId}`;
