@@ -566,6 +566,8 @@ const Admin = () => {
 
         {adminTab === "eventi" && isGlobal ? (
           <EventManager password={password} />
+        ) : adminTab === "newsletter" && isGlobal ? (
+          <NewsletterManager password={password} />
         ) : (
         <>
 
