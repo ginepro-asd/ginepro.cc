@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription,
   AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Eye, Send, Loader2, Mail, Users, TestTube } from "lucide-react";
+import { Plus, Pencil, Eye, Send, Loader2, Mail, Users, TestTube, MousePointerClick, UserMinus, CheckCircle } from "lucide-react";
 
 interface Newsletter {
   id: string;
@@ -26,6 +26,12 @@ interface Newsletter {
   cta_url: string;
   body_html: string | null;
   created_at: string;
+  sent_at: string | null;
+}
+
+interface NewsletterStats {
+  clicks: number;
+  unsubscribes: number;
 }
 
 interface Props {
@@ -34,6 +40,7 @@ interface Props {
 
 const NewsletterManager = ({ password }: Props) => {
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [stats, setStats] = useState<Record<string, NewsletterStats>>({});
   const [loading, setLoading] = useState(true);
   const [editDialog, setEditDialog] = useState(false);
   const [previewDialog, setPreviewDialog] = useState(false);
@@ -44,13 +51,8 @@ const NewsletterManager = ({ password }: Props) => {
   const [bulkConfirm, setBulkConfirm] = useState(false);
   const { toast } = useToast();
 
-  // Form state
   const [formData, setFormData] = useState({
-    id: "",
-    slug: "",
-    subject: "",
-    cta_url: "",
-    body_html: "",
+    id: "", slug: "", subject: "", cta_url: "", body_html: "",
   });
   const [isNew, setIsNew] = useState(true);
 
@@ -60,7 +62,22 @@ const NewsletterManager = ({ password }: Props) => {
       .from("newsletters")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setNewsletters(data);
+    if (!error && data) {
+      setNewsletters(data as Newsletter[]);
+      // Fetch stats for all newsletters
+      const ids = data.map((n: any) => n.id);
+      if (ids.length > 0) {
+        const [clicksRes, unsubsRes] = await Promise.all([
+          supabase.from("newsletter_clicks").select("newsletter_id").in("newsletter_id", ids),
+          supabase.from("newsletter_unsubscribes").select("newsletter_id").in("newsletter_id", ids),
+        ]);
+        const statsMap: Record<string, NewsletterStats> = {};
+        ids.forEach((id: string) => { statsMap[id] = { clicks: 0, unsubscribes: 0 }; });
+        clicksRes.data?.forEach((r: any) => { if (statsMap[r.newsletter_id]) statsMap[r.newsletter_id].clicks++; });
+        unsubsRes.data?.forEach((r: any) => { if (statsMap[r.newsletter_id]) statsMap[r.newsletter_id].unsubscribes++; });
+        setStats(statsMap);
+      }
+    }
     setLoading(false);
   };
 
@@ -74,13 +91,7 @@ const NewsletterManager = ({ password }: Props) => {
 
   const openEdit = (nl: Newsletter) => {
     setIsNew(false);
-    setFormData({
-      id: nl.id,
-      slug: nl.slug,
-      subject: nl.subject,
-      cta_url: nl.cta_url,
-      body_html: nl.body_html || "",
-    });
+    setFormData({ id: nl.id, slug: nl.slug, subject: nl.subject, cta_url: nl.cta_url, body_html: nl.body_html || "" });
     setEditDialog(true);
   };
 
@@ -100,36 +111,17 @@ const NewsletterManager = ({ password }: Props) => {
     }
     setSending(true);
     try {
-      if (isNew) {
-        const { error } = await supabase.functions.invoke("manage-event", {
-          body: {
-            password,
-            action: "upsert_newsletter",
-            newsletter: {
-              slug: formData.slug,
-              subject: formData.subject,
-              cta_url: formData.cta_url,
-              body_html: formData.body_html || null,
-            },
-          },
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.functions.invoke("manage-event", {
-          body: {
-            password,
-            action: "upsert_newsletter",
-            newsletter: {
-              id: formData.id,
-              slug: formData.slug,
-              subject: formData.subject,
-              cta_url: formData.cta_url,
-              body_html: formData.body_html || null,
-            },
-          },
-        });
-        if (error) throw error;
-      }
+      const newsletter = {
+        ...(formData.id ? { id: formData.id } : {}),
+        slug: formData.slug,
+        subject: formData.subject,
+        cta_url: formData.cta_url,
+        body_html: formData.body_html || null,
+      };
+      const { error } = await supabase.functions.invoke("manage-event", {
+        body: { password, action: "upsert_newsletter", newsletter },
+      });
+      if (error) throw error;
       toast({ title: "Salvato", description: "Newsletter salvata con successo." });
       setEditDialog(false);
       fetchNewsletters();
@@ -175,6 +167,7 @@ const NewsletterManager = ({ password }: Props) => {
       });
       setBulkConfirm(false);
       setSendTarget(null);
+      fetchNewsletters();
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     } finally {
@@ -211,41 +204,61 @@ const NewsletterManager = ({ password }: Props) => {
               <TableRow>
                 <TableHead>Slug</TableHead>
                 <TableHead>Soggetto</TableHead>
-                <TableHead>HTML</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>Stato</TableHead>
+                <TableHead className="text-center">
+                  <span className="flex items-center gap-1 justify-center">
+                    <MousePointerClick className="h-3.5 w-3.5" /> Click
+                  </span>
+                </TableHead>
+                <TableHead className="text-center">
+                  <span className="flex items-center gap-1 justify-center">
+                    <UserMinus className="h-3.5 w-3.5" /> Unsub
+                  </span>
+                </TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {newsletters.map((nl) => (
-                <TableRow key={nl.id}>
-                  <TableCell className="font-mono text-xs">{nl.slug}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{nl.subject}</TableCell>
-                  <TableCell>
-                    {nl.body_html ? (
-                      <Badge variant="default" className="text-xs">Sì</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">No</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(nl.created_at).toLocaleDateString("it-IT")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(nl)} title="Modifica">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openPreview(nl)} title="Preview" disabled={!nl.body_html}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setSendTarget(nl); setTestEmail(""); }} title="Invia">
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {newsletters.map((nl) => {
+                const nlStats = stats[nl.id] || { clicks: 0, unsubscribes: 0 };
+                const isSent = !!nl.sent_at;
+                return (
+                  <TableRow key={nl.id}>
+                    <TableCell className="font-mono text-xs">{nl.slug}</TableCell>
+                    <TableCell className="max-w-[180px] truncate">{nl.subject}</TableCell>
+                    <TableCell>
+                      {isSent ? (
+                        <Badge variant="default" className="text-xs gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Inviata {new Date(nl.sent_at!).toLocaleDateString("it-IT")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Bozza</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center font-medium">{nlStats.clicks}</TableCell>
+                    <TableCell className="text-center font-medium">{nlStats.unsubscribes}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(nl)} title="Modifica">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openPreview(nl)} title="Preview" disabled={!nl.body_html}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setSendTarget(nl); setTestEmail(""); }}
+                          title={isSent ? "Già inviata" : "Invia"}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -261,29 +274,16 @@ const NewsletterManager = ({ password }: Props) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Slug</Label>
-                <Input
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  placeholder="es. newsletter-estate-2026"
-                  disabled={!isNew}
-                />
+                <Input value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} placeholder="es. newsletter-estate-2026" disabled={!isNew} />
               </div>
               <div className="space-y-2">
                 <Label>CTA URL</Label>
-                <Input
-                  value={formData.cta_url}
-                  onChange={(e) => setFormData({ ...formData, cta_url: e.target.value })}
-                  placeholder="https://ginepro.cc/..."
-                />
+                <Input value={formData.cta_url} onChange={(e) => setFormData({ ...formData, cta_url: e.target.value })} placeholder="https://ginepro.cc/..." />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Soggetto</Label>
-              <Input
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                placeholder="es. Ciao <Nome>, scopri il prossimo evento!"
-              />
+              <Input value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} placeholder="es. Ciao <Nome>, scopri il prossimo evento!" />
             </div>
             <div className="space-y-2">
               <Label>
@@ -292,12 +292,7 @@ const NewsletterManager = ({ password }: Props) => {
                   Placeholder: {"{{nome}}"}, {"{{cta_link}}"}, {"{{unsubscribe_link}}"}
                 </span>
               </Label>
-              <Textarea
-                value={formData.body_html}
-                onChange={(e) => setFormData({ ...formData, body_html: e.target.value })}
-                placeholder="<html>...</html>"
-                className="font-mono text-xs min-h-[300px]"
-              />
+              <Textarea value={formData.body_html} onChange={(e) => setFormData({ ...formData, body_html: e.target.value })} placeholder="<html>...</html>" className="font-mono text-xs min-h-[300px]" />
             </div>
           </div>
           <DialogFooter>
@@ -317,12 +312,7 @@ const NewsletterManager = ({ password }: Props) => {
             <DialogTitle>Preview Newsletter</DialogTitle>
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden bg-white">
-            <iframe
-              srcDoc={previewHtml}
-              className="w-full min-h-[500px] border-0"
-              title="Newsletter Preview"
-              sandbox=""
-            />
+            <iframe srcDoc={previewHtml} className="w-full min-h-[500px] border-0" title="Newsletter Preview" sandbox="" />
           </div>
         </DialogContent>
       </Dialog>
@@ -339,6 +329,17 @@ const NewsletterManager = ({ password }: Props) => {
                 Newsletter: <strong>{sendTarget.subject}</strong>
               </p>
 
+              {sendTarget.sent_at && (
+                <div className="bg-muted rounded-lg p-3 flex items-center gap-2 text-sm">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                  <span>
+                    Questa newsletter è stata inviata il{" "}
+                    <strong>{new Date(sendTarget.sent_at).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}</strong>.
+                    L'invio massivo non è più disponibile.
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -346,34 +347,24 @@ const NewsletterManager = ({ password }: Props) => {
                     Invio di test
                   </Label>
                   <div className="flex gap-2">
-                    <Input
-                      type="email"
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      placeholder="email@esempio.com"
-                    />
+                    <Input type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="email@esempio.com" />
                     <Button onClick={() => sendTest(sendTarget)} disabled={sending || !testEmail} variant="outline">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
 
-                <div className="border-t pt-3">
-                  <Button
-                    onClick={() => setBulkConfirm(true)}
-                    variant="default"
-                    className="w-full"
-                    disabled={!sendTarget.body_html}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Invio massivo a tutti gli iscritti
-                  </Button>
-                  {!sendTarget.body_html && (
-                    <p className="text-xs text-destructive mt-1">
-                      Aggiungi il body HTML prima di inviare.
-                    </p>
-                  )}
-                </div>
+                {!sendTarget.sent_at && (
+                  <div className="border-t pt-3">
+                    <Button onClick={() => setBulkConfirm(true)} variant="default" className="w-full" disabled={!sendTarget.body_html}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Invio massivo a tutti gli iscritti
+                    </Button>
+                    {!sendTarget.body_html && (
+                      <p className="text-xs text-destructive mt-1">Aggiungi il body HTML prima di inviare.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
