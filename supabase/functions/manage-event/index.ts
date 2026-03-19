@@ -126,6 +126,49 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "upsert_newsletter") {
+      const { newsletter } = body;
+      if (!newsletter?.slug || !newsletter?.subject) {
+        return new Response(JSON.stringify({ error: "slug e subject sono obbligatori" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (newsletter.id) {
+        const { data, error } = await supabase
+          .from("newsletters")
+          .update({
+            slug: newsletter.slug,
+            subject: newsletter.subject,
+            cta_url: newsletter.cta_url,
+            body_html: newsletter.body_html,
+          })
+          .eq("id", newsletter.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, newsletter: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } else {
+        const { data, error } = await supabase
+          .from("newsletters")
+          .insert({
+            slug: newsletter.slug,
+            subject: newsletter.subject,
+            cta_url: newsletter.cta_url,
+            body_html: newsletter.body_html,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, newsletter: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     return new Response(JSON.stringify({ error: "Azione non valida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

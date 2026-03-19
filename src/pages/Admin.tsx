@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import EventManager from "@/components/EventManager";
+import NewsletterManager from "@/components/NewsletterManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
 import {
@@ -116,7 +117,7 @@ const Admin = () => {
   const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi">("iscrizioni");
+  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter">("iscrizioni");
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
@@ -549,11 +550,24 @@ const Admin = () => {
               <Settings className="h-3.5 w-3.5" />
               Eventi
             </button>
+            <button
+              onClick={() => setAdminTab("newsletter")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                adminTab === "newsletter"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Newsletter
+            </button>
           </div>
         )}
 
         {adminTab === "eventi" && isGlobal ? (
           <EventManager password={password} />
+        ) : adminTab === "newsletter" && isGlobal ? (
+          <NewsletterManager password={password} />
         ) : (
         <>
 
