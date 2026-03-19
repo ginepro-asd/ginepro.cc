@@ -218,12 +218,49 @@ export type Database = {
           },
         ]
       }
+      newsletter_unsubscribes: {
+        Row: {
+          id: string
+          newsletter_id: string
+          participant_id: string
+          unsubscribed_at: string
+        }
+        Insert: {
+          id?: string
+          newsletter_id: string
+          participant_id: string
+          unsubscribed_at?: string
+        }
+        Update: {
+          id?: string
+          newsletter_id?: string
+          participant_id?: string
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_unsubscribes_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_unsubscribes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletters: {
         Row: {
           body_html: string | null
           created_at: string
           cta_url: string
           id: string
+          sent_at: string | null
           slug: string
           subject: string
         }
@@ -232,6 +269,7 @@ export type Database = {
           created_at?: string
           cta_url: string
           id?: string
+          sent_at?: string | null
           slug: string
           subject: string
         }
@@ -240,6 +278,7 @@ export type Database = {
           created_at?: string
           cta_url?: string
           id?: string
+          sent_at?: string | null
           slug?: string
           subject?: string
         }

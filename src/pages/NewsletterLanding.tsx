@@ -58,15 +58,24 @@ export default function NewsletterLanding() {
   }, [newsletter, participantId, action]);
 
   const handleUnsubscribe = async () => {
-    if (!participantId) {
+    if (!participantId || !newsletter) {
       setError("Link non valido: manca il riferimento utente.");
       return;
     }
     setLoading(true);
+    // Update participant newsletter preference
     const { error: err } = await supabase
       .from("participants")
       .update({ newsletter: false })
       .eq("id", participantId);
+
+    // Track unsubscribe per newsletter (ignore duplicates)
+    if (!err) {
+      await supabase.from("newsletter_unsubscribes").insert({
+        newsletter_id: newsletter.id,
+        participant_id: participantId,
+      });
+    }
 
     if (err) {
       setError("Errore durante la disiscrizione. Riprova più tardi.");

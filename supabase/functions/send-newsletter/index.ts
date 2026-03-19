@@ -115,6 +115,12 @@ serve(async (req) => {
 
     console.log(`Newsletter sent: ${sent} ok, ${errors} errors out of ${participants.length}`);
 
+    // Mark newsletter as sent
+    await supabase
+      .from("newsletters")
+      .update({ sent_at: new Date().toISOString() })
+      .eq("slug", newsletter_slug);
+
     return new Response(
       JSON.stringify({ success: true, sent, errors, total: participants.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
