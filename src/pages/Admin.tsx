@@ -117,7 +117,7 @@ const Admin = () => {
   const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi">("iscrizioni");
+  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter">("iscrizioni");
   const { toast } = useToast();
 
   // Helper: get photo URL from participant's registrations
