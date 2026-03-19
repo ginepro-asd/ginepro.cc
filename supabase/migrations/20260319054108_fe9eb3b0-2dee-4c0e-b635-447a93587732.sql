@@ -1,0 +1,1 @@
+ALTER TABLE public.newsletters ADD COLUMN body_html text;

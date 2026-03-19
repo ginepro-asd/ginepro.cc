@@ -220,6 +220,7 @@ export type Database = {
       }
       newsletters: {
         Row: {
+          body_html: string | null
           created_at: string
           cta_url: string
           id: string
@@ -227,6 +228,7 @@ export type Database = {
           subject: string
         }
         Insert: {
+          body_html?: string | null
           created_at?: string
           cta_url: string
           id?: string
@@ -234,6 +236,7 @@ export type Database = {
           subject: string
         }
         Update: {
+          body_html?: string | null
           created_at?: string
           cta_url?: string
           id?: string
