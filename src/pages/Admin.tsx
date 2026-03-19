@@ -550,6 +550,17 @@ const Admin = () => {
               <Settings className="h-3.5 w-3.5" />
               Eventi
             </button>
+            <button
+              onClick={() => setAdminTab("newsletter")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                adminTab === "newsletter"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Newsletter
+            </button>
           </div>
         )}
 
