@@ -10,73 +10,18 @@ const corsHeaders = {
 const RESEND_API_URL = "https://api.resend.com/emails";
 const APP_URL = "https://ginepro.cc";
 
-function buildEmailHtml(nome: string, participantId: string, newsletter: { slug: string; subject: string; cta_url: string }) {
+function buildEmailHtml(nome: string, participantId: string, newsletter: { slug: string; subject: string; cta_url: string; body_html: string | null }) {
   const ctaLink = `${APP_URL}/newsletter/${newsletter.slug}?action=cta&pid=${participantId}`;
   const unsubscribeLink = `${APP_URL}/newsletter/${newsletter.slug}?action=unsubscribe&pid=${participantId}`;
 
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#1a3a3a,#2d5a5a);padding:32px 40px;text-align:center;">
-            <p style="margin:0;color:#f0a090;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">GINEPRO ASD</p>
-            <h1 style="margin:12px 0 0;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">🏔️ Tredozio Trail 2026</h1>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:40px;">
-            <p style="margin:0 0 20px;color:#333;font-size:15px;line-height:1.7;">
-              Ciao <strong>${nome}</strong>,
-            </p>
-            <p style="margin:0 0 16px;color:#333;font-size:15px;line-height:1.7;">
-              ti scriviamo da <strong>GINEPRO</strong> perché in passato hai partecipato ad alcuni dei nostri eventi — e speriamo che l'esperienza ti sia piaciuta!
-            </p>
-            <p style="margin:0 0 16px;color:#333;font-size:15px;line-height:1.7;">
-              Questo è il primo messaggio della nostra newsletter: niente spam, niente pubblicità — solo aggiornamenti sulle nostre attività, per tenerti sul pezzo. 🎯
-            </p>
-            <p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.7;">
-              E a proposito di restare sul pezzo: le iscrizioni a <strong>Tredozio Trail 2026</strong> chiudono il <strong>23 Marzo</strong>. La gara si terrà il <strong>29 Marzo</strong> — se non ti sei ancora iscritto, è il momento giusto!
-            </p>
+  if (!newsletter.body_html) {
+    throw new Error("Newsletter body_html is empty. Please add HTML content to the newsletter record.");
+  }
 
-            <!-- CTA -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 32px;">
-              <tr><td align="center">
-                <a href="${ctaLink}" style="display:inline-block;background:linear-gradient(135deg,#f0a090,#e8816e);color:#ffffff;padding:16px 40px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:700;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(240,160,144,0.4);">
-                  🏃 Iscriviti ora!
-                </a>
-              </td></tr>
-            </table>
-
-            <p style="margin:0;color:#999;font-size:13px;line-height:1.6;">
-              Ci vediamo sui sentieri,<br>
-              <strong style="color:#1a3a3a;">Il team GINEPRO</strong>
-            </p>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="padding:24px 40px;background-color:#f8fafa;border-top:1px solid #e8eeee;text-align:center;">
-            <p style="margin:0 0 12px;color:#999;font-size:12px;">
-              © ${new Date().getFullYear()} GINEPRO ASD · <a href="${APP_URL}" style="color:#2d5a5a;text-decoration:none;">ginepro.lovable.app</a>
-            </p>
-            <p style="margin:0;">
-              <a href="${unsubscribeLink}" style="color:#bbb;font-size:11px;text-decoration:underline;">
-                Se non vuoi più ricevere queste comunicazioni, disiscriviti qui
-              </a>
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  return newsletter.body_html
+    .replace(/\{\{nome\}\}/g, nome)
+    .replace(/\{\{cta_link\}\}/g, ctaLink)
+    .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeLink);
 }
 
 serve(async (req) => {
