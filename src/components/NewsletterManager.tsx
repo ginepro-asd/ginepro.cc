@@ -358,11 +358,11 @@ const NewsletterManager = ({ password }: Props) => {
                   </div>
                 </div>
 
-                {!sendTarget.sent_at && (
+                {(!sendTarget.sent_at || true) && (
                   <div className="border-t pt-3">
                     <Button onClick={() => setBulkConfirm(true)} variant="default" className="w-full" disabled={!sendTarget.body_html}>
                       <Users className="h-4 w-4 mr-2" />
-                      Invio massivo a tutti gli iscritti
+                      {sendTarget.sent_at ? "Invia prossimo batch (200 email)" : "Invio massivo a tutti gli iscritti (batch da 200)"}
                     </Button>
                     {!sendTarget.body_html && (
                       <p className="text-xs text-destructive mt-1">Aggiungi il body HTML prima di inviare.</p>
