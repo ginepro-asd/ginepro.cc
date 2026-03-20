@@ -218,6 +218,45 @@ export type Database = {
           },
         ]
       }
+      newsletter_sends: {
+        Row: {
+          id: string
+          newsletter_id: string
+          participant_id: string
+          sent_at: string
+          success: boolean
+        }
+        Insert: {
+          id?: string
+          newsletter_id: string
+          participant_id: string
+          sent_at?: string
+          success?: boolean
+        }
+        Update: {
+          id?: string
+          newsletter_id?: string
+          participant_id?: string
+          sent_at?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_sends_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_sends_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_unsubscribes: {
         Row: {
           id: string

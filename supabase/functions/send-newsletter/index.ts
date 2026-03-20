@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const APP_URL = "https://ginepro.cc";
+const BATCH_SIZE = 200;
 
 function buildEmailHtml(nome: string, participantId: string, newsletter: { slug: string; subject: string; cta_url: string; body_html: string | null }) {
   const ctaLink = `${APP_URL}/newsletter/${newsletter.slug}?action=cta&pid=${participantId}`;
@@ -48,7 +49,7 @@ serve(async (req) => {
 
     if (nlErr || !newsletter) throw new Error("Newsletter not found: " + newsletter_slug);
 
-    // If test_email, send only to that email (find or fake participant)
+    // If test_email, send only to that email
     if (test_email) {
       const { data: participant } = await supabase
         .from("participants")
@@ -75,7 +76,7 @@ serve(async (req) => {
       });
     }
 
-    // Production: send to all participants with newsletter=true
+    // Production: get all subscribers
     const { data: participants, error: pErr } = await supabase
       .from("participants")
       .select("id, nome, email")
@@ -84,9 +85,35 @@ serve(async (req) => {
     if (pErr) throw new Error("Error fetching participants: " + pErr.message);
     if (!participants?.length) throw new Error("No subscribers found");
 
+    // Get already-sent participant IDs for this newsletter
+    const { data: alreadySent } = await supabase
+      .from("newsletter_sends")
+      .select("participant_id")
+      .eq("newsletter_id", newsletter.id);
+
+    const sentIds = new Set((alreadySent || []).map((s: any) => s.participant_id));
+    const remaining = participants.filter((p: any) => !sentIds.has(p.id));
+
+    if (remaining.length === 0) {
+      // All sent — mark newsletter as sent if not already
+      if (!newsletter.sent_at) {
+        await supabase
+          .from("newsletters")
+          .update({ sent_at: new Date().toISOString() })
+          .eq("slug", newsletter_slug);
+      }
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, errors: 0, total: participants.length, already_sent: sentIds.size, remaining: 0, batch_complete: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Take only BATCH_SIZE
+    const batch = remaining.slice(0, BATCH_SIZE);
+
     let sent = 0;
     let errors = 0;
-    for (const p of participants) {
+    for (const p of batch) {
       try {
         const subject = newsletter.subject.replace("<Nome>", p.nome);
         const html = buildEmailHtml(p.nome, p.id, newsletter);
@@ -97,7 +124,8 @@ serve(async (req) => {
           body: JSON.stringify({ from: "Ginepro ASD <info@ginepro.cc>", to: [p.email], subject, html }),
         });
 
-        if (res.ok) {
+        const success = res.ok;
+        if (success) {
           sent++;
         } else {
           errors++;
@@ -105,24 +133,49 @@ serve(async (req) => {
           console.error(`Failed for ${p.email}:`, errBody);
         }
 
-        // Rate limiting: small delay between sends
+        // Track the send
+        await supabase.from("newsletter_sends").upsert({
+          newsletter_id: newsletter.id,
+          participant_id: p.id,
+          success,
+        });
+
         await new Promise(r => setTimeout(r, 100));
       } catch (e) {
         errors++;
         console.error(`Error sending to ${p.email}:`, e.message);
+        // Still track as failed
+        await supabase.from("newsletter_sends").upsert({
+          newsletter_id: newsletter.id,
+          participant_id: p.id,
+          success: false,
+        });
       }
     }
 
-    console.log(`Newsletter sent: ${sent} ok, ${errors} errors out of ${participants.length}`);
+    const newRemaining = remaining.length - batch.length;
+    const totalSent = sentIds.size + sent;
 
-    // Mark newsletter as sent
-    await supabase
-      .from("newsletters")
-      .update({ sent_at: new Date().toISOString() })
-      .eq("slug", newsletter_slug);
+    console.log(`Batch done: ${sent} ok, ${errors} errors. Total sent so far: ${totalSent}/${participants.length}. Remaining: ${newRemaining}`);
+
+    // Mark as sent only when all done
+    if (newRemaining === 0 && !newsletter.sent_at) {
+      await supabase
+        .from("newsletters")
+        .update({ sent_at: new Date().toISOString() })
+        .eq("slug", newsletter_slug);
+    }
 
     return new Response(
-      JSON.stringify({ success: true, sent, errors, total: participants.length }),
+      JSON.stringify({
+        success: true,
+        sent,
+        errors,
+        total: participants.length,
+        already_sent: sentIds.size,
+        remaining: newRemaining,
+        batch_complete: newRemaining === 0,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

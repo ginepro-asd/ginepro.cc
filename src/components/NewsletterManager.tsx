@@ -161,12 +161,16 @@ const NewsletterManager = ({ password }: Props) => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      const remaining = data.remaining ?? 0;
+      const alreadySent = data.already_sent ?? 0;
       toast({
-        title: "Invio completato",
-        description: `${data.sent} email inviate, ${data.errors} errori su ${data.total} destinatari.`,
+        title: remaining > 0 ? "Batch inviato" : "Invio completato",
+        description: `${data.sent} email inviate in questo batch, ${data.errors} errori. Totale inviate: ${alreadySent + data.sent}/${data.total}.${remaining > 0 ? ` Rimanenti: ${remaining}` : ""}`,
       });
       setBulkConfirm(false);
-      setSendTarget(null);
+      if (remaining === 0) {
+        setSendTarget(null);
+      }
       fetchNewsletters();
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
@@ -354,11 +358,11 @@ const NewsletterManager = ({ password }: Props) => {
                   </div>
                 </div>
 
-                {!sendTarget.sent_at && (
+                {(!sendTarget.sent_at || true) && (
                   <div className="border-t pt-3">
                     <Button onClick={() => setBulkConfirm(true)} variant="default" className="w-full" disabled={!sendTarget.body_html}>
                       <Users className="h-4 w-4 mr-2" />
-                      Invio massivo a tutti gli iscritti
+                      {sendTarget.sent_at ? "Invia prossimo batch (200 email)" : "Invio massivo a tutti gli iscritti (batch da 200)"}
                     </Button>
                     {!sendTarget.body_html && (
                       <p className="text-xs text-destructive mt-1">Aggiungi il body HTML prima di inviare.</p>
