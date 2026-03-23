@@ -593,8 +593,12 @@ const Admin = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     Importa da Firestore
                   </Button>
-               </>
-             )}
+                 <Button onClick={() => setShowCreateUserDialog(true)} variant="outline">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Aggiungi utente
+                  </Button>
+                </>
+              )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
               Scarica CSV
