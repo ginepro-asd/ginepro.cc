@@ -211,6 +211,152 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "admin_satispay") {
+      const { participant_id, event_id, custom_data } = body;
+      if (!participant_id || !event_id) {
+        return new Response(JSON.stringify({ error: "participant_id e event_id sono obbligatori" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: part, error: partErr } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("id", participant_id)
+        .single();
+      if (partErr) throw partErr;
+
+      const { data: evt, error: evtErr } = await supabase
+        .from("events")
+        .select("id, nome, prezzo, custom_fields")
+        .eq("id", event_id)
+        .single();
+      if (evtErr) throw evtErr;
+
+      // Resolve price
+      const { resolveEventPrice } = await import("../_shared/event-pricing.ts");
+      const price = resolveEventPrice(evt.prezzo, evt.custom_fields, custom_data || {});
+
+      // Delete any existing pending registration
+      await supabase
+        .from("registrations")
+        .delete()
+        .eq("participant_id", participant_id)
+        .eq("event_id", event_id)
+        .eq("payment_status", "pending");
+
+      const { data: reg, error: regErr } = await supabase
+        .from("registrations")
+        .insert({
+          participant_id,
+          event_id,
+          nome: part.nome,
+          cognome: part.cognome,
+          email: part.email,
+          telefono: part.telefono,
+          codice_fiscale: part.codice_fiscale || null,
+          birth_date: part.birth_date || null,
+          birth_place: part.birth_place || null,
+          identification_type: part.identification_type || "birth",
+          payment_method: "satispay",
+          payment_status: "pending",
+          custom_data: custom_data || {},
+        })
+        .select("id")
+        .single();
+      if (regErr) throw regErr;
+
+      // Call xpay
+      const XPAY_BASE = "https://xpay.ginepro.cc";
+      const orderId = `${evt.nome} ${part.cognome} ${part.nome}`;
+      const xpayRes = await fetch(`${XPAY_BASE}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          phoneNumber: part.telefono,
+          price,
+        }),
+      });
+
+      if (!xpayRes.ok) {
+        const errText = await xpayRes.text();
+        // Clean up the pending registration
+        await supabase.from("registrations").delete().eq("id", reg.id);
+        throw new Error(`Satispay error: ${xpayRes.status} - ${errText}`);
+      }
+
+      const { paymentId } = await xpayRes.json();
+      await supabase
+        .from("registrations")
+        .update({ payment_id: paymentId })
+        .eq("id", reg.id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        payment_id: paymentId,
+        registration_id: reg.id,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "resend_satispay") {
+      const { registration_id } = body;
+      if (!registration_id) {
+        return new Response(JSON.stringify({ error: "registration_id è obbligatorio" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: reg, error: regErr } = await supabase
+        .from("registrations")
+        .select("*, participants(*), events:event_id(id, nome, prezzo, custom_fields)")
+        .eq("id", registration_id)
+        .single();
+      if (regErr) throw regErr;
+
+      const part = reg.participants;
+      const evt = reg.events;
+      if (!part || !evt) throw new Error("Dati partecipante o evento mancanti");
+
+      const { resolveEventPrice } = await import("../_shared/event-pricing.ts");
+      const price = resolveEventPrice(evt.prezzo, evt.custom_fields, reg.custom_data || {});
+
+      const XPAY_BASE = "https://xpay.ginepro.cc";
+      const orderId = `${evt.nome} ${part.cognome} ${part.nome}`;
+      const xpayRes = await fetch(`${XPAY_BASE}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          phoneNumber: part.telefono,
+          price,
+        }),
+      });
+
+      if (!xpayRes.ok) {
+        const errText = await xpayRes.text();
+        throw new Error(`Satispay error: ${xpayRes.status} - ${errText}`);
+      }
+
+      const { paymentId } = await xpayRes.json();
+      await supabase
+        .from("registrations")
+        .update({ payment_id: paymentId, payment_status: "pending" })
+        .eq("id", registration_id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        payment_id: paymentId,
+        registration_id,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "update_registration") {
       const { registration_id, fields: regFields } = body;
       if (!registration_id || !regFields) {
