@@ -159,11 +159,45 @@ const Admin = () => {
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      toast({ title: "Richiesta inviata", description: "La richiesta di pagamento Satispay è stata reinviata." });
-      authenticate();
+      toast({ title: "Richiesta inviata", description: "In attesa del pagamento Satispay..." });
+
+      // Poll for payment completion
+      const paymentId = data.payment_id;
+      if (paymentId) {
+        let attempts = 0;
+        const maxAttempts = 60; // 3 minutes
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          try {
+            const { data: checkData } = await supabase.functions.invoke("check-satispay-payment", {
+              body: { payment_id: paymentId, registration_id: registrationId },
+            });
+            if (checkData?.status === "completed") {
+              clearInterval(pollInterval);
+              setResendingSatispay(null);
+              toast({ title: "Pagamento ricevuto!", description: "Il pagamento Satispay è stato completato." });
+              authenticate();
+            } else if (checkData?.status === "cancelled") {
+              clearInterval(pollInterval);
+              setResendingSatispay(null);
+              toast({ title: "Pagamento annullato", description: "L'utente ha annullato il pagamento.", variant: "destructive" });
+              authenticate();
+            } else if (attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              setResendingSatispay(null);
+              toast({ title: "Timeout", description: "Nessuna risposta ricevuta. Controlla lo stato manualmente." });
+              authenticate();
+            }
+          } catch {
+            // Keep polling on transient errors
+          }
+        }, 3000);
+      } else {
+        authenticate();
+        setResendingSatispay(null);
+      }
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
-    } finally {
       setResendingSatispay(null);
     }
   };
