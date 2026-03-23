@@ -142,6 +142,8 @@ const Admin = () => {
   const [registerCustomData, setRegisterCustomData] = useState<Record<string, any>>({});
   const [registering, setRegistering] = useState(false);
   const [allEvents, setAllEvents] = useState<any[]>([]);
+  const [detailCerts, setDetailCerts] = useState<MedicalCert[]>([]);
+  const [loadingCerts, setLoadingCerts] = useState(false);
   const { toast } = useToast();
 
   // Load events for register dialog
