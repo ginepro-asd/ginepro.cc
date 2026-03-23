@@ -13,6 +13,7 @@ import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
+import AdminAddRegistration from "@/components/AdminAddRegistration";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -144,6 +145,7 @@ const Admin = () => {
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [detailCerts, setDetailCerts] = useState<MedicalCert[]>([]);
   const [loadingCerts, setLoadingCerts] = useState(false);
+  const [showAddRegistrationDialog, setShowAddRegistrationDialog] = useState(false);
   const { toast } = useToast();
 
   // Fetch certificates when detail modal opens
@@ -630,6 +632,12 @@ const Admin = () => {
                     Aggiungi utente
                   </Button>
                 </>
+               )}
+              {!isGlobal && event && (
+                <Button onClick={() => setShowAddRegistrationDialog(true)} variant="outline">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Aggiungi iscritto
+                </Button>
               )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
@@ -1455,6 +1463,18 @@ const Admin = () => {
           password={password}
           onClose={() => setFidalParticipant(null)}
         />
+
+        {/* Add registration dialog (event-specific) */}
+        {event && (
+          <AdminAddRegistration
+            open={showAddRegistrationDialog}
+            onOpenChange={setShowAddRegistrationDialog}
+            eventId={event.id}
+            eventCustomFields={event.custom_fields}
+            password={password}
+            onSuccess={authenticate}
+          />
+        )}
 
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
