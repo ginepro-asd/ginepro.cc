@@ -1464,6 +1464,18 @@ const Admin = () => {
           onClose={() => setFidalParticipant(null)}
         />
 
+        {/* Add registration dialog (event-specific) */}
+        {event && (
+          <AdminAddRegistration
+            open={showAddRegistrationDialog}
+            onOpenChange={setShowAddRegistrationDialog}
+            eventId={event.id}
+            eventCustomFields={event.custom_fields}
+            password={password}
+            onSuccess={authenticate}
+          />
+        )}
+
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
 
