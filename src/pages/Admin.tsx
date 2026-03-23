@@ -994,6 +994,18 @@ const Admin = () => {
                                   <Info className="h-4 w-4" />
                                 </Button>
                               )}
+                              {r.payment_method === "satispay" && (r.payment_status === "pending" || r.payment_status === "cancelled") && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-primary hover:text-primary"
+                                  onClick={() => resendSatispay(r.id)}
+                                  disabled={resendingSatispay === r.id}
+                                  title="Reinvia richiesta Satispay"
+                                >
+                                  {resendingSatispay === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
