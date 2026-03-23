@@ -14,6 +14,7 @@ import NewsletterManager from "@/components/NewsletterManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
+import AdminCsvImport from "@/components/AdminCsvImport";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -146,6 +147,7 @@ const Admin = () => {
   const [detailCerts, setDetailCerts] = useState<MedicalCert[]>([]);
   const [loadingCerts, setLoadingCerts] = useState(false);
   const [showAddRegistrationDialog, setShowAddRegistrationDialog] = useState(false);
+  const [showCsvImportDialog, setShowCsvImportDialog] = useState(false);
   const { toast } = useToast();
 
   // Fetch certificates when detail modal opens
@@ -631,13 +633,23 @@ const Admin = () => {
                     <UserPlus className="h-4 w-4 mr-2" />
                     Aggiungi utente
                   </Button>
+                 <Button onClick={() => setShowCsvImportDialog(true)} variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importa CSV
+                  </Button>
                 </>
                )}
               {!isGlobal && event && (
-                <Button onClick={() => setShowAddRegistrationDialog(true)} variant="outline">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Aggiungi iscritto
-                </Button>
+                <>
+                  <Button onClick={() => setShowAddRegistrationDialog(true)} variant="outline">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Aggiungi iscritto
+                  </Button>
+                  <Button onClick={() => setShowCsvImportDialog(true)} variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importa CSV
+                  </Button>
+                </>
               )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
@@ -1475,6 +1487,16 @@ const Admin = () => {
             onSuccess={authenticate}
           />
         )}
+
+        {/* CSV Import dialog */}
+        <AdminCsvImport
+          open={showCsvImportDialog}
+          onOpenChange={setShowCsvImportDialog}
+          password={password}
+          eventId={event?.id}
+          eventName={event?.nome}
+          onSuccess={authenticate}
+        />
 
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
