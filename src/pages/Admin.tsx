@@ -432,11 +432,12 @@ const Admin = () => {
     if (!editParticipant?.participant_id) return;
     setSaving(true);
     try {
+      const fieldsToSend = { ...editFields, newsletter: editFields.newsletter === "true" };
       const { data, error } = await supabase.functions.invoke("update-participant", {
         body: {
           password,
           participant_id: editParticipant.participant_id,
-          fields: editFields,
+          fields: fieldsToSend,
         },
       });
       if (error) throw error;
