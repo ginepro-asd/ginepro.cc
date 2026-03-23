@@ -810,8 +810,9 @@ const Admin = () => {
                                   title="Iscrivi a evento"
                                   disabled={!p.participant_id}
                                 >
-                                  <CalendarPlus className="h-3.5 w-3.5" />
-                               <Button
+                                   <CalendarPlus className="h-3.5 w-3.5" />
+                                 </Button>
+                                <Button
                                  variant="ghost"
                                  size="sm"
                                  className={`h-7 w-7 p-0 ${p.fidal_data && Object.keys(p.fidal_data).length > 0 ? "text-green-600" : ""}`}
