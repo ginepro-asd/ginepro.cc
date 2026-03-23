@@ -633,13 +633,23 @@ const Admin = () => {
                     <UserPlus className="h-4 w-4 mr-2" />
                     Aggiungi utente
                   </Button>
+                 <Button onClick={() => setShowCsvImportDialog(true)} variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importa CSV
+                  </Button>
                 </>
                )}
               {!isGlobal && event && (
-                <Button onClick={() => setShowAddRegistrationDialog(true)} variant="outline">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Aggiungi iscritto
-                </Button>
+                <>
+                  <Button onClick={() => setShowAddRegistrationDialog(true)} variant="outline">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Aggiungi iscritto
+                  </Button>
+                  <Button onClick={() => setShowCsvImportDialog(true)} variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importa CSV
+                  </Button>
+                </>
               )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
