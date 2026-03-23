@@ -76,6 +76,16 @@ interface FlatRegistration {
   event_slug?: string;
   photo_thumb_url: string | null;
   photo_url: string | null;
+  participant_id?: string | null;
+}
+
+interface MedicalCert {
+  id: string;
+  file_path: string;
+  expiry_date: string | null;
+  disciplines: string[] | null;
+  ai_warning: string | null;
+  uploaded_at: string;
 }
 
 interface FirestoreEvent {
