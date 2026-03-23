@@ -1488,6 +1488,16 @@ const Admin = () => {
           />
         )}
 
+        {/* CSV Import dialog */}
+        <AdminCsvImport
+          open={showCsvImportDialog}
+          onOpenChange={setShowCsvImportDialog}
+          password={password}
+          eventId={event?.id}
+          eventName={event?.nome}
+          onSuccess={authenticate}
+        />
+
         {/* Chat sidebar */}
         <AdminChatSidebar password={password} open={chatOpen} onClose={() => setChatOpen(false)} />
 
