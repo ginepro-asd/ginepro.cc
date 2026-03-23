@@ -13,6 +13,7 @@ import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
+import AdminAddRegistration from "@/components/AdminAddRegistration";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
