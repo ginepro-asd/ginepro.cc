@@ -1001,6 +1001,52 @@ const Admin = () => {
                 ))}
               </div>
             )}
+            {/* Certificates section */}
+            {detailRegistration?.participant_id && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">Certificati medici</h4>
+                {loadingCerts ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Caricamento…</div>
+                ) : detailCerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun certificato caricato</p>
+                ) : (
+                  detailCerts.map((cert) => {
+                    const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date();
+                    return (
+                      <Card key={cert.id} className="border-border/50">
+                        <CardContent className="p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium text-foreground">
+                                {cert.expiry_date ? `Scadenza: ${new Date(cert.expiry_date).toLocaleDateString("it-IT")}` : "Senza scadenza"}
+                              </span>
+                            </div>
+                            <Badge variant={isExpired ? "destructive" : "default"}>
+                              {isExpired ? "Scaduto" : "Valido"}
+                            </Badge>
+                          </div>
+                          {cert.disciplines && cert.disciplines.length > 0 && (
+                            <p className="text-xs text-muted-foreground">Discipline: {cert.disciplines.join(", ")}</p>
+                          )}
+                          {cert.ai_warning && (
+                            <p className="text-xs text-yellow-600">⚠ {cert.ai_warning}</p>
+                          )}
+                          <a
+                            href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/authenticated/medical-certificates/${cert.file_path}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary underline"
+                          >
+                            Scarica certificato
+                          </a>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
