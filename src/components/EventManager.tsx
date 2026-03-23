@@ -132,6 +132,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: ev.scadenza_iscrizioni ? ev.scadenza_iscrizioni.slice(0, 16) : "",
         attivo: ev.attivo,
         hero_image: ev.hero_image || "",
+        payment_methods: ev.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: ev.is_tesseramento,
         visibile_in_landing: ev.visibile_in_landing ?? true,
         is_coppia: ev.is_coppia,
