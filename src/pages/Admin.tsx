@@ -50,6 +50,8 @@ interface Participant {
   codice_fiscale: string | null;
   birth_date: string | null;
   birth_place: string | null;
+  identification_type?: string;
+  newsletter?: boolean;
   participant_id: string | null;
   fidal_data: Record<string, any> | null;
   photo_thumb_url: string | null;
