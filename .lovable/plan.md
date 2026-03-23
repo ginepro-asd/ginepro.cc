@@ -1,75 +1,52 @@
 
-# GINEPRO ASD — Piattaforma Eventi e Tesseramento
 
-## Stato Attuale (Completato)
+## Piano: Gestione completa utenti + pagamento in contanti
 
-### Infrastruttura
-- ✅ Multi-evento dinamico: landing page con lista eventi attivi + archivio eventi passati
-- ✅ Pagina evento singolo con hero, countdown, form iscrizione
-- ✅ 3 metodi di pagamento: Stripe, Satispay, PayPal
-- ✅ Database partecipanti con deduplicazione (returning user)
-- ✅ Email di conferma parametrizzate per evento (Resend)
-- ✅ Pannello admin con login, tabella iscrizioni, export CSV
-- ✅ Event Manager per creare/modificare eventi da admin
+### Obiettivo
+1. Permettere all'admin di modificare **tutti** i campi del partecipante (inclusi `identification_type`, `newsletter`, `photo_url`, `signature_url`, ecc.)
+2. Aggiungere `'contanti'` (cash) come metodo di pagamento valido
+3. Permettere all'admin di creare utenti, iscriverli a eventi e registrare pagamenti in contanti
 
-### Tipologie Evento
-- ✅ Iscrizione singola standard (es. Tredozio Trail, Castel Raniero)
-- ✅ Iscrizione in coppia con pettorali collegati (es. Rione Rosso)
-- ✅ Tesseramento annuale multi-step (firma, foto, certificato medico, tessera)
-- ✅ Eventi con link esterno (es. IDchronos)
-- ✅ Custom fields con prezzi variabili (percorso/disciplina)
+### Modifiche
 
-### Design
-- ✅ Dark/Light mode con loghi appropriati
-- ✅ Pattern topografico SVG decorativo
-- ✅ Layout responsive mobile-first
-- ✅ Animazioni Framer Motion
+#### 1. Migrazione database
+- Aggiungere `'contanti'` e `'admin'` ai valori consentiti del vincolo `registrations_payment_method_check`
 
----
+```sql
+ALTER TABLE public.registrations DROP CONSTRAINT registrations_payment_method_check;
+ALTER TABLE public.registrations ADD CONSTRAINT registrations_payment_method_check 
+  CHECK (payment_method = ANY (ARRAY['stripe','satispay','paypal','imported','contanti','admin']));
+```
 
-## Fase 2 — Miglioramenti e Nuove Funzionalità
+#### 2. Edge Function `update-participant`
+- Estendere `allowedFields` per includere tutti i campi della tabella `participants`: aggiungere `identification_type`, `newsletter`, `photo_url`, `photo_thumb_url`, `signature_url`
+- I campi che non esistono in `registrations` (es. `newsletter`, `photo_url`, `signature_url`) non verranno sincronizzati nelle registrazioni
 
-### 2.1 Pagina di Conferma migliorata
-- Mostrare riepilogo dettagliato: nome evento, data, luogo, prezzo pagato
-- Mostrare numero pettorale (se assegnato)
-- Per tesseramento: mostrare numero tessera
-- CTA per condividere su social o salvare ricevuta
+#### 3. Edge Function `manage-event` — Nuove azioni
+- **`create_participant`**: Crea un nuovo partecipante con tutti i campi anagrafici
+- **`admin_register`**: Iscrive un partecipante a un evento con `payment_method` a scelta (incluso `'contanti'`) e `payment_status = 'completed'`, bypassando la scadenza. Supporta `custom_data`
+- **`update_registration`**: Aggiorna `payment_status`, `payment_method` e `custom_data` di un'iscrizione esistente
 
-### 2.2 Dashboard Admin avanzata
-- Statistiche riassuntive: totale iscritti, incasso, breakdown per metodo di pagamento
-- Grafici andamento iscrizioni nel tempo
-- Filtri avanzati per stato pagamento, data, metodo
-- Gestione partecipanti: modifica dati, rimborsi
-- Visualizzazione certificati medici con avvisi AI
+#### 4. Frontend Admin.tsx
+- **Dialog modifica utente**: Aggiungere i campi mancanti (`identification_type` come select, `newsletter` come checkbox)
+- **Pulsante "Aggiungi utente"**: Dialog con form completo per creare un nuovo partecipante
+- **Pulsante "Iscrivi a evento"**: Nella modale dettagli utente o nella riga, con select evento + metodo di pagamento (incluso "Contanti") + campi custom opzionali
+- **Pulsante "Aggiungi iscritto"** nella vista per-evento: cerca partecipante esistente o ne crea uno nuovo, poi lo iscrive
 
-### 2.3 Notifiche e comunicazioni
-- Notifiche push/email all'admin per nuove iscrizioni
-- Email di promemoria pre-evento ai partecipanti
-- Email personalizzabili per evento dall'admin
+#### 5. Deploy
+Redeploy delle edge function `update-participant` e `manage-event`.
 
-### 2.4 SEO e Performance
-- Meta tag dinamici per ogni evento (Open Graph, Twitter Card)
-- Sitemap dinamica
-- Lazy loading immagini
-- Ottimizzazione Core Web Vitals
+### Dettagli tecnici
 
-### 2.5 Esperienza Utente
-- Pagina "I miei eventi" per utenti registrati (lookup per email)
-- Download ricevuta PDF post-iscrizione
-- Migliorare la pagina 404
-- Breadcrumb navigation
+```text
+Flusso "Iscrizione in contanti":
+Admin → Trova/crea utente → "Iscrivi a evento" 
+  → Seleziona evento + "Contanti" come metodo
+  → Iscrizione creata con payment_status=completed, payment_method=contanti
+```
 
-### 2.6 Funzionalità Avanzate
-- Lista d'attesa per eventi sold-out
-- Codici sconto / promo
-- Iscrizioni di gruppo (>2 persone)
-- QR code per check-in il giorno dell'evento
+I campi editabili nel dialog di modifica utente saranno:
+- nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type (select: birth/fiscal/cf), newsletter (checkbox)
 
----
+I campi `photo_url`, `signature_url` restano modificabili solo via API (non ha senso un campo testo per URL di foto nella UI).
 
-## Note Tecniche
-- **Lovable Cloud** per edge functions e database
-- **Stripe, Satispay, PayPal** per pagamenti
-- **Resend** per email transazionali
-- **Gemini Flash** per analisi certificati medici
-- Secrets già configurati: Stripe, Satispay, PayPal, Resend, Firebase, FIDAL
