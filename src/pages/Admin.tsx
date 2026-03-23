@@ -1041,14 +1041,12 @@ const Admin = () => {
                           {cert.ai_warning && (
                             <p className="text-xs text-yellow-600">⚠ {cert.ai_warning}</p>
                           )}
-                          <a
-                            href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/authenticated/medical-certificates/${cert.file_path}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary underline"
+                          <button
+                            onClick={() => downloadCert(cert.file_path)}
+                            className="text-xs text-primary underline cursor-pointer bg-transparent border-none p-0"
                           >
                             Scarica certificato
-                          </a>
+                          </button>
                         </CardContent>
                       </Card>
                     );
