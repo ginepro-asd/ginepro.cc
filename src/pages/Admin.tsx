@@ -121,7 +121,27 @@ const Admin = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter">("iscrizioni");
+  // New user / register dialogs
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [newUserFields, setNewUserFields] = useState<Record<string, any>>({ identification_type: "birth", newsletter: true });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [registerParticipantId, setRegisterParticipantId] = useState<string | null>(null);
+  const [registerEventId, setRegisterEventId] = useState<string>("");
+  const [registerPaymentMethod, setRegisterPaymentMethod] = useState<string>("contanti");
+  const [registerCustomData, setRegisterCustomData] = useState<Record<string, any>>({});
+  const [registering, setRegistering] = useState(false);
+  const [allEvents, setAllEvents] = useState<any[]>([]);
   const { toast } = useToast();
+
+  // Load events for register dialog
+  useEffect(() => {
+    if (authenticated) {
+      supabase.from("events").select("id, nome, slug, attivo, custom_fields").order("created_at", { ascending: false }).then(({ data }) => {
+        if (data) setAllEvents(data);
+      });
+    }
+  }, [authenticated]);
 
   // Helper: get photo URL from participant's registrations
   const getParticipantPhoto = (p: Participant): string | null => {
