@@ -1,12 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail, UserPlus, CalendarPlus } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
