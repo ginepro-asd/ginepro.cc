@@ -103,7 +103,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Count registrations
       const { data: regs } = await supabase
         .from("registrations")
         .select("id")
@@ -122,6 +121,120 @@ Deno.serve(async (req) => {
       if (error) throw error;
 
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "create_participant") {
+      const { participant } = body;
+      if (!participant?.nome || !participant?.cognome || !participant?.email || !participant?.telefono) {
+        return new Response(JSON.stringify({ error: "nome, cognome, email e telefono sono obbligatori" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const insertData: Record<string, any> = {
+        nome: participant.nome,
+        cognome: participant.cognome,
+        email: participant.email,
+        telefono: participant.telefono,
+        identification_type: participant.identification_type || "birth",
+        newsletter: participant.newsletter !== undefined ? participant.newsletter : true,
+      };
+      if (participant.codice_fiscale) insertData.codice_fiscale = participant.codice_fiscale;
+      if (participant.birth_date) insertData.birth_date = participant.birth_date;
+      if (participant.birth_place) insertData.birth_place = participant.birth_place;
+
+      const { data, error } = await supabase
+        .from("participants")
+        .insert(insertData)
+        .select()
+        .single();
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, participant: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "admin_register") {
+      const { participant_id, event_id, payment_method, custom_data } = body;
+      if (!participant_id || !event_id) {
+        return new Response(JSON.stringify({ error: "participant_id e event_id sono obbligatori" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get participant data
+      const { data: part, error: partErr } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("id", participant_id)
+        .single();
+      if (partErr) throw partErr;
+
+      // Delete any existing pending registration for same participant+event
+      await supabase
+        .from("registrations")
+        .delete()
+        .eq("participant_id", participant_id)
+        .eq("event_id", event_id)
+        .eq("payment_status", "pending");
+
+      const regData = {
+        participant_id,
+        event_id,
+        nome: part.nome,
+        cognome: part.cognome,
+        email: part.email,
+        telefono: part.telefono,
+        codice_fiscale: part.codice_fiscale || null,
+        birth_date: part.birth_date || null,
+        birth_place: part.birth_place || null,
+        identification_type: part.identification_type || "birth",
+        payment_method: payment_method || "admin",
+        payment_status: "completed",
+        custom_data: custom_data || {},
+      };
+
+      const { data, error } = await supabase
+        .from("registrations")
+        .insert(regData)
+        .select()
+        .single();
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, registration: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "update_registration") {
+      const { registration_id, fields: regFields } = body;
+      if (!registration_id || !regFields) {
+        return new Response(JSON.stringify({ error: "registration_id e fields sono obbligatori" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const allowed = ["payment_status", "payment_method", "custom_data"];
+      const sanitized: Record<string, any> = {};
+      for (const [key, val] of Object.entries(regFields)) {
+        if (allowed.includes(key)) sanitized[key] = val;
+      }
+
+      const { data, error } = await supabase
+        .from("registrations")
+        .update(sanitized)
+        .eq("id", registration_id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, registration: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

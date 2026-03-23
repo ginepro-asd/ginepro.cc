@@ -34,11 +34,19 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Only allow updating known safe fields
-    const allowedFields = ["nome", "cognome", "email", "telefono", "codice_fiscale", "birth_date", "birth_place", "identification_type"];
+    const allowedFields = [
+      "nome", "cognome", "email", "telefono", "codice_fiscale",
+      "birth_date", "birth_place", "identification_type",
+      "newsletter", "photo_url", "photo_thumb_url", "signature_url",
+    ];
     const updateData: Record<string, any> = {};
     for (const key of allowedFields) {
       if (fields[key] !== undefined) {
-        updateData[key] = fields[key] === "" ? null : fields[key];
+        if (key === "newsletter") {
+          updateData[key] = !!fields[key];
+        } else {
+          updateData[key] = fields[key] === "" ? null : fields[key];
+        }
       }
     }
 
