@@ -158,6 +158,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: "",
         attivo: true,
         hero_image: "",
+        payment_methods: ["stripe", "satispay", "paypal"],
         is_tesseramento: false,
         visibile_in_landing: true,
         is_coppia: false,
