@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
-const PARTICIPANT_FIELDS = [
+const PARTICIPANT_FIELDS: { key: string; label: string; required?: boolean }[] = [
   { key: "nome", label: "Nome", required: true },
   { key: "cognome", label: "Cognome", required: true },
   { key: "email", label: "Email", required: true },
@@ -19,7 +19,7 @@ const PARTICIPANT_FIELDS = [
   { key: "codice_fiscale", label: "Codice Fiscale" },
   { key: "birth_date", label: "Data di nascita" },
   { key: "birth_place", label: "Luogo di nascita" },
-] as const;
+];
 
 interface AdminCsvImportProps {
   open: boolean;
