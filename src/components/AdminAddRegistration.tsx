@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, UserCheck, Search } from "lucide-react";
+import { UserPlus, Loader2, UserCheck, Search, Smartphone, CheckCircle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
@@ -40,8 +40,8 @@ interface AdminAddRegistrationProps {
 const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, password, onSuccess }: AdminAddRegistrationProps) => {
   const { toast } = useToast();
 
-  // Step: "search" | "form" | "confirm"
-  const [step, setStep] = useState<"search" | "form">("search");
+  // Step: "search" | "form" | "satispay_waiting"
+  const [step, setStep] = useState<"search" | "form" | "satispay_waiting">("search");
 
   // Search state
   const [searchNome, setSearchNome] = useState("");
@@ -67,6 +67,13 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
   const [paymentMethod, setPaymentMethod] = useState("contanti");
   const [submitting, setSubmitting] = useState(false);
 
+  // Satispay polling state
+  const [satispayPaymentId, setSatispayPaymentId] = useState<string | null>(null);
+  const [satispayRegistrationId, setSatispayRegistrationId] = useState<string | null>(null);
+  const [satispayStatus, setSatispayStatus] = useState<"pending" | "paid" | "cancelled" | "error">("pending");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Reset on open
   useEffect(() => {
     if (open) {
@@ -83,8 +90,51 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
       });
       setCustomFieldValues({});
       setPaymentMethod("contanti");
+      setSatispayPaymentId(null);
+      setSatispayRegistrationId(null);
+      setSatispayStatus("pending");
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
   }, [open]);
+
+  // Satispay polling
+  useEffect(() => {
+    if (step !== "satispay_waiting" || !satispayPaymentId || !satispayRegistrationId) return;
+
+    const checkPayment = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("check-satispay-payment", {
+          body: { payment_id: satispayPaymentId, registration_id: satispayRegistrationId },
+        });
+        if (error) return;
+        if (data.status === "completed") {
+          setSatispayStatus("paid");
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setTimeout(() => {
+            onOpenChange(false);
+            onSuccess();
+          }, 2000);
+        } else if (data.status === "cancelled") {
+          setSatispayStatus("cancelled");
+          if (intervalRef.current) clearInterval(intervalRef.current);
+        }
+      } catch {}
+    };
+
+    checkPayment();
+    intervalRef.current = setInterval(checkPayment, 3000);
+    timeoutRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setSatispayStatus("error");
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [step, satispayPaymentId, satispayRegistrationId]);
 
   const searchParticipants = async () => {
     if (!searchNome.trim() && !searchCognome.trim()) return;
@@ -101,7 +151,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
       setSearchResults(data || []);
       setSearched(true);
     } catch {
-      // silently fail
     } finally {
       setSearching(false);
     }
@@ -150,7 +199,29 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
         participantId = data.participant.id;
       }
 
-      // Register to event
+      // If Satispay, use the dedicated flow
+      if (paymentMethod === "satispay") {
+        const { data, error } = await supabase.functions.invoke("manage-event", {
+          body: {
+            password,
+            action: "admin_satispay",
+            participant_id: participantId,
+            event_id: eventId,
+            custom_data: customFieldValues,
+          },
+        });
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        setSatispayPaymentId(data.payment_id);
+        setSatispayRegistrationId(data.registration_id);
+        setSatispayStatus("pending");
+        setStep("satispay_waiting");
+        setSubmitting(false);
+        return;
+      }
+
+      // Regular registration (contanti, admin, etc.)
       const { data, error } = await supabase.functions.invoke("manage-event", {
         body: {
           password,
@@ -185,9 +256,11 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
           <DialogDescription>
             {step === "search"
               ? "Cerca un partecipante esistente o creane uno nuovo."
-              : selectedParticipant
-                ? `Iscrivi ${selectedParticipant.nome} ${selectedParticipant.cognome} all'evento.`
-                : "Compila i dati del nuovo partecipante e iscrivilo all'evento."
+              : step === "satispay_waiting"
+                ? "In attesa del pagamento Satispay..."
+                : selectedParticipant
+                  ? `Iscrivi ${selectedParticipant.nome} ${selectedParticipant.cognome} all'evento.`
+                  : "Compila i dati del nuovo partecipante e iscrivilo all'evento."
             }
           </DialogDescription>
         </DialogHeader>
@@ -262,7 +335,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
 
         {step === "form" && (
           <div className="space-y-4 mt-2">
-            {/* Show selected participant info */}
             {selectedParticipant && (
               <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1">
                 <div className="flex items-center gap-2">
@@ -277,7 +349,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
               </div>
             )}
 
-            {/* New participant fields */}
             {!selectedParticipant && (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -315,7 +386,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
               </div>
             )}
 
-            {/* Custom fields */}
             {eventCustomFields.length > 0 && (
               <div className="space-y-3 border-t border-border/50 pt-4">
                 <Label className="text-sm font-medium">Informazioni aggiuntive</Label>
@@ -330,7 +400,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
               </div>
             )}
 
-            {/* Payment method */}
             <div className="space-y-1">
               <Label className="text-sm">Metodo di pagamento</Label>
               <select
@@ -352,9 +421,62 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                Iscrivi
+                {paymentMethod === "satispay" ? "Invia richiesta Satispay" : "Iscrivi"}
               </Button>
             </DialogFooter>
+          </div>
+        )}
+
+        {step === "satispay_waiting" && (
+          <div className="py-8 text-center space-y-6">
+            {satispayStatus === "pending" && (
+              <>
+                <div className="relative mx-auto w-20 h-20">
+                  <Smartphone className="h-12 w-12 absolute inset-0 m-auto text-primary" />
+                  <Loader2 className="h-20 w-20 absolute inset-0 animate-spin text-primary/30" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2">In attesa del pagamento</h3>
+                  <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                    La richiesta di pagamento è stata inviata. Attendere la conferma dall'app Satispay.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => {
+                  onOpenChange(false);
+                  onSuccess(); // Refresh to show the pending registration
+                }}>
+                  Chiudi (resta in attesa)
+                </Button>
+              </>
+            )}
+            {satispayStatus === "paid" && (
+              <>
+                <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
+                <div>
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2">Pagamento ricevuto!</h3>
+                  <p className="text-muted-foreground text-sm">Iscrizione completata con successo.</p>
+                </div>
+              </>
+            )}
+            {(satispayStatus === "cancelled" || satispayStatus === "error") && (
+              <>
+                <XCircle className="h-16 w-16 mx-auto text-destructive" />
+                <div>
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2">
+                    {satispayStatus === "cancelled" ? "Pagamento annullato" : "Tempo scaduto"}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    L'iscrizione resta in sospeso. Puoi reinviare la richiesta dalla lista iscritti.
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => {
+                  onOpenChange(false);
+                  onSuccess();
+                }}>
+                  Chiudi
+                </Button>
+              </>
+            )}
           </div>
         )}
       </DialogContent>
@@ -365,7 +487,6 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
 function AdminCustomFieldInput({ field, value, onChange }: { field: CustomField; value: string; onChange: (v: string) => void }) {
   const label = `${field.label}${field.required ? " *" : ""}`;
   if (field.type === "select" && field.options) {
-    const hasOptionPrices = field.options.some((opt) => getOptionPrice(field, opt) !== null);
     return (
       <div className="space-y-1">
         <Label className="text-sm">{label}</Label>
