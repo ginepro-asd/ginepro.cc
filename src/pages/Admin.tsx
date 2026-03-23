@@ -370,7 +370,62 @@ const Admin = () => {
       codice_fiscale: p.codice_fiscale || "",
       birth_date: p.birth_date || "",
       birth_place: p.birth_place || "",
+      identification_type: p.identification_type || "birth",
+      newsletter: p.newsletter !== false ? "true" : "false",
     });
+  };
+
+  const createUser = async () => {
+    setCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: { password, action: "create_participant", participant: newUserFields },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Utente creato", description: `${newUserFields.nome} ${newUserFields.cognome}` });
+      setShowCreateUserDialog(false);
+      setNewUserFields({ identification_type: "birth", newsletter: true });
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const openRegisterDialog = (participantId: string) => {
+    setRegisterParticipantId(participantId);
+    setRegisterEventId("");
+    setRegisterPaymentMethod("contanti");
+    setRegisterCustomData({});
+    setShowRegisterDialog(true);
+  };
+
+  const executeRegister = async () => {
+    if (!registerParticipantId || !registerEventId) return;
+    setRegistering(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: {
+          password,
+          action: "admin_register",
+          participant_id: registerParticipantId,
+          event_id: registerEventId,
+          payment_method: registerPaymentMethod,
+          custom_data: registerCustomData,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Iscrizione creata", description: "Iscrizione registrata con successo." });
+      setShowRegisterDialog(false);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const saveEdit = async () => {
