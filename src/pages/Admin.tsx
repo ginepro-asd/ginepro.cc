@@ -192,6 +192,15 @@ const Admin = () => {
     return p.photo_thumb_url || null;
   };
 
+  const downloadCert = async (filePath: string) => {
+    const { data, error } = await supabase.storage.from("medical-certificates").createSignedUrl(filePath, 300);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Errore", description: "Impossibile scaricare il certificato", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+
   // Helper: get photo from flat registration
   const getRegistrationPhoto = (r: FlatRegistration): string | null => {
     return r.photo_thumb_url || r.photo_url || r.custom_data?.photoUrlThumb || r.custom_data?.photoUrl || null;
