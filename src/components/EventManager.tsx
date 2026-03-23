@@ -524,6 +524,38 @@ const EventManager = ({ password }: EventManagerProps) => {
               Se disattivato, l&apos;evento sparisce dalla landing ma resta raggiungibile con link diretto e disponibile in area admin.
             </p>
 
+            {/* Payment methods */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Metodi di pagamento</Label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "stripe", label: "Stripe" },
+                  { value: "satispay", label: "Satispay" },
+                  { value: "paypal", label: "PayPal" },
+                  { value: "contanti", label: "Contanti" },
+                ].map((method) => {
+                  const methods = editFields.payment_methods || [];
+                  const checked = methods.includes(method.value);
+                  return (
+                    <label key={method.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked
+                            ? methods.filter((m: string) => m !== method.value)
+                            : [...methods, method.value];
+                          setEditFields((prev: any) => ({ ...prev, payment_methods: next }));
+                        }}
+                        className="rounded border-input"
+                      />
+                      {method.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             {editFields.is_coppia && (
               <div className="space-y-1.5">
                 <Label className="text-sm">Pettorale di partenza</Label>
