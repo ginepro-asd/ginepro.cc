@@ -160,7 +160,7 @@ const Admin = () => {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
       toast({ title: "Richiesta inviata", description: "La richiesta di pagamento Satispay è stata reinviata." });
-      fetchData();
+      authenticate();
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     } finally {
