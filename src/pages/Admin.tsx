@@ -1136,7 +1136,7 @@ const Admin = () => {
 
         {/* Edit participant dialog */}
         <Dialog open={!!editParticipant} onOpenChange={(open) => { if (!open) setEditParticipant(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">Modifica partecipante</DialogTitle>
               <DialogDescription>
@@ -1162,12 +1162,140 @@ const Admin = () => {
                   />
                 </div>
               ))}
+              <div className="space-y-1">
+                <Label className="text-sm">Tipo identificazione</Label>
+                <select
+                  value={editFields.identification_type || "birth"}
+                  onChange={(e) => setEditFields(prev => ({ ...prev, identification_type: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="birth">Data di nascita</option>
+                  <option value="fiscal">Codice Fiscale</option>
+                  <option value="cf">CF</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-newsletter"
+                  checked={editFields.newsletter === "true"}
+                  onCheckedChange={(checked) => setEditFields(prev => ({ ...prev, newsletter: checked ? "true" : "false" }))}
+                />
+                <Label htmlFor="edit-newsletter" className="text-sm">Iscritto alla newsletter</Label>
+              </div>
             </div>
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEditParticipant(null)}>Annulla</Button>
               <Button onClick={saveEdit} disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 Salva
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create user dialog */}
+        <Dialog open={showCreateUserDialog} onOpenChange={setShowCreateUserDialog}>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display">Aggiungi utente</DialogTitle>
+              <DialogDescription>Crea un nuovo partecipante nel sistema.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {[
+                { key: "nome", label: "Nome *", type: "text" },
+                { key: "cognome", label: "Cognome *", type: "text" },
+                { key: "email", label: "Email *", type: "email" },
+                { key: "telefono", label: "Telefono *", type: "tel" },
+                { key: "codice_fiscale", label: "Codice Fiscale", type: "text" },
+                { key: "birth_date", label: "Data di nascita", type: "date" },
+                { key: "birth_place", label: "Luogo di nascita", type: "text" },
+              ].map(({ key, label, type }) => (
+                <div key={key} className="space-y-1">
+                  <Label className="text-sm">{label}</Label>
+                  <Input
+                    type={type}
+                    value={newUserFields[key] || ""}
+                    onChange={(e) => setNewUserFields(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <Label className="text-sm">Tipo identificazione</Label>
+                <select
+                  value={newUserFields.identification_type || "birth"}
+                  onChange={(e) => setNewUserFields(prev => ({ ...prev, identification_type: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="birth">Data di nascita</option>
+                  <option value="fiscal">Codice Fiscale</option>
+                  <option value="cf">CF</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="new-newsletter"
+                  checked={newUserFields.newsletter !== false}
+                  onCheckedChange={(checked) => setNewUserFields(prev => ({ ...prev, newsletter: !!checked }))}
+                />
+                <Label htmlFor="new-newsletter" className="text-sm">Iscritto alla newsletter</Label>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setShowCreateUserDialog(false)}>Annulla</Button>
+              <Button
+                onClick={createUser}
+                disabled={creatingUser || !newUserFields.nome || !newUserFields.cognome || !newUserFields.email || !newUserFields.telefono}
+              >
+                {creatingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                Crea utente
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Register to event dialog */}
+        <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Iscrivi a evento</DialogTitle>
+              <DialogDescription>Seleziona un evento e il metodo di pagamento.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              <div className="space-y-1">
+                <Label className="text-sm">Evento</Label>
+                <select
+                  value={registerEventId}
+                  onChange={(e) => setRegisterEventId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Seleziona evento...</option>
+                  {allEvents.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nome} {!ev.attivo ? "(inattivo)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">Metodo di pagamento</Label>
+                <select
+                  value={registerPaymentMethod}
+                  onChange={(e) => setRegisterPaymentMethod(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="contanti">Contanti</option>
+                  <option value="admin">Admin (gratuito)</option>
+                  <option value="stripe">Stripe</option>
+                  <option value="satispay">Satispay</option>
+                  <option value="paypal">PayPal</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setShowRegisterDialog(false)}>Annulla</Button>
+              <Button onClick={executeRegister} disabled={registering || !registerEventId}>
+                {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CalendarPlus className="h-4 w-4 mr-2" />}
+                Iscrivi
               </Button>
             </DialogFooter>
           </DialogContent>
