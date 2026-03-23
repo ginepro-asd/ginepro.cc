@@ -199,6 +199,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: editFields.scadenza_iscrizioni ? new Date(editFields.scadenza_iscrizioni).toISOString() : null,
         attivo: editFields.attivo,
         hero_image: editFields.hero_image || null,
+        payment_methods: editFields.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: editFields.is_tesseramento,
         visibile_in_landing: editFields.visibile_in_landing ?? true,
         is_coppia: editFields.is_coppia,
