@@ -148,7 +148,25 @@ const Admin = () => {
   const [loadingCerts, setLoadingCerts] = useState(false);
   const [showAddRegistrationDialog, setShowAddRegistrationDialog] = useState(false);
   const [showCsvImportDialog, setShowCsvImportDialog] = useState(false);
+  const [resendingSatispay, setResendingSatispay] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const resendSatispay = async (registrationId: string) => {
+    setResendingSatispay(registrationId);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: { password, action: "resend_satispay", registration_id: registrationId },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Richiesta inviata", description: "La richiesta di pagamento Satispay è stata reinviata." });
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setResendingSatispay(null);
+    }
+  };
 
   // Fetch certificates when detail modal opens
   useEffect(() => {
