@@ -144,6 +144,7 @@ const Admin = () => {
   const [allEvents, setAllEvents] = useState<any[]>([]);
   const [detailCerts, setDetailCerts] = useState<MedicalCert[]>([]);
   const [loadingCerts, setLoadingCerts] = useState(false);
+  const [showAddRegistrationDialog, setShowAddRegistrationDialog] = useState(false);
   const { toast } = useToast();
 
   // Fetch certificates when detail modal opens
