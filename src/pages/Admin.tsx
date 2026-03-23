@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail, UserPlus, CalendarPlus } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail, UserPlus, CalendarPlus, Smartphone } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
@@ -148,7 +148,25 @@ const Admin = () => {
   const [loadingCerts, setLoadingCerts] = useState(false);
   const [showAddRegistrationDialog, setShowAddRegistrationDialog] = useState(false);
   const [showCsvImportDialog, setShowCsvImportDialog] = useState(false);
+  const [resendingSatispay, setResendingSatispay] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const resendSatispay = async (registrationId: string) => {
+    setResendingSatispay(registrationId);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: { password, action: "resend_satispay", registration_id: registrationId },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Richiesta inviata", description: "La richiesta di pagamento Satispay è stata reinviata." });
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setResendingSatispay(null);
+    }
+  };
 
   // Fetch certificates when detail modal opens
   useEffect(() => {
@@ -974,6 +992,18 @@ const Admin = () => {
                                   onClick={() => setDetailRegistration(r)}
                                 >
                                   <Info className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {r.payment_method === "satispay" && (r.payment_status === "pending" || r.payment_status === "cancelled") && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-primary hover:text-primary"
+                                  onClick={() => resendSatispay(r.id)}
+                                  disabled={resendingSatispay === r.id}
+                                  title="Reinvia richiesta Satispay"
+                                >
+                                  {resendingSatispay === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
                                 </Button>
                               )}
                               <Button
