@@ -132,6 +132,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: ev.scadenza_iscrizioni ? ev.scadenza_iscrizioni.slice(0, 16) : "",
         attivo: ev.attivo,
         hero_image: ev.hero_image || "",
+        payment_methods: ev.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: ev.is_tesseramento,
         visibile_in_landing: ev.visibile_in_landing ?? true,
         is_coppia: ev.is_coppia,
@@ -157,6 +158,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: "",
         attivo: true,
         hero_image: "",
+        payment_methods: ["stripe", "satispay", "paypal"],
         is_tesseramento: false,
         visibile_in_landing: true,
         is_coppia: false,
@@ -197,6 +199,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         scadenza_iscrizioni: editFields.scadenza_iscrizioni ? new Date(editFields.scadenza_iscrizioni).toISOString() : null,
         attivo: editFields.attivo,
         hero_image: editFields.hero_image || null,
+        payment_methods: editFields.payment_methods || ["stripe", "satispay", "paypal"],
         is_tesseramento: editFields.is_tesseramento,
         visibile_in_landing: editFields.visibile_in_landing ?? true,
         is_coppia: editFields.is_coppia,
@@ -520,6 +523,38 @@ const EventManager = ({ password }: EventManagerProps) => {
             <p className="text-xs text-muted-foreground">
               Se disattivato, l&apos;evento sparisce dalla landing ma resta raggiungibile con link diretto e disponibile in area admin.
             </p>
+
+            {/* Payment methods */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Metodi di pagamento</Label>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "stripe", label: "Stripe" },
+                  { value: "satispay", label: "Satispay" },
+                  { value: "paypal", label: "PayPal" },
+                  { value: "contanti", label: "Contanti" },
+                ].map((method) => {
+                  const methods = editFields.payment_methods || [];
+                  const checked = methods.includes(method.value);
+                  return (
+                    <label key={method.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const next = checked
+                            ? methods.filter((m: string) => m !== method.value)
+                            : [...methods, method.value];
+                          setEditFields((prev: any) => ({ ...prev, payment_methods: next }));
+                        }}
+                        className="rounded border-input"
+                      />
+                      {method.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
 
             {editFields.is_coppia && (
               <div className="space-y-1.5">
