@@ -14,6 +14,7 @@ import NewsletterManager from "@/components/NewsletterManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
+import AdminCsvImport from "@/components/AdminCsvImport";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
