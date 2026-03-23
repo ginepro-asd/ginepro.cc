@@ -146,7 +146,22 @@ const Admin = () => {
   const [loadingCerts, setLoadingCerts] = useState(false);
   const { toast } = useToast();
 
-  // Load events for register dialog
+  // Fetch certificates when detail modal opens
+  useEffect(() => {
+    const pid = detailRegistration?.participant_id || selectedParticipant?.participant_id;
+    if (!pid) { setDetailCerts([]); return; }
+    setLoadingCerts(true);
+    supabase
+      .from("medical_certificates")
+      .select("id, file_path, expiry_date, disciplines, ai_warning, uploaded_at")
+      .eq("participant_id", pid)
+      .order("expiry_date", { ascending: false })
+      .then(({ data }) => {
+        setDetailCerts(data || []);
+        setLoadingCerts(false);
+      });
+  }, [detailRegistration, selectedParticipant]);
+
   useEffect(() => {
     if (authenticated) {
       supabase.from("events").select("id, nome, slug, attivo, custom_fields").order("created_at", { ascending: false }).then(({ data }) => {
