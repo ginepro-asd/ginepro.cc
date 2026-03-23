@@ -1,12 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail } from "lucide-react";
+import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Check, Search, Merge, X, Pencil, MessageSquare, Send, RefreshCw, Trash2, Settings, Mail, UserPlus, CalendarPlus } from "lucide-react";
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
@@ -49,6 +50,8 @@ interface Participant {
   codice_fiscale: string | null;
   birth_date: string | null;
   birth_place: string | null;
+  identification_type?: string;
+  newsletter?: boolean;
   participant_id: string | null;
   fidal_data: Record<string, any> | null;
   photo_thumb_url: string | null;
@@ -118,7 +121,27 @@ const Admin = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter">("iscrizioni");
+  // New user / register dialogs
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [newUserFields, setNewUserFields] = useState<Record<string, any>>({ identification_type: "birth", newsletter: true });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [registerParticipantId, setRegisterParticipantId] = useState<string | null>(null);
+  const [registerEventId, setRegisterEventId] = useState<string>("");
+  const [registerPaymentMethod, setRegisterPaymentMethod] = useState<string>("contanti");
+  const [registerCustomData, setRegisterCustomData] = useState<Record<string, any>>({});
+  const [registering, setRegistering] = useState(false);
+  const [allEvents, setAllEvents] = useState<any[]>([]);
   const { toast } = useToast();
+
+  // Load events for register dialog
+  useEffect(() => {
+    if (authenticated) {
+      supabase.from("events").select("id, nome, slug, attivo, custom_fields").order("created_at", { ascending: false }).then(({ data }) => {
+        if (data) setAllEvents(data);
+      });
+    }
+  }, [authenticated]);
 
   // Helper: get photo URL from participant's registrations
   const getParticipantPhoto = (p: Participant): string | null => {
@@ -347,18 +370,74 @@ const Admin = () => {
       codice_fiscale: p.codice_fiscale || "",
       birth_date: p.birth_date || "",
       birth_place: p.birth_place || "",
+      identification_type: p.identification_type || "birth",
+      newsletter: p.newsletter !== false ? "true" : "false",
     });
+  };
+
+  const createUser = async () => {
+    setCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: { password, action: "create_participant", participant: newUserFields },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Utente creato", description: `${newUserFields.nome} ${newUserFields.cognome}` });
+      setShowCreateUserDialog(false);
+      setNewUserFields({ identification_type: "birth", newsletter: true });
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const openRegisterDialog = (participantId: string) => {
+    setRegisterParticipantId(participantId);
+    setRegisterEventId("");
+    setRegisterPaymentMethod("contanti");
+    setRegisterCustomData({});
+    setShowRegisterDialog(true);
+  };
+
+  const executeRegister = async () => {
+    if (!registerParticipantId || !registerEventId) return;
+    setRegistering(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-event", {
+        body: {
+          password,
+          action: "admin_register",
+          participant_id: registerParticipantId,
+          event_id: registerEventId,
+          payment_method: registerPaymentMethod,
+          custom_data: registerCustomData,
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast({ title: "Iscrizione creata", description: "Iscrizione registrata con successo." });
+      setShowRegisterDialog(false);
+      authenticate();
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const saveEdit = async () => {
     if (!editParticipant?.participant_id) return;
     setSaving(true);
     try {
+      const fieldsToSend = { ...editFields, newsletter: editFields.newsletter === "true" };
       const { data, error } = await supabase.functions.invoke("update-participant", {
         body: {
           password,
           participant_id: editParticipant.participant_id,
-          fields: editFields,
+          fields: fieldsToSend,
         },
       });
       if (error) throw error;
@@ -514,8 +593,12 @@ const Admin = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     Importa da Firestore
                   </Button>
-               </>
-             )}
+                 <Button onClick={() => setShowCreateUserDialog(true)} variant="outline">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Aggiungi utente
+                  </Button>
+                </>
+              )}
             <Button onClick={downloadCSV} disabled={loading} variant="outline">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
               Scarica CSV
@@ -718,8 +801,18 @@ const Admin = () => {
                                  title="Modifica"
                                >
                                  <Pencil className="h-3.5 w-3.5" />
-                               </Button>
-                               <Button
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0"
+                                  onClick={(e) => { e.stopPropagation(); openRegisterDialog(p.participant_id!); }}
+                                  title="Iscrivi a evento"
+                                  disabled={!p.participant_id}
+                                >
+                                   <CalendarPlus className="h-3.5 w-3.5" />
+                                 </Button>
+                                <Button
                                  variant="ghost"
                                  size="sm"
                                  className={`h-7 w-7 p-0 ${p.fidal_data && Object.keys(p.fidal_data).length > 0 ? "text-green-600" : ""}`}
@@ -1044,7 +1137,7 @@ const Admin = () => {
 
         {/* Edit participant dialog */}
         <Dialog open={!!editParticipant} onOpenChange={(open) => { if (!open) setEditParticipant(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">Modifica partecipante</DialogTitle>
               <DialogDescription>
@@ -1070,12 +1163,140 @@ const Admin = () => {
                   />
                 </div>
               ))}
+              <div className="space-y-1">
+                <Label className="text-sm">Tipo identificazione</Label>
+                <select
+                  value={editFields.identification_type || "birth"}
+                  onChange={(e) => setEditFields(prev => ({ ...prev, identification_type: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="birth">Data di nascita</option>
+                  <option value="fiscal">Codice Fiscale</option>
+                  <option value="cf">CF</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-newsletter"
+                  checked={editFields.newsletter === "true"}
+                  onCheckedChange={(checked) => setEditFields(prev => ({ ...prev, newsletter: checked ? "true" : "false" }))}
+                />
+                <Label htmlFor="edit-newsletter" className="text-sm">Iscritto alla newsletter</Label>
+              </div>
             </div>
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEditParticipant(null)}>Annulla</Button>
               <Button onClick={saveEdit} disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 Salva
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create user dialog */}
+        <Dialog open={showCreateUserDialog} onOpenChange={setShowCreateUserDialog}>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display">Aggiungi utente</DialogTitle>
+              <DialogDescription>Crea un nuovo partecipante nel sistema.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {[
+                { key: "nome", label: "Nome *", type: "text" },
+                { key: "cognome", label: "Cognome *", type: "text" },
+                { key: "email", label: "Email *", type: "email" },
+                { key: "telefono", label: "Telefono *", type: "tel" },
+                { key: "codice_fiscale", label: "Codice Fiscale", type: "text" },
+                { key: "birth_date", label: "Data di nascita", type: "date" },
+                { key: "birth_place", label: "Luogo di nascita", type: "text" },
+              ].map(({ key, label, type }) => (
+                <div key={key} className="space-y-1">
+                  <Label className="text-sm">{label}</Label>
+                  <Input
+                    type={type}
+                    value={newUserFields[key] || ""}
+                    onChange={(e) => setNewUserFields(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <Label className="text-sm">Tipo identificazione</Label>
+                <select
+                  value={newUserFields.identification_type || "birth"}
+                  onChange={(e) => setNewUserFields(prev => ({ ...prev, identification_type: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="birth">Data di nascita</option>
+                  <option value="fiscal">Codice Fiscale</option>
+                  <option value="cf">CF</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="new-newsletter"
+                  checked={newUserFields.newsletter !== false}
+                  onCheckedChange={(checked) => setNewUserFields(prev => ({ ...prev, newsletter: !!checked }))}
+                />
+                <Label htmlFor="new-newsletter" className="text-sm">Iscritto alla newsletter</Label>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setShowCreateUserDialog(false)}>Annulla</Button>
+              <Button
+                onClick={createUser}
+                disabled={creatingUser || !newUserFields.nome || !newUserFields.cognome || !newUserFields.email || !newUserFields.telefono}
+              >
+                {creatingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                Crea utente
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Register to event dialog */}
+        <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display">Iscrivi a evento</DialogTitle>
+              <DialogDescription>Seleziona un evento e il metodo di pagamento.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              <div className="space-y-1">
+                <Label className="text-sm">Evento</Label>
+                <select
+                  value={registerEventId}
+                  onChange={(e) => setRegisterEventId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Seleziona evento...</option>
+                  {allEvents.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nome} {!ev.attivo ? "(inattivo)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">Metodo di pagamento</Label>
+                <select
+                  value={registerPaymentMethod}
+                  onChange={(e) => setRegisterPaymentMethod(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="contanti">Contanti</option>
+                  <option value="admin">Admin (gratuito)</option>
+                  <option value="stripe">Stripe</option>
+                  <option value="satispay">Satispay</option>
+                  <option value="paypal">PayPal</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setShowRegisterDialog(false)}>Annulla</Button>
+              <Button onClick={executeRegister} disabled={registering || !registerEventId}>
+                {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CalendarPlus className="h-4 w-4 mr-2" />}
+                Iscrivi
               </Button>
             </DialogFooter>
           </DialogContent>
