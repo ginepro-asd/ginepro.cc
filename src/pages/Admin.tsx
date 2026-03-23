@@ -76,6 +76,16 @@ interface FlatRegistration {
   event_slug?: string;
   photo_thumb_url: string | null;
   photo_url: string | null;
+  participant_id?: string | null;
+}
+
+interface MedicalCert {
+  id: string;
+  file_path: string;
+  expiry_date: string | null;
+  disciplines: string[] | null;
+  ai_warning: string | null;
+  uploaded_at: string;
 }
 
 interface FirestoreEvent {
@@ -132,9 +142,26 @@ const Admin = () => {
   const [registerCustomData, setRegisterCustomData] = useState<Record<string, any>>({});
   const [registering, setRegistering] = useState(false);
   const [allEvents, setAllEvents] = useState<any[]>([]);
+  const [detailCerts, setDetailCerts] = useState<MedicalCert[]>([]);
+  const [loadingCerts, setLoadingCerts] = useState(false);
   const { toast } = useToast();
 
-  // Load events for register dialog
+  // Fetch certificates when detail modal opens
+  useEffect(() => {
+    const pid = detailRegistration?.participant_id || selectedParticipant?.participant_id;
+    if (!pid) { setDetailCerts([]); return; }
+    setLoadingCerts(true);
+    supabase
+      .from("medical_certificates")
+      .select("id, file_path, expiry_date, disciplines, ai_warning, uploaded_at")
+      .eq("participant_id", pid)
+      .order("expiry_date", { ascending: false })
+      .then(({ data }) => {
+        setDetailCerts(data || []);
+        setLoadingCerts(false);
+      });
+  }, [detailRegistration, selectedParticipant]);
+
   useEffect(() => {
     if (authenticated) {
       supabase.from("events").select("id, nome, slug, attivo, custom_fields").order("created_at", { ascending: false }).then(({ data }) => {
@@ -163,6 +190,15 @@ const Admin = () => {
       if (cd?.photoUrl) return cd.photoUrl;
     }
     return p.photo_thumb_url || null;
+  };
+
+  const downloadCert = async (filePath: string) => {
+    const { data, error } = await supabase.storage.from("medical-certificates").createSignedUrl(filePath, 300);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Errore", description: "Impossibile scaricare il certificato", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
   };
 
   // Helper: get photo from flat registration
@@ -974,6 +1010,50 @@ const Admin = () => {
                 ))}
               </div>
             )}
+            {/* Certificates section */}
+            {detailRegistration?.participant_id && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">Certificati medici</h4>
+                {loadingCerts ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Caricamento…</div>
+                ) : detailCerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun certificato caricato</p>
+                ) : (
+                  detailCerts.map((cert) => {
+                    const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date();
+                    return (
+                      <Card key={cert.id} className="border-border/50">
+                        <CardContent className="p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium text-foreground">
+                                {cert.expiry_date ? `Scadenza: ${new Date(cert.expiry_date).toLocaleDateString("it-IT")}` : "Senza scadenza"}
+                              </span>
+                            </div>
+                            <Badge variant={isExpired ? "destructive" : "default"}>
+                              {isExpired ? "Scaduto" : "Valido"}
+                            </Badge>
+                          </div>
+                          {cert.disciplines && cert.disciplines.length > 0 && (
+                            <p className="text-xs text-muted-foreground">Discipline: {cert.disciplines.join(", ")}</p>
+                          )}
+                          {cert.ai_warning && (
+                            <p className="text-xs text-yellow-600">⚠ {cert.ai_warning}</p>
+                          )}
+                          <button
+                            onClick={() => downloadCert(cert.file_path)}
+                            className="text-xs text-primary underline cursor-pointer bg-transparent border-none p-0"
+                          >
+                            Scarica certificato
+                          </button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -1008,6 +1088,50 @@ const Admin = () => {
                 </Card>
               ))}
             </div>
+            {/* Certificates section */}
+            {selectedParticipant?.participant_id && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">Certificati medici</h4>
+                {loadingCerts ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Caricamento…</div>
+                ) : detailCerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun certificato caricato</p>
+                ) : (
+                  detailCerts.map((cert) => {
+                    const isExpired = cert.expiry_date && new Date(cert.expiry_date) < new Date();
+                    return (
+                      <Card key={cert.id} className="border-border/50">
+                        <CardContent className="p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium text-foreground">
+                                {cert.expiry_date ? `Scadenza: ${new Date(cert.expiry_date).toLocaleDateString("it-IT")}` : "Senza scadenza"}
+                              </span>
+                            </div>
+                            <Badge variant={isExpired ? "destructive" : "default"}>
+                              {isExpired ? "Scaduto" : "Valido"}
+                            </Badge>
+                          </div>
+                          {cert.disciplines && cert.disciplines.length > 0 && (
+                            <p className="text-xs text-muted-foreground">Discipline: {cert.disciplines.join(", ")}</p>
+                          )}
+                          {cert.ai_warning && (
+                            <p className="text-xs text-yellow-600">⚠ {cert.ai_warning}</p>
+                          )}
+                          <button
+                            onClick={() => downloadCert(cert.file_path)}
+                            className="text-xs text-primary underline cursor-pointer bg-transparent border-none p-0"
+                          >
+                            Scarica certificato
+                          </button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
