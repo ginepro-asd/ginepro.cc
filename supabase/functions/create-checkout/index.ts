@@ -134,7 +134,7 @@ serve(async (req) => {
           price_data: {
             currency: "eur",
             product_data: { name: `${event.nome}` },
-            unit_amount: eventPrice,
+            unit_amount: totalPrice,
           },
           quantity: 1,
         },

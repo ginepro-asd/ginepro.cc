@@ -664,6 +664,11 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting || certificateUploading}>
                   {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Elaborazione...</>) : `Iscriviti e Paga — ${displayPriceLabel}`}
                 </Button>
+                {serviceFee > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-1.5">
+                    di cui {formatPrice(serviceFee)} commissioni servizio idchronos
+                  </p>
+                )}
               </form>
             </Form>
           </CardContent>
