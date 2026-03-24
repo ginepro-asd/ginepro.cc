@@ -57,6 +57,7 @@ serve(async (req) => {
     const eventPrice = (isTesseramento && membershipType && MEMBERSHIP_PRICES[membershipType])
       ? MEMBERSHIP_PRICES[membershipType]
       : resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
+    const totalPrice = eventPrice + (event.service_fee || 0);
 
     // Upsert participant (with photo/signature if provided)
     const participantData: any = {
