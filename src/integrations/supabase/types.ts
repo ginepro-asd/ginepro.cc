@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_email_sends: {
+        Row: {
+          error: string | null
+          event_email_id: string
+          id: string
+          registration_id: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          event_email_id: string
+          id?: string
+          registration_id: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          event_email_id?: string
+          id?: string
+          registration_id?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_email_sends_event_email_id_fkey"
+            columns: ["event_email_id"]
+            isOneToOne: false
+            referencedRelation: "event_emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_email_sends_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_emails: {
+        Row: {
+          body_html: string | null
+          created_at: string
+          event_id: string
+          id: string
+          orario_map: Json | null
+          sent_at: string | null
+          slug: string
+          subject: string
+          trigger_type: string
+        }
+        Insert: {
+          body_html?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          orario_map?: Json | null
+          sent_at?: string | null
+          slug: string
+          subject: string
+          trigger_type?: string
+        }
+        Update: {
+          body_html?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          orario_map?: Json | null
+          sent_at?: string | null
+          slug?: string
+          subject?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_emails_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           attivo: boolean
