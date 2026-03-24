@@ -102,3 +102,26 @@ export function getSelectedPrice(
 
   return pricedValue ?? basePrice;
 }
+
+export function getOptionMaxSpots(
+  field: CustomField | null | undefined,
+  option: string | null | undefined,
+): number | null {
+  if (!field || !option) return null;
+  const val = field.option_max_spots?.[option];
+  return typeof val === "number" ? val : null;
+}
+
+export function optionRequiresCertificate(
+  field: CustomField | null | undefined,
+  option: string | null | undefined,
+): boolean {
+  if (!field || !option) return false;
+  return !!field.option_requires_certificate?.[option];
+}
+
+export function hasMaxSpotsOptions(customFields: CustomField[]): boolean {
+  const routeField = getRouteSelectionField(customFields);
+  if (!routeField || !hasOptions(routeField)) return false;
+  return routeField.options.some((opt) => getOptionMaxSpots(routeField, opt) !== null);
+}

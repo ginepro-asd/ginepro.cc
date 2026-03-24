@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { resolveEventPrice } from "../_shared/event-pricing.ts";
+import { validateSpotsAndCertificate } from "../_shared/spot-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,6 +68,9 @@ serve(async (req) => {
       .single();
 
     if (eventError || !event) throw new Error("Evento non trovato");
+
+    // Validate spots and certificate
+    await validateSpotsAndCertificate(supabaseAdmin, event, customData || {}, certificatePaths);
 
     // For tesseramento events, use membership type pricing
     const MEMBERSHIP_PRICES: Record<string, number> = {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator } from "lucide-react";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Upload, ShieldCheck, AlertTriangle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -28,6 +28,8 @@ import {
   getStartingPrice,
   hasVariablePricing,
   getRouteSelectionField,
+  optionRequiresCertificate,
+  getOptionMaxSpots,
 } from "@/lib/event-pricing";
 import {
   COUNTRY_CODES,
@@ -37,6 +39,7 @@ import {
 } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
+import { Link } from "react-router-dom";
 
 const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
@@ -73,9 +76,10 @@ type FormData = z.infer<typeof formSchema>;
 interface RegistrationFormProps {
   event: EventData;
   preselectedDiscipline?: string;
+  spotCounts?: Record<string, number>;
 }
 
-const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProps) => {
+const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: RegistrationFormProps) => {
   const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
@@ -93,6 +97,16 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
   });
   const [computedCF, setComputedCF] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
+
+  // Tessera sportiva & certificate state
+  const [tesseraSportiva, setTesseraSportiva] = useState("");
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [certificatePath, setCertificatePath] = useState<string | null>(null);
+  const [certificateAnalysis, setCertificateAnalysis] = useState<any>(null);
+  const [certificateUploading, setCertificateUploading] = useState(false);
+  const [certificateAnalyzing, setCertificateAnalyzing] = useState(false);
+  const certInputRef = useRef<HTMLInputElement>(null);
+
   const { toast } = useToast();
   const pricingField = getPricingField(event.custom_fields);
   const hasEventVariablePricing = hasVariablePricing(event.custom_fields);
@@ -103,6 +117,12 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
   const displayPriceLabel = hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
   const defaultPayment = event.payment_methods[0] || "stripe";
+
+  // Determine if current discipline requires certificate
+  const routeField = getRouteSelectionField(event.custom_fields);
+  const currentDiscipline = preselectedDiscipline || (routeField ? customFieldValues[routeField.key] : undefined);
+  const requiresCertificate = optionRequiresCertificate(routeField, currentDiscipline);
+  const certificateRequired = requiresCertificate && !tesseraSportiva.trim();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -153,6 +173,72 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
     }
   }, [identificationType, watchedCF]);
 
+  // Reset certificate when discipline changes
+  useEffect(() => {
+    setCertificateFile(null);
+    setCertificatePath(null);
+    setCertificateAnalysis(null);
+    setTesseraSportiva("");
+  }, [currentDiscipline]);
+
+  // Upload and analyze certificate
+  const handleCertificateUpload = async (file: File) => {
+    setCertificateFile(file);
+    setCertificateUploading(true);
+    setCertificateAnalysis(null);
+
+    try {
+      const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "")}`;
+      const { error: uploadError } = await supabase.storage.from("medical-certificates").upload(path, file);
+      if (uploadError) throw uploadError;
+      setCertificatePath(path);
+
+      // Try AI analysis (non-blocking)
+      setCertificateAnalyzing(true);
+      try {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.readAsDataURL(file);
+        });
+
+        const { data: analysis } = await supabase.functions.invoke("analyze-certificate", {
+          body: {
+            fileBase64: base64,
+            fileName: file.name,
+            mimeType: file.type,
+            expectedDiscipline: "Atletica Leggera / Trail running",
+          },
+        });
+
+        if (analysis && !analysis.error) {
+          setCertificateAnalysis(analysis);
+        }
+      } catch {
+        // Analysis failure is non-blocking
+      } finally {
+        setCertificateAnalyzing(false);
+      }
+    } catch (err: any) {
+      toast({ title: "Errore upload", description: err.message, variant: "destructive" });
+      setCertificateFile(null);
+    } finally {
+      setCertificateUploading(false);
+    }
+  };
+
+  const isCertificateValidOnDate = () => {
+    if (!certificateAnalysis?.expiry_date || !event.data_evento) return null;
+    try {
+      return new Date(certificateAnalysis.expiry_date) >= new Date(event.data_evento);
+    } catch {
+      return null;
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     for (const field of event.custom_fields) {
       if (field.required && !customFieldValues[field.key]) {
@@ -160,6 +246,25 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
         return;
       }
     }
+
+    // Validate certificate requirement
+    if (certificateRequired && !certificatePath) {
+      toast({ title: "Errore", description: "Il certificato medico è obbligatorio senza tessera sportiva", variant: "destructive" });
+      return;
+    }
+
+    // Check spots
+    if (currentDiscipline && routeField) {
+      const maxSpots = getOptionMaxSpots(routeField, currentDiscipline);
+      if (maxSpots !== null) {
+        const used = spotCounts?.[currentDiscipline] || 0;
+        if (used >= maxSpots) {
+          toast({ title: "Errore", description: "Posti esauriti per questa disciplina", variant: "destructive" });
+          return;
+        }
+      }
+    }
+
     if (!returningUserData && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       toast({ title: "Errore", description: "Email non valida", variant: "destructive" });
       return;
@@ -169,12 +274,28 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
     const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
     const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
-    const payload = {
+    const customData = { ...customFieldValues };
+    if (tesseraSportiva.trim()) {
+      customData.tessera_sportiva = tesseraSportiva.trim();
+    }
+
+    const payload: any = {
       nome: data.nome, cognome: data.cognome, email: realEmail, telefono: realPhone,
       identificationType: data.identificationType,
       birthDate: data.birthDate || null, birthPlace: data.birthPlace || null,
-      codiceFiscale: realCF, eventId: event.id, customData: customFieldValues,
+      codiceFiscale: realCF, eventId: event.id, customData,
     };
+
+    if (certificatePath) {
+      payload.certificatePaths = [certificatePath];
+      if (certificateAnalysis) {
+        payload.certificateAnalyses = [{
+          expiryDate: certificateAnalysis.expiry_date || null,
+          disciplines: certificateAnalysis.disciplines || [],
+          warning: certificateAnalysis.warning || null,
+        }];
+      }
+    }
 
     try {
       if (data.paymentMethod === "stripe") {
@@ -356,7 +477,6 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
 
                 {/* Custom fields */}
                 {event.custom_fields.filter((cf) => {
-                  // Hide the discipline field if preselected from EventPage
                   if (preselectedDiscipline && cf.type === "select") {
                     const rf = getRouteSelectionField(event.custom_fields);
                     if (rf && rf.key === cf.key) return false;
@@ -374,6 +494,143 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
                     }).map((cf) => (
                       <CustomFieldInput key={cf.key} field={cf} value={customFieldValues[cf.key] || ""} onChange={(v) => setCustomFieldValues((prev) => ({ ...prev, [cf.key]: v }))} />
                     ))}
+                  </div>
+                )}
+
+                {/* Tessera sportiva & certificate section */}
+                {requiresCertificate && (
+                  <div className="space-y-4 border-t border-border/50 pt-5">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">Tessera sportiva</Label>
+                      <Input
+                        placeholder="Inserisci il numero di tessera (opzionale)"
+                        value={tesseraSportiva}
+                        onChange={(e) => setTesseraSportiva(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Se hai una tessera sportiva valida il certificato medico diventa facoltativo.
+                      </p>
+                      <Link
+                        to="/tesseramento-2026"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                      >
+                        Non hai una tessera? Tesserati con Ginepro
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">
+                        Certificato medico sportivo {certificateRequired ? "*" : "(facoltativo)"}
+                      </Label>
+                      {!certificateFile ? (
+                        <>
+                          <input
+                            ref={certInputRef}
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleCertificateUpload(file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => certInputRef.current?.click()}
+                            disabled={certificateUploading}
+                          >
+                            {certificateUploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            Carica certificato
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
+                            <span className="text-sm text-foreground truncate flex-1">{certificateFile.name}</span>
+                            {certificateAnalyzing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs text-destructive"
+                              onClick={() => {
+                                setCertificateFile(null);
+                                setCertificatePath(null);
+                                setCertificateAnalysis(null);
+                              }}
+                            >
+                              Rimuovi
+                            </Button>
+                          </div>
+
+                          {certificateAnalysis && !certificateAnalyzing && (
+                            <div className={`flex items-start gap-2 rounded-lg p-3 text-sm ${
+                              isCertificateValidOnDate() === true
+                                ? "bg-green-500/10 border border-green-500/20"
+                                : isCertificateValidOnDate() === false
+                                  ? "bg-orange-500/10 border border-orange-500/20"
+                                  : "bg-muted/50 border border-border"
+                            }`}>
+                              {isCertificateValidOnDate() === true ? (
+                                <ShieldCheck className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+                              )}
+                              <div className="space-y-0.5">
+                                {certificateAnalysis.expiry_date && (
+                                  <p className="text-foreground">
+                                    Scadenza: <strong>{new Date(certificateAnalysis.expiry_date).toLocaleDateString("it-IT")}</strong>
+                                    {isCertificateValidOnDate() === true && " ✓ valido il giorno della gara"}
+                                    {isCertificateValidOnDate() === false && " — potrebbe essere scaduto il giorno della gara"}
+                                  </p>
+                                )}
+                                {certificateAnalysis.disciplines?.length > 0 && (
+                                  <p className="text-muted-foreground">
+                                    Discipline: {certificateAnalysis.disciplines.join(", ")}
+                                  </p>
+                                )}
+                                {certificateAnalysis.warning && (
+                                  <p className="text-orange-600 text-xs">{certificateAnalysis.warning}</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!tesseraSportiva.trim() && (
+                        <p className="text-xs text-muted-foreground">
+                          Senza tessera sportiva, il certificato medico è obbligatorio.
+                        </p>
+                      )}
+                      {tesseraSportiva.trim() && (
+                        <p className="text-xs text-muted-foreground">
+                          Con tessera sportiva, il certificato è facoltativo ma consigliato.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* CTA tesseramento for non-certificate disciplines (Walk) */}
+                {currentDiscipline && !requiresCertificate && (
+                  <div className="bg-primary/5 border border-primary/15 rounded-lg p-4">
+                    <p className="text-sm text-foreground mb-1">
+                      🌲 Vuoi diventare socio Ginepro?
+                    </p>
+                    <Link
+                      to="/tesseramento-2026"
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium"
+                    >
+                      Scopri il tesseramento
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 )}
 
@@ -395,7 +652,7 @@ const RegistrationForm = ({ event, preselectedDiscipline }: RegistrationFormProp
                   )} />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting}>
+                <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting || certificateUploading}>
                   {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Elaborazione...</>) : `Iscriviti e Paga — ${displayPriceLabel}`}
                 </Button>
               </form>

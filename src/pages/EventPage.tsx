@@ -13,7 +13,12 @@ import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
-import { getStartingPrice, hasVariablePricing, getRouteSelectionField, isOptionCoppia, hasCoppiaOptions, getOptionPrice } from "@/lib/event-pricing";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  getStartingPrice, hasVariablePricing, getRouteSelectionField,
+  isOptionCoppia, hasCoppiaOptions, getOptionPrice, getOptionMaxSpots, hasMaxSpotsOptions,
+} from "@/lib/event-pricing";
+import { useQuery } from "@tanstack/react-query";
 
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,9 +33,35 @@ const EventPage = () => {
   }, [event?.nome]);
 
   const routeField = event ? getRouteSelectionField(event.custom_fields) : null;
+  const showMaxSpots = event ? hasMaxSpotsOptions(event.custom_fields) : false;
+  const showDisciplineSelectorForSpots = showMaxSpots && routeField && !hasCoppiaOptions(event!.custom_fields);
+
+  // Fetch spot counts for options with max_spots
+  const { data: spotCounts } = useQuery({
+    queryKey: ["spot-counts", event?.id],
+    queryFn: async () => {
+      if (!event || !routeField) return {};
+      const { data: regs } = await supabase
+        .from("registrations")
+        .select("custom_data")
+        .eq("event_id", event.id)
+        .eq("payment_status", "completed");
+
+      const counts: Record<string, number> = {};
+      if (regs) {
+        for (const r of regs) {
+          const disc = (r.custom_data as any)?.[routeField.key];
+          if (disc) counts[disc] = (counts[disc] || 0) + 1;
+        }
+      }
+      return counts;
+    },
+    enabled: !!event && showMaxSpots,
+    staleTime: 30_000,
+  });
 
   useEffect(() => {
-    if (routeField?.options?.length) {
+    if (routeField?.options?.length && !selectedDiscipline) {
       setSelectedDiscipline(routeField.options[0]);
     }
   }, [routeField?.options?.join("|")]);
@@ -60,12 +91,24 @@ const EventPage = () => {
   const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
   const allCoppia = event.is_coppia && !hasMixedCoppia;
   const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
-  const showDisciplineSelector = hasMixedCoppia && routeField;
+  const showDisciplineSelector = (hasMixedCoppia || showDisciplineSelectorForSpots) && routeField;
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
   const firstWord = nameParts[0];
   const restWords = nameParts.slice(1).join(" ");
+
+  const getRemainingSpots = (option: string): number | null => {
+    const maxSpots = getOptionMaxSpots(routeField, option);
+    if (maxSpots === null) return null;
+    const used = spotCounts?.[option] || 0;
+    return Math.max(0, maxSpots - used);
+  };
+
+  const isOptionSoldOut = (option: string): boolean => {
+    const remaining = getRemainingSpots(option);
+    return remaining !== null && remaining <= 0;
+  };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -227,24 +270,32 @@ const EventPage = () => {
         <TesseramentoForm event={event} />
       ) : (
         <>
-          {/* Discipline selector for mixed coppia events */}
+          {/* Discipline selector */}
           {showDisciplineSelector && routeField && (
             <section className="py-8 px-4">
               <div className="max-w-xl mx-auto">
                 <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
                   <CardContent className="pt-6 space-y-3">
                     <Label className="text-sm font-medium">{routeField.label} *</Label>
-                    <RadioGroup value={selectedDiscipline} onValueChange={setSelectedDiscipline} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <RadioGroup value={selectedDiscipline} onValueChange={(v) => { if (!isOptionSoldOut(v)) setSelectedDiscipline(v); }} className="grid grid-cols-1 gap-3">
                       {routeField.options.map((opt) => {
                         const price = getOptionPrice(routeField, opt);
                         const coppia = isOptionCoppia(routeField, opt);
+                        const remaining = getRemainingSpots(opt);
+                        const soldOut = isOptionSoldOut(opt);
                         return (
                           <label
                             key={opt}
                             htmlFor={`disc-ev-${opt}`}
-                            className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-all ${selectedDiscipline === opt ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                            className={`flex items-center gap-3 border rounded-lg p-4 transition-all ${
+                              soldOut
+                                ? "border-border/30 bg-muted/30 cursor-not-allowed opacity-60"
+                                : selectedDiscipline === opt
+                                  ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
+                                  : "border-border hover:border-primary/40 cursor-pointer"
+                            }`}
                           >
-                            <RadioGroupItem value={opt} id={`disc-ev-${opt}`} />
+                            <RadioGroupItem value={opt} id={`disc-ev-${opt}`} disabled={soldOut} />
                             <div className="flex-1">
                               <span className="text-sm font-medium">{opt}</span>
                               {coppia && <span className="ml-1.5 text-xs text-secondary font-medium">(in coppia)</span>}
@@ -254,6 +305,17 @@ const EventPage = () => {
                                 </span>
                               )}
                             </div>
+                            {remaining !== null && (
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                soldOut
+                                  ? "bg-destructive/10 text-destructive"
+                                  : remaining <= 5
+                                    ? "bg-orange-500/10 text-orange-600"
+                                    : "bg-green-500/10 text-green-600"
+                              }`}>
+                                {soldOut ? "Esaurito" : `${remaining} posti`}
+                              </span>
+                            )}
                           </label>
                         );
                       })}
@@ -266,7 +328,11 @@ const EventPage = () => {
           {isCoppiaForSelected ? (
             <PairRegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
           ) : (
-            <RegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+            <RegistrationForm
+              event={event}
+              preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
+              spotCounts={spotCounts}
+            />
           )}
         </>
       )}
