@@ -69,6 +69,9 @@ serve(async (req) => {
 
     if (eventError || !event) throw new Error("Evento non trovato");
 
+    // Validate spots and certificate
+    await validateSpotsAndCertificate(supabaseAdmin, event, customData || {}, certificatePaths);
+
     // For tesseramento events, use membership type pricing
     const MEMBERSHIP_PRICES: Record<string, number> = {
       "fidal-running": 4000, "fidal-running-uisp-bike": 8000,
