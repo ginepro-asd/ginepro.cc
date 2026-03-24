@@ -428,6 +428,58 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (action === "create_event_email") {
+      const { event_id, slug, subject, body_html, trigger_type, orario_map } = body;
+      if (!event_id || !slug || !subject) {
+        return new Response(JSON.stringify({ error: "event_id, slug e subject sono obbligatori" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data, error } = await supabase.from("event_emails").insert({
+        event_id, slug, subject, body_html: body_html || null,
+        trigger_type: trigger_type || "manual", orario_map: orario_map || {},
+      }).select().single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, event_email: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "update_event_email") {
+      const { event_email_id, slug, subject, body_html, trigger_type, orario_map } = body;
+      if (!event_email_id) {
+        return new Response(JSON.stringify({ error: "event_email_id è obbligatorio" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const updates: Record<string, any> = {};
+      if (slug !== undefined) updates.slug = slug;
+      if (subject !== undefined) updates.subject = subject;
+      if (body_html !== undefined) updates.body_html = body_html;
+      if (trigger_type !== undefined) updates.trigger_type = trigger_type;
+      if (orario_map !== undefined) updates.orario_map = orario_map;
+
+      const { data, error } = await supabase.from("event_emails").update(updates).eq("id", event_email_id).select().single();
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, event_email: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "delete_event_email") {
+      const { event_email_id } = body;
+      if (!event_email_id) {
+        return new Response(JSON.stringify({ error: "event_email_id è obbligatorio" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error } = await supabase.from("event_emails").delete().eq("id", event_email_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Azione non valida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
