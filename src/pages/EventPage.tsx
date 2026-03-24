@@ -245,10 +245,11 @@ const EventPage = () => {
           </div>
         </section>
       )}
+      <span id="iscrizione" />
 
       {/* Registration Form or External Link */}
       {event.external_url ? (
-        <section id="iscrizione" className="relative py-16 sm:py-24 px-4">
+        <section className="relative py-16 sm:py-24 px-4">
           <div className="max-w-xl mx-auto text-center">
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4 text-foreground">Iscrizione</h2>
             <p className="text-muted-foreground mb-8">
