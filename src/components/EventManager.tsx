@@ -655,6 +655,55 @@ const EventManager = ({ password }: EventManagerProps) => {
                                   />
                                   <Label className="text-xs text-muted-foreground">Iscrizione in coppia</Label>
                                 </div>
+                                <div className="space-y-1.5 mt-1">
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-xs text-muted-foreground w-20">Max posti</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="∞"
+                                      className="h-7 text-xs w-20"
+                                      value={field.option_max_spots?.[option] ?? ""}
+                                      onChange={(e) =>
+                                        setEditFields((prev) => ({
+                                          ...prev,
+                                          custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                            customField.key !== field.key
+                                              ? customField
+                                              : {
+                                                  ...customField,
+                                                  option_max_spots: {
+                                                    ...(customField.option_max_spots || {}),
+                                                    [option]: e.target.value ? parseInt(e.target.value) : undefined,
+                                                  },
+                                                },
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={field.option_requires_certificate?.[option] ?? false}
+                                      onCheckedChange={(v) =>
+                                        setEditFields((prev) => ({
+                                          ...prev,
+                                          custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                            customField.key !== field.key
+                                              ? customField
+                                              : {
+                                                  ...customField,
+                                                  option_requires_certificate: {
+                                                    ...(customField.option_requires_certificate || {}),
+                                                    [option]: v,
+                                                  },
+                                                },
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                    <Label className="text-xs text-muted-foreground">Richiede certificato</Label>
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
