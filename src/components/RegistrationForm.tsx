@@ -173,6 +173,14 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
     }
   }, [identificationType, watchedCF]);
 
+  // Sync preselectedDiscipline into customFieldValues when it changes
+  useEffect(() => {
+    if (preselectedDiscipline) {
+      const rf = getPricingField(event.custom_fields) || getRouteSelectionField(event.custom_fields);
+      if (rf) setCustomFieldValues((prev) => ({ ...prev, [rf.key]: preselectedDiscipline }));
+    }
+  }, [preselectedDiscipline]);
+
   // Reset certificate when discipline changes
   useEffect(() => {
     setCertificateFile(null);
