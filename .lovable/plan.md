@@ -1,52 +1,80 @@
 
 
-## Piano: Gestione completa utenti + pagamento in contanti
+## Piano: Gestione iscrizioni Tredozio Trail 2026
 
-### Obiettivo
-1. Permettere all'admin di modificare **tutti** i campi del partecipante (inclusi `identification_type`, `newsletter`, `photo_url`, `signature_url`, ecc.)
-2. Aggiungere `'contanti'` (cash) come metodo di pagamento valido
-3. Permettere all'admin di creare utenti, iscriverli a eventi e registrare pagamenti in contanti
+Trasformare l'evento da link esterno a gestione interna con 3 discipline, posti limitati, logica tessera/certificato condizionale e analisi AI non bloccante.
 
-### Modifiche
+---
 
-#### 1. Migrazione database
-- Aggiungere `'contanti'` e `'admin'` ai valori consentiti del vincolo `registrations_payment_method_check`
+### 1. Aggiornamento dati evento (database)
 
-```sql
-ALTER TABLE public.registrations DROP CONSTRAINT registrations_payment_method_check;
-ALTER TABLE public.registrations ADD CONSTRAINT registrations_payment_method_check 
-  CHECK (payment_method = ANY (ARRAY['stripe','satispay','paypal','imported','contanti','admin']));
-```
+Aggiornare il record `tredozio-trail-2026`:
+- `external_url` → `null`
+- `prezzo` → `1500`
+- `custom_fields` con disciplina, prezzi, posti e flag certificato
 
-#### 2. Edge Function `update-participant`
-- Estendere `allowedFields` per includere tutti i campi della tabella `participants`: aggiungere `identification_type`, `newsletter`, `photo_url`, `photo_thumb_url`, `signature_url`
-- I campi che non esistono in `registrations` (es. `newsletter`, `photo_url`, `signature_url`) non verranno sincronizzati nelle registrazioni
+### 2. Estendere il tipo `CustomField` (src/hooks/use-event.ts)
 
-#### 3. Edge Function `manage-event` — Nuove azioni
-- **`create_participant`**: Crea un nuovo partecipante con tutti i campi anagrafici
-- **`admin_register`**: Iscrive un partecipante a un evento con `payment_method` a scelta (incluso `'contanti'`) e `payment_status = 'completed'`, bypassando la scadenza. Supporta `custom_data`
-- **`update_registration`**: Aggiorna `payment_status`, `payment_method` e `custom_data` di un'iscrizione esistente
+Aggiungere:
+- `option_max_spots?: Record<string, number>`
+- `option_requires_certificate?: Record<string, boolean>`
 
-#### 4. Frontend Admin.tsx
-- **Dialog modifica utente**: Aggiungere i campi mancanti (`identification_type` come select, `newsletter` come checkbox)
-- **Pulsante "Aggiungi utente"**: Dialog con form completo per creare un nuovo partecipante
-- **Pulsante "Iscrivi a evento"**: Nella modale dettagli utente o nella riga, con select evento + metodo di pagamento (incluso "Contanti") + campi custom opzionali
-- **Pulsante "Aggiungi iscritto"** nella vista per-evento: cerca partecipante esistente o ne crea uno nuovo, poi lo iscrive
+### 3. Conteggio posti e disciplina selector (EventPage.tsx)
 
-#### 5. Deploy
-Redeploy delle edge function `update-participant` e `manage-event`.
+Usare il selettore disciplina già presente in `EventPage.tsx` (quello per mixed coppia) anche per eventi con `option_max_spots`. Per ogni opzione con posti limitati:
+- Query a `registrations` filtrando `event_id`, `payment_status = 'completed'`, contando per `custom_data->>disciplina`
+- Mostrare "X posti rimasti" (verde >5, arancione 1-5, rosso 0)
+- Disabilitare opzioni esaurite
 
-### Dettagli tecnici
+### 4. Logica tessera/certificato nel RegistrationForm
 
-```text
-Flusso "Iscrizione in contanti":
-Admin → Trova/crea utente → "Iscrivi a evento" 
-  → Seleziona evento + "Contanti" come metodo
-  → Iscrizione creata con payment_status=completed, payment_method=contanti
-```
+**Se disciplina con `option_requires_certificate = true` (Short/Long):**
+- Campo "Tessera sportiva" (testo, opzionale)
+- Se tessera compilata → upload certificato **facoltativo** con nota "facoltativo con tessera"
+- Se tessera vuota → upload certificato **obbligatorio**
+- Link: "Non hai una tessera? Tesserati con Ginepro →" → `/tesseramento-2026`
 
-I campi editabili nel dialog di modifica utente saranno:
-- nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, identification_type (select: birth/fiscal/cf), newsletter (checkbox)
+**Se disciplina senza flag (Walk):**
+- Nessun campo tessera/certificato
+- CTA leggera: "Vuoi diventare socio Ginepro? Scopri il tesseramento →"
 
-I campi `photo_url`, `signature_url` restano modificabili solo via API (non ha senso un campo testo per URL di foto nella UI).
+**Upload certificato:**
+- File caricato su bucket `medical-certificates`
+- Al caricamento, chiamare `analyze-certificate` con `expectedDiscipline` derivata dalla disciplina (discipline valide: "Atletica Leggera", "Trail running" e sinonimi)
+- Mostrare spinner durante analisi
+- Risultato: badge verde se scadenza valida il giorno gara, warning arancione se non leggibile/scaduto — **mai bloccante**
+- Passare `certificatePaths` e `certificateAnalyses` al payload di checkout
+
+### 5. Validazione backend (Edge Functions)
+
+In `create-checkout`, `create-satispay-payment`, `create-paypal-order`:
+
+**Verifica posti:**
+- Contare registrazioni `completed` per la disciplina selezionata (`custom_data->>'disciplina'`)
+- Confrontare con `option_max_spots` dal campo custom dell'evento
+- Rifiutare con errore se esaurito
+
+**Verifica certificato:**
+- Se l'opzione ha `option_requires_certificate` e `customData.tessera_sportiva` è vuoto → `certificatePaths` deve essere presente, altrimenti rifiutare
+- Salvare `tessera_sportiva` in `customData`
+
+### 6. EventManager (admin)
+
+Aggiungere nell'editor custom fields la possibilità di configurare `option_max_spots` e `option_requires_certificate` per le opzioni di un campo select, per riutilizzabilità futura.
+
+---
+
+### File coinvolti
+
+| File | Modifica |
+|------|----------|
+| DB (insert tool) | Update evento tredozio-trail-2026 |
+| `src/hooks/use-event.ts` | Nuovi campi in `CustomField` |
+| `src/pages/EventPage.tsx` | Selettore disciplina con posti rimasti |
+| `src/components/RegistrationForm.tsx` | Tessera sportiva, upload certificato con analisi AI, CTA tesseramento |
+| `src/lib/event-pricing.ts` | Helper `getOptionMaxSpots`, `optionRequiresCertificate` |
+| `supabase/functions/create-checkout/index.ts` | Verifica posti + certificato |
+| `supabase/functions/create-satispay-payment/index.ts` | Verifica posti + certificato |
+| `supabase/functions/create-paypal-order/index.ts` | Verifica posti + certificato |
+| `src/components/EventManager.tsx` | UI per configurare max spots e requires certificate |
 
