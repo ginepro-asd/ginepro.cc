@@ -21,7 +21,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Send, Eye, Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Eye, Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp, Info, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface EventEmail {
   id: string;
