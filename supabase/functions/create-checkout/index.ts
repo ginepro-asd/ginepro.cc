@@ -38,7 +38,7 @@ serve(async (req) => {
     // Fetch event for pricing
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, custom_fields")
+      .select("id, nome, prezzo, slug, custom_fields, service_fee")
       .eq("id", eventId)
       .single();
 
@@ -57,6 +57,7 @@ serve(async (req) => {
     const eventPrice = (isTesseramento && membershipType && MEMBERSHIP_PRICES[membershipType])
       ? MEMBERSHIP_PRICES[membershipType]
       : resolveEventPrice(event.prezzo, event.custom_fields, customData || {});
+    const totalPrice = eventPrice + (event.service_fee || 0);
 
     // Upsert participant
     const participantData: any = {
@@ -133,7 +134,7 @@ serve(async (req) => {
           price_data: {
             currency: "eur",
             product_data: { name: `${event.nome}` },
-            unit_amount: eventPrice,
+            unit_amount: totalPrice,
           },
           quantity: 1,
         },

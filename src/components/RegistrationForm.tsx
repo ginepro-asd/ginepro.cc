@@ -113,7 +113,8 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   const selectedPrice = getSelectedPrice(event.prezzo, event.custom_fields, customFieldValues);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
   const selectedPricingOption = pricingField ? customFieldValues[pricingField.key] : undefined;
-  const displayPrice = hasEventVariablePricing && !selectedPricingOption ? startingPrice : selectedPrice;
+  const serviceFee = event.service_fee || 0;
+  const displayPrice = hasEventVariablePricing && !selectedPricingOption ? startingPrice + serviceFee : selectedPrice + serviceFee;
   const displayPriceLabel = hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
   const defaultPayment = event.payment_methods[0] || "stripe";
@@ -353,7 +354,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
             registrationId={satispayState.registrationId}
             onCancel={() => setSatispayState(null)}
             eventSlug={event.slug}
-            price={selectedPrice}
+            price={selectedPrice + serviceFee}
           />
         </div>
       </section>
@@ -663,6 +664,11 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting || certificateUploading}>
                   {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Elaborazione...</>) : `Iscriviti e Paga — ${displayPriceLabel}`}
                 </Button>
+                {serviceFee > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-1.5">
+                    di cui {formatPrice(serviceFee)} commissioni servizio idchronos
+                  </p>
+                )}
               </form>
             </Form>
           </CardContent>

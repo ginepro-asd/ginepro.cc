@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN service_fee integer NOT NULL DEFAULT 0;

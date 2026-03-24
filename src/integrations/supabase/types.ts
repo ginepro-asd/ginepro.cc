@@ -36,6 +36,7 @@ export type Database = {
           prezzo: number
           regulation_url: string | null
           scadenza_iscrizioni: string | null
+          service_fee: number
           slug: string
           updated_at: string
           visibile_in_landing: boolean
@@ -61,6 +62,7 @@ export type Database = {
           prezzo?: number
           regulation_url?: string | null
           scadenza_iscrizioni?: string | null
+          service_fee?: number
           slug: string
           updated_at?: string
           visibile_in_landing?: boolean
@@ -86,6 +88,7 @@ export type Database = {
           prezzo?: number
           regulation_url?: string | null
           scadenza_iscrizioni?: string | null
+          service_fee?: number
           slug?: string
           updated_at?: string
           visibile_in_landing?: boolean
