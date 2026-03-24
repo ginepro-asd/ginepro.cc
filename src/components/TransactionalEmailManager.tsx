@@ -290,6 +290,42 @@ export default function TransactionalEmailManager({ password }: Props) {
 
       {selectedEventId && !isEditing && (
         <>
+          {/* Fallback indicator for on_payment email */}
+          {!loading && (() => {
+            const hasOnPayment = templates.some(t => t.trigger_type === "on_payment");
+            if (!hasOnPayment) {
+              return (
+                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Nessuna email di conferma configurata. Viene utilizzato il <strong>template di sistema predefinito</strong>.
+                    </span>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => {
+                      setEditTemplate(null);
+                      setEditFields({
+                        slug: "conferma-iscrizione",
+                        subject: "Iscrizione confermata — {evento}",
+                        trigger_type: "on_payment",
+                        body_html: DEFAULT_CONFIRMATION_HTML,
+                      });
+                      setOrarioEntries([]);
+                      setShowNew(true);
+                    }}>
+                      <Plus className="h-3 w-3 mr-1" /> Crea template conferma
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return (
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Email di conferma configurata
+              </div>
+            );
+          })()}
+
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-foreground">Email template</h3>
             <Button size="sm" onClick={openNew}>
