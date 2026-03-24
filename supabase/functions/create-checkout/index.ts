@@ -38,7 +38,7 @@ serve(async (req) => {
     // Fetch event for pricing
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, custom_fields")
+      .select("id, nome, prezzo, slug, custom_fields, service_fee")
       .eq("id", eventId)
       .single();
 
