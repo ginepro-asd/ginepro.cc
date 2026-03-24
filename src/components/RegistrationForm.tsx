@@ -354,7 +354,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
             registrationId={satispayState.registrationId}
             onCancel={() => setSatispayState(null)}
             eventSlug={event.slug}
-            price={selectedPrice}
+            price={selectedPrice + serviceFee}
           />
         </div>
       </section>
