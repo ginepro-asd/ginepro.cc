@@ -21,7 +21,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Send, Eye, Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Eye, Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp, Info, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface EventEmail {
   id: string;
@@ -47,6 +48,55 @@ interface EventEmailSend {
 interface Props {
   password: string;
 }
+
+const DEFAULT_CONFIRMATION_HTML = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#1a3a3a,#2d5a5a);padding:32px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:0.5px;">{evento}</h1>
+            <p style="margin:8px 0 0;color:#f0a090;font-size:14px;font-weight:600;">by GINEPRO</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;">
+            <h2 style="margin:0 0 8px;color:#1a3a3a;font-size:20px;">Iscrizione confermata! ✅</h2>
+            <p style="margin:0 0 24px;color:#666;font-size:15px;line-height:1.6;">
+              Ciao <strong>{nome}</strong>, la tua iscrizione a <strong>{evento}</strong> è stata completata con successo.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafa;border-radius:8px;border:1px solid #e8eeee;">
+              <tr><td style="padding:20px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:6px 0;color:#888;font-size:13px;width:140px;">Nome</td>
+                    <td style="padding:6px 0;color:#1a3a3a;font-size:14px;font-weight:600;">{nome} {cognome}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 0;color:#888;font-size:13px;">Email</td>
+                    <td style="padding:6px 0;color:#1a3a3a;font-size:14px;">{email}</td>
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+            <p style="margin:24px 0 0;color:#666;font-size:14px;line-height:1.6;">
+              Conserva questa email come ricevuta della tua iscrizione. Ti contatteremo con ulteriori dettagli sull'evento.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 40px;background-color:#f8fafa;border-top:1px solid #e8eeee;text-align:center;">
+            <p style="margin:0;color:#999;font-size:12px;">© 2026 GINEPRO ASD</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 
 export default function TransactionalEmailManager({ password }: Props) {
   const [events, setEvents] = useState<any[]>([]);
@@ -289,6 +339,42 @@ export default function TransactionalEmailManager({ password }: Props) {
 
       {selectedEventId && !isEditing && (
         <>
+          {/* Fallback indicator for on_payment email */}
+          {!loading && (() => {
+            const hasOnPayment = templates.some(t => t.trigger_type === "on_payment");
+            if (!hasOnPayment) {
+              return (
+                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Nessuna email di conferma configurata. Viene utilizzato il <strong>template di sistema predefinito</strong>.
+                    </span>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => {
+                      setEditTemplate(null);
+                      setEditFields({
+                        slug: "conferma-iscrizione",
+                        subject: "Iscrizione confermata — {evento}",
+                        trigger_type: "on_payment",
+                        body_html: DEFAULT_CONFIRMATION_HTML,
+                      });
+                      setOrarioEntries([]);
+                      setShowNew(true);
+                    }}>
+                      <Plus className="h-3 w-3 mr-1" /> Crea template conferma
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              );
+            }
+            return (
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Email di conferma configurata
+              </div>
+            );
+          })()}
+
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-foreground">Email template</h3>
             <Button size="sm" onClick={openNew}>
