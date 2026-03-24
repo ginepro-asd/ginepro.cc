@@ -23,6 +23,7 @@ export interface EventData {
   location_label: string | null;
   external_url: string | null;
   regulation_url: string | null;
+  service_fee: number;
 }
 
 export interface CustomField {
