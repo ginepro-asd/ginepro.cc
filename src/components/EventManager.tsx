@@ -75,9 +75,27 @@ const sanitizeCustomFields = (customFields: CustomField[]): CustomField[] =>
         .filter((entry): entry is [string, number] => entry !== null),
     );
 
+    // Sanitize option_max_spots: keep only valid numbers
+    const maxSpots = field.option_max_spots
+      ? Object.fromEntries(
+          Object.entries(field.option_max_spots)
+            .filter(([, v]) => typeof v === "number" && v > 0)
+        )
+      : undefined;
+
+    // Sanitize option_requires_certificate: keep only true values
+    const reqCert = field.option_requires_certificate
+      ? Object.fromEntries(
+          Object.entries(field.option_requires_certificate)
+            .filter(([, v]) => v === true)
+        )
+      : undefined;
+
     return {
       ...field,
       option_prices: Object.keys(optionPrices).length > 0 ? optionPrices : undefined,
+      option_max_spots: maxSpots && Object.keys(maxSpots).length > 0 ? maxSpots : undefined,
+      option_requires_certificate: reqCert && Object.keys(reqCert).length > 0 ? reqCert : undefined,
     };
   });
 
