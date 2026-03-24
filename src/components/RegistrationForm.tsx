@@ -113,7 +113,8 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   const selectedPrice = getSelectedPrice(event.prezzo, event.custom_fields, customFieldValues);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
   const selectedPricingOption = pricingField ? customFieldValues[pricingField.key] : undefined;
-  const displayPrice = hasEventVariablePricing && !selectedPricingOption ? startingPrice : selectedPrice;
+  const serviceFee = event.service_fee || 0;
+  const displayPrice = hasEventVariablePricing && !selectedPricingOption ? startingPrice + serviceFee : selectedPrice + serviceFee;
   const displayPriceLabel = hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
   const defaultPayment = event.payment_methods[0] || "stripe";
