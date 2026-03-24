@@ -11,6 +11,7 @@ import { Lock, Download, FileSpreadsheet, Loader2, Eye, EyeOff, Upload, Info, Ch
 import AdminChatSidebar from "@/components/AdminChatSidebar";
 import EventManager from "@/components/EventManager";
 import NewsletterManager from "@/components/NewsletterManager";
+import TransactionalEmailManager from "@/components/TransactionalEmailManager";
 import PhotoAvatar from "@/components/PhotoAvatar";
 import FidalDialog from "@/components/FidalDialog";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
@@ -132,7 +133,7 @@ const Admin = () => {
   const [fidalParticipant, setFidalParticipant] = useState<Participant | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "registration" | "participant"; id: string; label: string; regCount?: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter">("iscrizioni");
+  const [adminTab, setAdminTab] = useState<"iscrizioni" | "eventi" | "newsletter" | "email">("iscrizioni");
   // New user / register dialogs
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
   const [newUserFields, setNewUserFields] = useState<Record<string, any>>({ identification_type: "birth", newsletter: true });
@@ -748,6 +749,17 @@ const Admin = () => {
               <Mail className="h-3.5 w-3.5" />
               Newsletter
             </button>
+            <button
+              onClick={() => setAdminTab("email")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                adminTab === "email"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Email
+            </button>
           </div>
         )}
 
@@ -755,6 +767,8 @@ const Admin = () => {
           <EventManager password={password} />
         ) : adminTab === "newsletter" && isGlobal ? (
           <NewsletterManager password={password} />
+        ) : adminTab === "email" && isGlobal ? (
+          <TransactionalEmailManager password={password} />
         ) : (
         <>
 
