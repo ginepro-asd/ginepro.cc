@@ -33,6 +33,8 @@ export interface CustomField {
   options?: string[];
   option_prices?: Record<string, number | string>;
   option_coppia?: Record<string, boolean>;
+  option_max_spots?: Record<string, number>;
+  option_requires_certificate?: Record<string, boolean>;
   placeholder?: string;
 }
 
