@@ -1573,6 +1573,7 @@ const Admin = () => {
           password={password}
           eventId={event?.id}
           eventName={event?.nome}
+          eventCustomFields={event?.custom_fields}
           onSuccess={authenticate}
         />
 
