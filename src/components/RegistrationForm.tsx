@@ -909,7 +909,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 </Button>
                 {serviceFee > 0 && (
                   <p className="text-xs text-muted-foreground text-center mt-1.5">
-                    di cui {formatPrice(serviceFee)} commissioni di servizio
+                    di cui {formatPrice(serviceFee)} commissioni di servizio.
                   </p>
                 )}
               </form>
