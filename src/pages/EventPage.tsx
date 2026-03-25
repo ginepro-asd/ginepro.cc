@@ -91,7 +91,7 @@ const EventPage = () => {
   const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
   const allCoppia = event.is_coppia && !hasMixedCoppia;
   const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
-  const showDisciplineSelector = (hasMixedCoppia || showDisciplineSelectorForSpots) && routeField;
+  const showDisciplineSelector = routeField && (hasMixedCoppia || showDisciplineSelectorForSpots || hasVariablePricing(event!.custom_fields));
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
