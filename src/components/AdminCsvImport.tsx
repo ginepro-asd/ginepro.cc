@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Loader2, Check, AlertTriangle, FileUp } from "lucide-react";
+import { Upload, Check, AlertTriangle, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface CustomField {
+  key: string;
+  label: string;
+  type: "text" | "select" | "file" | "checkbox" | "number";
+  required?: boolean;
+  options?: string[];
+}
 
 const PARTICIPANT_FIELDS: { key: string; label: string; required?: boolean }[] = [
   { key: "nome", label: "Nome", required: true },
@@ -21,12 +30,15 @@ const PARTICIPANT_FIELDS: { key: string; label: string; required?: boolean }[] =
   { key: "birth_place", label: "Luogo di nascita" },
 ];
 
+const CF_PREFIX = "cf:";
+
 interface AdminCsvImportProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   password: string;
   eventId?: string;
   eventName?: string;
+  eventCustomFields?: CustomField[];
   onSuccess: () => void;
 }
 
@@ -59,7 +71,7 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   return { headers, rows };
 }
 
-function autoMapColumns(csvHeaders: string[]): Record<number, string> {
+function autoMapColumns(csvHeaders: string[], customFields: CustomField[]): Record<number, string> {
   const mapping: Record<number, string> = {};
   const aliases: Record<string, string[]> = {
     nome: ["nome", "name", "first_name", "firstname", "first name"],
@@ -70,6 +82,11 @@ function autoMapColumns(csvHeaders: string[]): Record<number, string> {
     birth_date: ["birth_date", "data_nascita", "data di nascita", "birthdate", "date of birth", "dob"],
     birth_place: ["birth_place", "luogo_nascita", "luogo di nascita", "birthplace", "place of birth"],
   };
+
+  // Add custom field aliases
+  for (const cf of customFields) {
+    aliases[CF_PREFIX + cf.key] = [cf.key.toLowerCase(), cf.label.toLowerCase()];
+  }
 
   csvHeaders.forEach((h, idx) => {
     const lower = h.toLowerCase().trim();
@@ -83,9 +100,15 @@ function autoMapColumns(csvHeaders: string[]): Record<number, string> {
   return mapping;
 }
 
-const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSuccess }: AdminCsvImportProps) => {
+const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, eventCustomFields, onSuccess }: AdminCsvImportProps) => {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Filter custom fields to mappable types (exclude file)
+  const mappableCustomFields = useMemo(() =>
+    (eventCustomFields || []).filter(f => f.type !== "file"),
+    [eventCustomFields]
+  );
 
   const [step, setStep] = useState<"upload" | "map" | "importing" | "done">("upload");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
@@ -100,6 +123,23 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
   const [importResults, setImportResults] = useState<{ created: number; skipped: number; registered: number; errors: string[] }>({
     created: 0, skipped: 0, registered: 0, errors: [],
   });
+
+  // All mappable fields: participant + custom
+  const allFields = useMemo(() => {
+    const fields: { key: string; label: string; required?: boolean; isCustom?: boolean; options?: string[] }[] = [
+      ...PARTICIPANT_FIELDS,
+    ];
+    for (const cf of mappableCustomFields) {
+      fields.push({
+        key: CF_PREFIX + cf.key,
+        label: cf.label + " ⚙",
+        required: cf.required,
+        isCustom: true,
+        options: cf.type === "select" ? cf.options : undefined,
+      });
+    }
+    return fields;
+  }, [mappableCustomFields]);
 
   const reset = () => {
     setStep("upload");
@@ -126,7 +166,7 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
       }
       setCsvHeaders(headers);
       setCsvRows(rows);
-      setColumnMapping(autoMapColumns(headers));
+      setColumnMapping(autoMapColumns(headers, mappableCustomFields));
       setStep("map");
     };
     reader.readAsText(file);
@@ -135,7 +175,6 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
   const setMapping = (colIdx: number, field: string) => {
     setColumnMapping((prev) => {
       const next = { ...prev };
-      // Remove any existing mapping to this field
       if (field !== "_skip") {
         for (const [k, v] of Object.entries(next)) {
           if (v === field) delete next[Number(k)];
@@ -148,15 +187,47 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
   };
 
   const mappedFields = new Set(Object.values(columnMapping));
-  const requiredMissing = PARTICIPANT_FIELDS.filter((f) => f.required && !mappedFields.has(f.key));
-  const canImport = requiredMissing.length === 0;
+  const requiredMissing = allFields.filter((f) => f.required && !mappedFields.has(f.key));
+  
+  // Validation: check select custom fields have valid values
+  const validationErrors = useMemo(() => {
+    if (!registerToEvent) return [];
+    const errors: string[] = [];
+    
+    for (const field of allFields) {
+      if (!field.isCustom || !field.options || !mappedFields.has(field.key)) continue;
+      
+      // Check all rows for invalid values
+      const invalidRows: { row: number; value: string }[] = [];
+      for (let i = 0; i < csvRows.length; i++) {
+        const val = getRowValueFromMapping(csvRows[i], field.key);
+        if (!val) continue; // empty is ok (will be caught by required check later)
+        if (!field.options.some(opt => opt.toLowerCase() === val.toLowerCase())) {
+          invalidRows.push({ row: i + 2, value: val });
+        }
+      }
+      
+      if (invalidRows.length > 0) {
+        const sample = invalidRows.slice(0, 3).map(r => `riga ${r.row}: "${r.value}"`).join(", ");
+        const more = invalidRows.length > 3 ? ` e altri ${invalidRows.length - 3}` : "";
+        errors.push(
+          `${field.label.replace(" ⚙", "")}: valori non validi (${sample}${more}). Valori ammessi: ${field.options.join(", ")}`
+        );
+      }
+    }
+    return errors;
+  }, [allFields, mappedFields, csvRows, registerToEvent]);
 
-  const getRowValue = (row: string[], field: string): string => {
+  const canImport = requiredMissing.length === 0 && validationErrors.length === 0;
+
+  function getRowValueFromMapping(row: string[], field: string): string {
     for (const [colIdx, mappedField] of Object.entries(columnMapping)) {
       if (mappedField === field) return row[Number(colIdx)] || "";
     }
     return "";
-  };
+  }
+
+  const getRowValue = (row: string[], field: string): string => getRowValueFromMapping(row, field);
 
   const startImport = async () => {
     setStep("importing");
@@ -215,6 +286,25 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
 
         // Register to event if requested
         if (registerToEvent && eventId) {
+          // Build custom_data from mapped custom fields
+          const customData: Record<string, any> = {};
+          for (const cf of mappableCustomFields) {
+            const val = getRowValue(row, CF_PREFIX + cf.key).trim();
+            if (val) {
+              // Normalize select values to match exact option casing
+              if (cf.type === "select" && cf.options) {
+                const match = cf.options.find(opt => opt.toLowerCase() === val.toLowerCase());
+                customData[cf.key] = match || val;
+              } else if (cf.type === "checkbox") {
+                customData[cf.key] = ["true", "1", "sì", "si", "yes", "x"].includes(val.toLowerCase());
+              } else if (cf.type === "number") {
+                customData[cf.key] = Number(val) || 0;
+              } else {
+                customData[cf.key] = val;
+              }
+            }
+          }
+
           const { data, error } = await supabase.functions.invoke("manage-event", {
             body: {
               password,
@@ -222,12 +312,11 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
               participant_id: participantId,
               event_id: eventId,
               payment_method: paymentMethod,
-              custom_data: {},
+              custom_data: customData,
             },
           });
           if (error) throw error;
           if (data.error) {
-            // Likely already registered
             results.errors.push(`${nome} ${cognome}: ${data.error}`);
           } else {
             results.registered++;
@@ -298,10 +387,31 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
                             {f.label}{f.required ? " *" : ""}
                           </SelectItem>
                         ))}
+                        {mappableCustomFields.length > 0 && (
+                          <>
+                            <SelectItem value="_separator_cf" disabled>
+                              <span className="text-xs text-muted-foreground font-medium">— Campi evento —</span>
+                            </SelectItem>
+                            {mappableCustomFields.map((cf) => (
+                              <SelectItem
+                                key={CF_PREFIX + cf.key}
+                                value={CF_PREFIX + cf.key}
+                                disabled={mappedFields.has(CF_PREFIX + cf.key) && columnMapping[idx] !== CF_PREFIX + cf.key}
+                              >
+                                {cf.label}{cf.required ? " *" : ""} {cf.type === "select" ? "📋" : ""}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                     {columnMapping[idx] && (
-                      <Badge variant="secondary" className="text-xs">{PARTICIPANT_FIELDS.find(f => f.key === columnMapping[idx])?.label}</Badge>
+                      <Badge
+                        variant={columnMapping[idx].startsWith(CF_PREFIX) ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {allFields.find(f => f.key === columnMapping[idx])?.label?.replace(" ⚙", "") || columnMapping[idx]}
+                      </Badge>
                     )}
                   </div>
                 ))}
@@ -309,10 +419,23 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
               {requiredMissing.length > 0 && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  Campi obbligatori mancanti: {requiredMissing.map(f => f.label).join(", ")}
+                  Campi obbligatori mancanti: {requiredMissing.map(f => f.label.replace(" ⚙", "")).join(", ")}
                 </div>
               )}
             </div>
+
+            {/* Validation errors for select fields */}
+            {validationErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-1">
+                  <p className="font-medium">Validazione fallita — correggi il CSV prima di importare:</p>
+                  {validationErrors.map((err, i) => (
+                    <p key={i} className="text-xs">{err}</p>
+                  ))}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Preview */}
             <div className="space-y-2">
@@ -321,15 +444,15 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, onSu
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {PARTICIPANT_FIELDS.filter(f => mappedFields.has(f.key)).map(f => (
-                        <TableHead key={f.key} className="text-xs whitespace-nowrap">{f.label}</TableHead>
+                      {allFields.filter(f => mappedFields.has(f.key)).map(f => (
+                        <TableHead key={f.key} className="text-xs whitespace-nowrap">{f.label.replace(" ⚙", "")}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {csvRows.slice(0, 5).map((row, i) => (
                       <TableRow key={i}>
-                        {PARTICIPANT_FIELDS.filter(f => mappedFields.has(f.key)).map(f => (
+                        {allFields.filter(f => mappedFields.has(f.key)).map(f => (
                           <TableCell key={f.key} className="text-xs">{getRowValue(row, f.key) || "—"}</TableCell>
                         ))}
                       </TableRow>
