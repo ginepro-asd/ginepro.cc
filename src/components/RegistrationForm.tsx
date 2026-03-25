@@ -11,7 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Upload, ShieldCheck, AlertTriangle, ExternalLink } from "lucide-react";
+import {
+  CreditCard,
+  Smartphone,
+  CircleDollarSign,
+  Lock,
+  Loader2,
+  Calculator,
+  Upload,
+  ShieldCheck,
+  AlertTriangle,
+  ExternalLink,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -31,12 +42,7 @@ import {
   optionRequiresCertificate,
   getOptionMaxSpots,
 } from "@/lib/event-pricing";
-import {
-  COUNTRY_CODES,
-  PAYMENT_LABELS,
-  tryComputeCF,
-  tryInverseCF,
-} from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
@@ -47,29 +53,33 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
 };
 
-const formSchema = z.object({
-  nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-  cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-  email: z.string().trim().min(1, "Campo obbligatorio").max(255),
-  telefono: z.string().trim().min(6, "Numero non valido").max(20),
-  identificationType: z.enum(["birth", "fiscal"]),
-  birthDate: z.string().optional(),
-  birthPlace: z.string().optional(),
-  gender: z.enum(["M", "F"]).optional(),
-  codiceFiscale: z.string().optional(),
-  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
-}).refine(
-  (data) => {
-    if (data.identificationType === "birth") {
-      return data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0 && data.gender;
-    }
-    return data.codiceFiscale && data.codiceFiscale.length >= 11;
-  },
-  {
-    message: "Compila i campi di identificazione",
-    path: ["codiceFiscale"],
-  }
-);
+const formSchema = z
+  .object({
+    nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
+    cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
+    email: z.string().trim().min(1, "Campo obbligatorio").max(255),
+    telefono: z.string().trim().min(6, "Numero non valido").max(20),
+    identificationType: z.enum(["birth", "fiscal"]),
+    birthDate: z.string().optional(),
+    birthPlace: z.string().optional(),
+    gender: z.enum(["M", "F"]).optional(),
+    codiceFiscale: z.string().optional(),
+    paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  })
+  .refine(
+    (data) => {
+      if (data.identificationType === "birth") {
+        return (
+          data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0 && data.gender
+        );
+      }
+      return data.codiceFiscale && data.codiceFiscale.length >= 11;
+    },
+    {
+      message: "Compila i campi di identificazione",
+      path: ["codiceFiscale"],
+    },
+  );
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -96,7 +106,12 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
     return {};
   });
   const [computedCF, setComputedCF] = useState<string | null>(null);
-  const [extractedData, setExtractedData] = useState<{ birthDate: string; birthPlace: string; birthPlaceProvincia: string; gender: "M" | "F" } | null>(null);
+  const [extractedData, setExtractedData] = useState<{
+    birthDate: string;
+    birthPlace: string;
+    birthPlaceProvincia: string;
+    gender: "M" | "F";
+  } | null>(null);
 
   // Tessera sportiva & certificate state
   const [tesseraSportiva, setTesseraSportiva] = useState("");
@@ -114,8 +129,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
   const selectedPricingOption = pricingField ? customFieldValues[pricingField.key] : undefined;
   const serviceFee = event.service_fee || 0;
-  const displayPrice = hasEventVariablePricing && !selectedPricingOption ? startingPrice + serviceFee : selectedPrice + serviceFee;
-  const displayPriceLabel = hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
+  const displayPrice =
+    hasEventVariablePricing && !selectedPricingOption ? startingPrice + serviceFee : selectedPrice + serviceFee;
+  const displayPriceLabel =
+    hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
   const defaultPayment = event.payment_methods[0] || "stripe";
 
@@ -128,9 +145,15 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome: "", cognome: "", email: "", telefono: "",
-      identificationType: "birth", birthDate: "", birthPlace: "",
-      gender: undefined, codiceFiscale: "",
+      nome: "",
+      cognome: "",
+      email: "",
+      telefono: "",
+      identificationType: "birth",
+      birthDate: "",
+      birthPlace: "",
+      gender: undefined,
+      codiceFiscale: "",
       paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
     },
   });
@@ -142,12 +165,14 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   const watchedGender = form.watch("gender");
   const watchedCF = form.watch("codiceFiscale");
 
-  const {
-    matchedUsers, showMatchDialog, setShowMatchDialog,
-    returningUserData, handleSelectMatch, handleDismiss,
-  } = useReturningUser({
-    watchedNome, watchedCognome, form, setCountryCode, setIdentificationType,
-  });
+  const { matchedUsers, showMatchDialog, setShowMatchDialog, returningUserData, handleSelectMatch, handleDismiss } =
+    useReturningUser({
+      watchedNome,
+      watchedCognome,
+      form,
+      setCountryCode,
+      setIdentificationType,
+    });
 
   // Auto-compute CF from birth data
   useEffect(() => {
@@ -156,7 +181,14 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
       setComputedCF(null);
       return;
     }
-    const cf = tryComputeCF(watchedNome, watchedCognome, watchedBirthDate, watchedBirthPlace, watchedGender, bornAbroad);
+    const cf = tryComputeCF(
+      watchedNome,
+      watchedCognome,
+      watchedBirthDate,
+      watchedBirthPlace,
+      watchedGender,
+      bornAbroad,
+    );
     setComputedCF(cf);
     if (cf) form.setValue("codiceFiscale", cf);
   }, [identificationType, watchedNome, watchedCognome, watchedBirthDate, watchedBirthPlace, watchedGender, bornAbroad]);
@@ -164,7 +196,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   // Auto-extract birth data from CF
   useEffect(() => {
     if (identificationType !== "fiscal") return;
-    if (!watchedCF || watchedCF.length < 16) { setExtractedData(null); return; }
+    if (!watchedCF || watchedCF.length < 16) {
+      setExtractedData(null);
+      return;
+    }
     const data = tryInverseCF(watchedCF);
     setExtractedData(data);
     if (data) {
@@ -258,7 +293,11 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
 
     // Validate certificate requirement
     if (certificateRequired && !certificatePath) {
-      toast({ title: "Errore", description: "Il certificato medico è obbligatorio senza tessera sportiva", variant: "destructive" });
+      toast({
+        title: "Errore",
+        description: "Il certificato medico è obbligatorio senza tessera sportiva",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -280,7 +319,9 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
     }
     setIsSubmitting(true);
     const realEmail = returningUserData ? returningUserData.email : data.email;
-    const realPhone = returningUserData ? returningUserData.telefono : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
+    const realPhone = returningUserData
+      ? returningUserData.telefono
+      : `${countryCode}${data.telefono.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "")}`;
     const realCF = returningUserData?.codice_fiscale || data.codiceFiscale || computedCF || null;
 
     const customData = { ...customFieldValues };
@@ -289,20 +330,28 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
     }
 
     const payload: any = {
-      nome: data.nome, cognome: data.cognome, email: realEmail, telefono: realPhone,
+      nome: data.nome,
+      cognome: data.cognome,
+      email: realEmail,
+      telefono: realPhone,
       identificationType: data.identificationType,
-      birthDate: data.birthDate || null, birthPlace: data.birthPlace || null,
-      codiceFiscale: realCF, eventId: event.id, customData,
+      birthDate: data.birthDate || null,
+      birthPlace: data.birthPlace || null,
+      codiceFiscale: realCF,
+      eventId: event.id,
+      customData,
     };
 
     if (certificatePath) {
       payload.certificatePaths = [certificatePath];
       if (certificateAnalysis) {
-        payload.certificateAnalyses = [{
-          expiryDate: certificateAnalysis.expiry_date || null,
-          disciplines: certificateAnalysis.disciplines || [],
-          warning: certificateAnalysis.warning || null,
-        }];
+        payload.certificateAnalyses = [
+          {
+            expiryDate: certificateAnalysis.expiry_date || null,
+            disciplines: certificateAnalysis.disciplines || [],
+            warning: certificateAnalysis.warning || null,
+          },
+        ];
       }
     }
 
@@ -325,7 +374,11 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
         else throw new Error("Nessun URL PayPal ricevuto");
       }
     } catch (err: any) {
-      toast({ title: "Errore", description: err.message || "Errore durante la creazione del pagamento.", variant: "destructive" });
+      toast({
+        title: "Errore",
+        description: err.message || "Errore durante la creazione del pagamento.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -384,30 +437,86 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="nome" render={({ field }) => (
-                    <FormItem><FormLabel>Nome *</FormLabel><FormControl><Input placeholder="Mario" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="cognome" render={({ field }) => (
-                    <FormItem><FormLabel>Cognome *</FormLabel><FormControl><Input placeholder="Rossi" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="nome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Mario" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="cognome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cognome *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Rossi" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>Email *</FormLabel><FormControl><Input type={returningUserData ? "text" : "email"} placeholder="mario@email.com" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type={returningUserData ? "text" : "email"}
+                          placeholder="mario@email.com"
+                          readOnly={!!returningUserData}
+                          className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <FormField control={form.control} name="telefono" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefono *</FormLabel>
-                    <div className="flex gap-2">
-                      <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0">
-                        {COUNTRY_CODES.map((c) => (<option key={c.code} value={c.code}>{c.country} {c.code}</option>))}
-                      </select>
-                      <FormControl><Input type="tel" placeholder="333 1234567" readOnly={!!returningUserData} className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""} {...field} /></FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="telefono"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefono *</FormLabel>
+                      <div className="flex gap-2">
+                        <select
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.country} {c.code}
+                            </option>
+                          ))}
+                        </select>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="333 1234567"
+                            readOnly={!!returningUserData}
+                            className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""}
+                            {...field}
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Identification type */}
                 <div className="space-y-3">
@@ -424,28 +533,64 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                   >
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="birth" id="birth" />
-                      <Label htmlFor="birth" className="cursor-pointer">Data/Luogo di nascita</Label>
+                      <Label htmlFor="birth" className="cursor-pointer">
+                        Data/Luogo di nascita
+                      </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="fiscal" id="fiscal" />
-                      <Label htmlFor="fiscal" className="cursor-pointer">Codice Fiscale</Label>
+                      <Label htmlFor="fiscal" className="cursor-pointer">
+                        Codice Fiscale
+                      </Label>
                     </div>
                   </RadioGroup>
 
                   {identificationType === "fiscal" ? (
                     <div className="space-y-3">
-                      <FormField control={form.control} name="codiceFiscale" render={({ field }) => (
-                        <FormItem><FormControl><Input placeholder="RSSMRA85M01H501Z" maxLength={16} className={`uppercase ${returningUserData?.codice_fiscale ? "bg-muted/50 cursor-not-allowed" : ""}`} readOnly={!!returningUserData?.codice_fiscale} {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="codiceFiscale"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                placeholder="RSSMRA85M01H501Z"
+                                maxLength={16}
+                                className={`uppercase ${returningUserData?.codice_fiscale ? "bg-muted/50 cursor-not-allowed" : ""}`}
+                                readOnly={!!returningUserData?.codice_fiscale}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       {extractedData && (
                         <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1.5">
                           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                            <Calculator className="h-3.5 w-3.5" />Dati estratti dal Codice Fiscale
+                            <Calculator className="h-3.5 w-3.5" />
+                            Dati estratti dal Codice Fiscale
                           </div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div><span className="text-muted-foreground">Nato/a il: </span><span className="font-medium text-foreground">{new Date(extractedData.birthDate).toLocaleDateString("it-IT")}</span></div>
-                            <div><span className="text-muted-foreground">Sesso: </span><span className="font-medium text-foreground">{extractedData.gender}</span></div>
-                            <div className="col-span-2"><span className="text-muted-foreground">Luogo: </span><span className="font-medium text-foreground">{extractedData.birthPlace}{extractedData.birthPlaceProvincia && extractedData.birthPlaceProvincia !== "EE" ? ` (${extractedData.birthPlaceProvincia})` : ""}</span></div>
+                            <div>
+                              <span className="text-muted-foreground">Nato/a il: </span>
+                              <span className="font-medium text-foreground">
+                                {new Date(extractedData.birthDate).toLocaleDateString("it-IT")}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Sesso: </span>
+                              <span className="font-medium text-foreground">{extractedData.gender}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Luogo: </span>
+                              <span className="font-medium text-foreground">
+                                {extractedData.birthPlace}
+                                {extractedData.birthPlaceProvincia && extractedData.birthPlaceProvincia !== "EE"
+                                  ? ` (${extractedData.birthPlaceProvincia})`
+                                  : ""}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -453,30 +598,90 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Checkbox id="born-abroad" checked={bornAbroad} onCheckedChange={(checked) => { setBornAbroad(!!checked); form.setValue("birthPlace", ""); }} />
-                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">Nato/a all'estero</Label>
+                        <Checkbox
+                          id="born-abroad"
+                          checked={bornAbroad}
+                          onCheckedChange={(checked) => {
+                            setBornAbroad(!!checked);
+                            form.setValue("birthPlace", "");
+                          }}
+                        />
+                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
+                          Nato/a all'estero
+                        </Label>
                       </div>
-                      <FormField control={form.control} name="gender" render={({ field }) => (
-                        <FormItem><FormLabel>Sesso *</FormLabel><FormControl>
-                          <RadioGroup value={field.value || ""} onValueChange={field.onChange} className="flex gap-4">
-                            <div className="flex items-center gap-2"><RadioGroupItem value="M" id="gender-m" /><Label htmlFor="gender-m" className="cursor-pointer">M</Label></div>
-                            <div className="flex items-center gap-2"><RadioGroupItem value="F" id="gender-f" /><Label htmlFor="gender-f" className="cursor-pointer">F</Label></div>
-                          </RadioGroup>
-                        </FormControl><FormMessage /></FormItem>
-                      )} />
+                      <FormField
+                        control={form.control}
+                        name="gender"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sesso *</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                value={field.value || ""}
+                                onValueChange={field.onChange}
+                                className="flex gap-4"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem value="M" id="gender-m" />
+                                  <Label htmlFor="gender-m" className="cursor-pointer">
+                                    M
+                                  </Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem value="F" id="gender-f" />
+                                  <Label htmlFor="gender-f" className="cursor-pointer">
+                                    F
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="birthDate" render={({ field }) => (
-                          <FormItem><FormLabel>Data di nascita</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="birthPlace" render={({ field }) => (
-                          <FormItem><FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel><FormControl>
-                            <SearchableSelect options={bornAbroad ? COUNTRIES : comuni} value={field.value || ""} onChange={(v) => field.onChange(v)} placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."} searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."} emptyMessage="Nessun risultato trovato." loading={!bornAbroad && comuniLoading} />
-                          </FormControl><FormMessage /></FormItem>
-                        )} />
+                        <FormField
+                          control={form.control}
+                          name="birthDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Data di nascita</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="birthPlace"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
+                              <FormControl>
+                                <SearchableSelect
+                                  options={bornAbroad ? COUNTRIES : comuni}
+                                  value={field.value || ""}
+                                  onChange={(v) => field.onChange(v)}
+                                  placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
+                                  searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
+                                  emptyMessage="Nessun risultato trovato."
+                                  loading={!bornAbroad && comuniLoading}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                       {computedCF && (
                         <div className="bg-muted/50 border border-border rounded-lg p-3">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1"><Calculator className="h-3.5 w-3.5" />Codice Fiscale calcolato</div>
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                            <Calculator className="h-3.5 w-3.5" />
+                            Codice Fiscale calcolato
+                          </div>
                           <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{computedCF}</p>
                         </div>
                       )}
@@ -494,15 +699,22 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 }).length > 0 && (
                   <div className="space-y-4 border-t border-border/50 pt-5">
                     <Label className="text-sm font-medium">Informazioni aggiuntive</Label>
-                    {event.custom_fields.filter((cf) => {
-                      if (preselectedDiscipline && cf.type === "select") {
-                        const rf = getRouteSelectionField(event.custom_fields);
-                        if (rf && rf.key === cf.key) return false;
-                      }
-                      return true;
-                    }).map((cf) => (
-                      <CustomFieldInput key={cf.key} field={cf} value={customFieldValues[cf.key] || ""} onChange={(v) => setCustomFieldValues((prev) => ({ ...prev, [cf.key]: v }))} />
-                    ))}
+                    {event.custom_fields
+                      .filter((cf) => {
+                        if (preselectedDiscipline && cf.type === "select") {
+                          const rf = getRouteSelectionField(event.custom_fields);
+                          if (rf && rf.key === cf.key) return false;
+                        }
+                        return true;
+                      })
+                      .map((cf) => (
+                        <CustomFieldInput
+                          key={cf.key}
+                          field={cf}
+                          value={customFieldValues[cf.key] || ""}
+                          onChange={(v) => setCustomFieldValues((prev) => ({ ...prev, [cf.key]: v }))}
+                        />
+                      ))}
                   </div>
                 )}
 
@@ -580,13 +792,15 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                           </div>
 
                           {certificateAnalysis && !certificateAnalyzing && (
-                            <div className={`flex items-start gap-2 rounded-lg p-3 text-sm ${
-                              isCertificateValidOnDate() === true
-                                ? "bg-green-500/10 border border-green-500/20"
-                                : isCertificateValidOnDate() === false
-                                  ? "bg-orange-500/10 border border-orange-500/20"
-                                  : "bg-muted/50 border border-border"
-                            }`}>
+                            <div
+                              className={`flex items-start gap-2 rounded-lg p-3 text-sm ${
+                                isCertificateValidOnDate() === true
+                                  ? "bg-green-500/10 border border-green-500/20"
+                                  : isCertificateValidOnDate() === false
+                                    ? "bg-orange-500/10 border border-orange-500/20"
+                                    : "bg-muted/50 border border-border"
+                              }`}
+                            >
                               {isCertificateValidOnDate() === true ? (
                                 <ShieldCheck className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                               ) : (
@@ -595,9 +809,13 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                               <div className="space-y-0.5">
                                 {certificateAnalysis.expiry_date && (
                                   <p className="text-foreground">
-                                    Scadenza: <strong>{new Date(certificateAnalysis.expiry_date).toLocaleDateString("it-IT")}</strong>
+                                    Scadenza:{" "}
+                                    <strong>
+                                      {new Date(certificateAnalysis.expiry_date).toLocaleDateString("it-IT")}
+                                    </strong>
                                     {isCertificateValidOnDate() === true && " ✓ valido il giorno della gara"}
-                                    {isCertificateValidOnDate() === false && " — potrebbe essere scaduto il giorno della gara"}
+                                    {isCertificateValidOnDate() === false &&
+                                      " — potrebbe essere scaduto il giorno della gara"}
                                   </p>
                                 )}
                                 {certificateAnalysis.disciplines?.length > 0 && (
@@ -630,9 +848,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 {/* CTA tesseramento for non-certificate disciplines (Walk) */}
                 {currentDiscipline && !requiresCertificate && (
                   <div className="bg-primary/5 border border-primary/15 rounded-lg p-4">
-                    <p className="text-sm text-foreground mb-1">
-                      🌲 Vuoi diventare socio Ginepro?
-                    </p>
+                    <p className="text-sm text-foreground mb-1">🌲 Vuoi diventare socio Ginepro?</p>
                     <Link
                       to="/tesseramento-2026"
                       className="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium"
@@ -646,27 +862,54 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                 {/* Payment method */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">Metodo di pagamento *</Label>
-                  <FormField control={form.control} name="paymentMethod" render={({ field }) => (
-                    <FormItem><FormControl>
-                      <RadioGroup value={field.value} onValueChange={field.onChange} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {event.payment_methods.map((pm) => (
-                          <label key={pm} htmlFor={`pay-${pm}`} className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === pm ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
-                            <RadioGroupItem value={pm} id={`pay-${pm}`} />
-                            {PAYMENT_ICONS[pm]}
-                            <span className="text-sm font-medium">{PAYMENT_LABELS[pm] || pm}</span>
-                          </label>
-                        ))}
-                      </RadioGroup>
-                    </FormControl><FormMessage /></FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+                          >
+                            {event.payment_methods.map((pm) => (
+                              <label
+                                key={pm}
+                                htmlFor={`pay-${pm}`}
+                                className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === pm ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+                              >
+                                <RadioGroupItem value={pm} id={`pay-${pm}`} />
+                                {PAYMENT_ICONS[pm]}
+                                <span className="text-sm font-medium">{PAYMENT_LABELS[pm] || pm}</span>
+                              </label>
+                            ))}
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full font-display font-semibold text-lg h-12" disabled={isSubmitting || certificateUploading}>
-                  {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Elaborazione...</>) : `Iscriviti e Paga — ${displayPriceLabel}`}
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full font-display font-semibold text-lg h-12"
+                  disabled={isSubmitting || certificateUploading}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Elaborazione...
+                    </>
+                  ) : (
+                    `Iscriviti e Paga — ${displayPriceLabel}`
+                  )}
                 </Button>
                 {serviceFee > 0 && (
                   <p className="text-xs text-muted-foreground text-center mt-1.5">
-                    di cui {formatPrice(serviceFee)} commissioni servizio idchronos
+                    di cui {formatPrice(serviceFee)} commissioni di servizio
                   </p>
                 )}
               </form>
@@ -678,7 +921,15 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
   );
 };
 
-function CustomFieldInput({ field, value, onChange }: { field: CustomField; value: string; onChange: (v: string) => void }) {
+function CustomFieldInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: CustomField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const label = `${field.label}${field.required ? " *" : ""}`;
   if (field.type === "select" && field.options) {
     const hasOptionPrices = field.options.some((opt) => getOptionPrice(field, opt) !== null);
@@ -686,15 +937,24 @@ function CustomFieldInput({ field, value, onChange }: { field: CustomField; valu
       <div className="space-y-1.5">
         <Label className="text-sm">{label}</Label>
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger><SelectValue placeholder={`Seleziona ${field.label.toLowerCase()}...`} /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder={`Seleziona ${field.label.toLowerCase()}...`} />
+          </SelectTrigger>
           <SelectContent>
             {field.options.map((opt) => {
               const optionPrice = getOptionPrice(field, opt);
-              return (<SelectItem key={opt} value={opt}>{opt}{optionPrice !== null ? ` - ${formatPrice(optionPrice)}` : ""}</SelectItem>);
+              return (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                  {optionPrice !== null ? ` - ${formatPrice(optionPrice)}` : ""}
+                </SelectItem>
+              );
             })}
           </SelectContent>
         </Select>
-        {hasOptionPrices && <p className="text-xs text-muted-foreground">Seleziona l&apos;opzione per aggiornare il prezzo finale.</p>}
+        {hasOptionPrices && (
+          <p className="text-xs text-muted-foreground">Seleziona l&apos;opzione per aggiornare il prezzo finale.</p>
+        )}
       </div>
     );
   }
@@ -702,14 +962,21 @@ function CustomFieldInput({ field, value, onChange }: { field: CustomField; valu
     return (
       <div className="flex items-center gap-2">
         <Checkbox id={field.key} checked={value === "true"} onCheckedChange={(c) => onChange(c ? "true" : "false")} />
-        <Label htmlFor={field.key} className="cursor-pointer text-sm">{label}</Label>
+        <Label htmlFor={field.key} className="cursor-pointer text-sm">
+          {label}
+        </Label>
       </div>
     );
   }
   return (
     <div className="space-y-1.5">
       <Label className="text-sm">{label}</Label>
-      <Input type={field.type === "number" ? "number" : "text"} placeholder={field.placeholder || ""} value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input
+        type={field.type === "number" ? "number" : "text"}
+        placeholder={field.placeholder || ""}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
