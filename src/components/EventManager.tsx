@@ -730,6 +730,28 @@ const EventManager = ({ password }: EventManagerProps) => {
                                     />
                                     <Label className="text-xs text-muted-foreground">Richiede certificato</Label>
                                   </div>
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={field.option_featured?.[option] ?? false}
+                                      onCheckedChange={(v) =>
+                                        setEditFields((prev) => ({
+                                          ...prev,
+                                          custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                            customField.key !== field.key
+                                              ? customField
+                                              : {
+                                                  ...customField,
+                                                  option_featured: {
+                                                    ...(customField.option_featured || {}),
+                                                    [option]: v,
+                                                  },
+                                                },
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                    <Label className="text-xs text-muted-foreground">⭐ In evidenza</Label>
+                                  </div>
                                 </div>
                               </div>
                             ))}
