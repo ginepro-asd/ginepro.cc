@@ -91,11 +91,20 @@ const sanitizeCustomFields = (customFields: CustomField[]): CustomField[] =>
         )
       : undefined;
 
+    // Sanitize option_featured: keep only true values
+    const featured = field.option_featured
+      ? Object.fromEntries(
+          Object.entries(field.option_featured)
+            .filter(([, v]) => v === true)
+        )
+      : undefined;
+
     return {
       ...field,
       option_prices: Object.keys(optionPrices).length > 0 ? optionPrices : undefined,
       option_max_spots: maxSpots && Object.keys(maxSpots).length > 0 ? maxSpots : undefined,
       option_requires_certificate: reqCert && Object.keys(reqCert).length > 0 ? reqCert : undefined,
+      option_featured: featured && Object.keys(featured).length > 0 ? featured : undefined,
     };
   });
 
@@ -720,6 +729,28 @@ const EventManager = ({ password }: EventManagerProps) => {
                                       }
                                     />
                                     <Label className="text-xs text-muted-foreground">Richiede certificato</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={field.option_featured?.[option] ?? false}
+                                      onCheckedChange={(v) =>
+                                        setEditFields((prev) => ({
+                                          ...prev,
+                                          custom_fields: normalizeCustomFields(prev.custom_fields).map((customField) =>
+                                            customField.key !== field.key
+                                              ? customField
+                                              : {
+                                                  ...customField,
+                                                  option_featured: {
+                                                    ...(customField.option_featured || {}),
+                                                    [option]: v,
+                                                  },
+                                                },
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                    <Label className="text-xs text-muted-foreground">⭐ In evidenza</Label>
                                   </div>
                                 </div>
                               </div>

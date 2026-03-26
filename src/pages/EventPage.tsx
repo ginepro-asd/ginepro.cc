@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   getStartingPrice, hasVariablePricing, getRouteSelectionField,
   isOptionCoppia, hasCoppiaOptions, getOptionPrice, getOptionMaxSpots, hasMaxSpotsOptions,
+  isOptionFeatured,
 } from "@/lib/event-pricing";
 import { useQuery } from "@tanstack/react-query";
 
@@ -284,16 +285,19 @@ const EventPage = () => {
                         const coppia = isOptionCoppia(routeField, opt);
                         const remaining = getRemainingSpots(opt);
                         const soldOut = isOptionSoldOut(opt);
+                        const featured = isOptionFeatured(routeField, opt);
                         return (
                           <label
                             key={opt}
                             htmlFor={`disc-ev-${opt}`}
-                            className={`flex items-center gap-3 border rounded-lg p-4 transition-all ${
+                            className={`relative flex items-center gap-3 border rounded-lg p-4 transition-all ${
                               soldOut
                                 ? "border-border/30 bg-muted/30 cursor-not-allowed opacity-60"
-                                : selectedDiscipline === opt
-                                  ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
-                                  : "border-border hover:border-primary/40 cursor-pointer"
+                                : featured
+                                  ? `cursor-pointer featured-option ${selectedDiscipline === opt ? "featured-option-selected" : ""}`
+                                  : selectedDiscipline === opt
+                                    ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
+                                    : "border-border hover:border-primary/40 cursor-pointer"
                             }`}
                           >
                             <RadioGroupItem value={opt} id={`disc-ev-${opt}`} disabled={soldOut} />
