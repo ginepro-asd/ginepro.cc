@@ -91,11 +91,20 @@ const sanitizeCustomFields = (customFields: CustomField[]): CustomField[] =>
         )
       : undefined;
 
+    // Sanitize option_featured: keep only true values
+    const featured = field.option_featured
+      ? Object.fromEntries(
+          Object.entries(field.option_featured)
+            .filter(([, v]) => v === true)
+        )
+      : undefined;
+
     return {
       ...field,
       option_prices: Object.keys(optionPrices).length > 0 ? optionPrices : undefined,
       option_max_spots: maxSpots && Object.keys(maxSpots).length > 0 ? maxSpots : undefined,
       option_requires_certificate: reqCert && Object.keys(reqCert).length > 0 ? reqCert : undefined,
+      option_featured: featured && Object.keys(featured).length > 0 ? featured : undefined,
     };
   });
 

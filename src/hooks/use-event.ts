@@ -36,6 +36,7 @@ export interface CustomField {
   option_coppia?: Record<string, boolean>;
   option_max_spots?: Record<string, number>;
   option_requires_certificate?: Record<string, boolean>;
+  option_featured?: Record<string, boolean>;
   placeholder?: string;
 }
 

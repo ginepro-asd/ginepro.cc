@@ -125,3 +125,11 @@ export function hasMaxSpotsOptions(customFields: CustomField[]): boolean {
   if (!routeField || !hasOptions(routeField)) return false;
   return routeField.options.some((opt) => getOptionMaxSpots(routeField, opt) !== null);
 }
+
+export function isOptionFeatured(
+  field: CustomField | null | undefined,
+  option: string | null | undefined,
+): boolean {
+  if (!field || !option) return false;
+  return !!field.option_featured?.[option];
+}
