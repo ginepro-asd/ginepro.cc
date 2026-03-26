@@ -175,45 +175,40 @@
 
 .featured-option {
   position: relative;
-  background:
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.08) 0%,
-      hsl(var(--secondary) / 0.12) 25%,
-      hsl(var(--primary) / 0.06) 50%,
-      hsl(var(--secondary) / 0.15) 75%,
-      hsl(var(--primary) / 0.08) 100%
-    )
-    padding-box,
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.5),
-      hsl(var(--secondary) / 0.7),
-      hsl(var(--primary) / 0.5),
-      hsl(var(--secondary) / 0.7)
-    )
-    border-box;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.08) 0%,
+    hsl(var(--secondary) / 0.12) 25%,
+    hsl(var(--primary) / 0.06) 50%,
+    hsl(var(--secondary) / 0.15) 75%,
+    hsl(var(--primary) / 0.08) 100%
+  );
   background-size: 200% 200%;
   animation: featured-shimmer 4s ease-in-out infinite;
   border: 2px solid transparent;
-  border-radius: 0.5rem;
+  border-image: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.5),
+    hsl(var(--secondary) / 0.7),
+    hsl(var(--primary) / 0.5),
+    hsl(var(--secondary) / 0.7)
+  ) 1;
   box-shadow:
     0 0 12px hsl(var(--secondary) / 0.15),
     inset 0 0 12px hsl(var(--secondary) / 0.05);
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
-/* Glitter sweep overlay */
 .featured-option::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
   background: linear-gradient(
     45deg,
     transparent 30%,
     hsl(var(--secondary) / 0.08) 45%,
-    hsl(var(--secondary) / 0.18) 50%,
+    hsl(var(--secondary) / 0.15) 50%,
     hsl(var(--secondary) / 0.08) 55%,
     transparent 70%
   );
@@ -223,55 +218,30 @@
 }
 
 .featured-option:hover {
-  background:
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.1) 0%,
-      hsl(var(--secondary) / 0.15) 25%,
-      hsl(var(--primary) / 0.08) 50%,
-      hsl(var(--secondary) / 0.18) 75%,
-      hsl(var(--primary) / 0.1) 100%
-    )
-    padding-box,
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.7),
-      hsl(var(--secondary)),
-      hsl(var(--primary) / 0.7),
-      hsl(var(--secondary))
-    )
-    border-box;
-  background-size: 200% 200%;
-  animation: featured-shimmer 2s ease-in-out infinite;
   box-shadow:
     0 0 20px hsl(var(--secondary) / 0.3),
     0 0 40px hsl(var(--secondary) / 0.1),
     inset 0 0 15px hsl(var(--secondary) / 0.08);
   transform: scale(1.02);
+  border-image: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.7),
+    hsl(var(--secondary)),
+    hsl(var(--primary) / 0.7),
+    hsl(var(--secondary))
+  ) 1;
 }
 
 .featured-option-selected {
-  background:
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.1) 0%,
-      hsl(var(--secondary) / 0.14) 25%,
-      hsl(var(--primary) / 0.08) 50%,
-      hsl(var(--secondary) / 0.16) 75%,
-      hsl(var(--primary) / 0.1) 100%
-    )
-    padding-box,
-    linear-gradient(
-      135deg,
-      hsl(var(--primary)),
-      hsl(var(--secondary)),
-      hsl(var(--primary)),
-      hsl(var(--secondary))
-    )
-    border-box;
-  background-size: 200% 200%;
   box-shadow:
     0 0 16px hsl(var(--secondary) / 0.25),
     0 0 32px hsl(var(--secondary) / 0.1),
     inset 0 0 12px hsl(var(--secondary) / 0.06);
+  border-image: linear-gradient(
+    135deg,
+    hsl(var(--primary)),
+    hsl(var(--secondary)),
+    hsl(var(--primary)),
+    hsl(var(--secondary))
+  ) 1;
 }
