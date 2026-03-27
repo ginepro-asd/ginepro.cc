@@ -151,7 +151,23 @@ Deno.serve(async (req) => {
         .insert(insertData)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        // If duplicate, try to find and return existing participant
+        if (error.code === "23505") {
+          const { data: existing } = await supabase
+            .from("participants")
+            .select("*")
+            .or(`email.ilike.${participant.email},and(nome.ilike.${participant.nome},cognome.ilike.${participant.cognome})`)
+            .limit(1)
+            .single();
+          if (existing) {
+            return new Response(JSON.stringify({ success: true, participant: existing }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+        throw error;
+      }
 
       return new Response(JSON.stringify({ success: true, participant: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
