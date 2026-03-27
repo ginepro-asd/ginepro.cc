@@ -249,13 +249,25 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, even
       }
 
       try {
-        // Check if participant already exists
-        const { data: existing } = await supabase
+        // Check if participant already exists (by name or email)
+        const { data: byName } = await supabase
           .from("participants")
           .select("id")
           .ilike("nome", nome)
           .ilike("cognome", cognome)
           .limit(1);
+
+        let existing = byName && byName.length > 0 ? byName : null;
+
+        // Fallback: check by email if name didn't match
+        if (!existing) {
+          const { data: byEmail } = await supabase
+            .from("participants")
+            .select("id")
+            .ilike("email", email)
+            .limit(1);
+          if (byEmail && byEmail.length > 0) existing = byEmail;
+        }
 
         let participantId: string;
 
@@ -275,12 +287,18 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, even
           const bp = getRowValue(row, "birth_place");
           if (bp) participant.birth_place = bp;
 
-          const { data, error } = await supabase.functions.invoke("manage-event", {
+          const res = await supabase.functions.invoke("manage-event", {
             body: { password, action: "create_participant", participant },
           });
-          if (error) throw error;
-          if (data.error) throw new Error(data.error);
-          participantId = data.participant.id;
+          if (res.error) {
+            // Extract actual error message from response
+            const msg = typeof res.error === "object" && "context" in res.error
+              ? await (res.error as any).context?.json?.().then((b: any) => b?.error).catch(() => null)
+              : null;
+            throw new Error(msg || res.error.message || "Errore creazione partecipante");
+          }
+          if (res.data.error) throw new Error(res.data.error);
+          participantId = res.data.participant.id;
           results.created++;
         }
 
@@ -305,7 +323,7 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, even
             }
           }
 
-          const { data, error } = await supabase.functions.invoke("manage-event", {
+          const regRes = await supabase.functions.invoke("manage-event", {
             body: {
               password,
               action: "admin_register",
@@ -315,9 +333,14 @@ const AdminCsvImport = ({ open, onOpenChange, password, eventId, eventName, even
               custom_data: customData,
             },
           });
-          if (error) throw error;
-          if (data.error) {
-            results.errors.push(`${nome} ${cognome}: ${data.error}`);
+          if (regRes.error) {
+            const msg = typeof regRes.error === "object" && "context" in regRes.error
+              ? await (regRes.error as any).context?.json?.().then((b: any) => b?.error).catch(() => null)
+              : null;
+            throw new Error(msg || regRes.error.message || "Errore registrazione");
+          }
+          if (regRes.data.error) {
+            results.errors.push(`${nome} ${cognome}: ${regRes.data.error}`);
           } else {
             results.registered++;
           }
