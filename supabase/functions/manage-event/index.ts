@@ -175,6 +175,22 @@ Deno.serve(async (req) => {
         .single();
       if (partErr) throw partErr;
 
+      // Check for existing completed registration
+      const { data: existingReg } = await supabase
+        .from("registrations")
+        .select("id")
+        .eq("participant_id", participant_id)
+        .eq("event_id", event_id)
+        .eq("payment_status", "completed")
+        .limit(1);
+
+      if (existingReg && existingReg.length > 0) {
+        return new Response(JSON.stringify({ error: "Già iscritto a questo evento" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Delete any existing pending registration for same participant+event
       await supabase
         .from("registrations")
