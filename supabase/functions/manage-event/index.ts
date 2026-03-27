@@ -151,7 +151,23 @@ Deno.serve(async (req) => {
         .insert(insertData)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        // If duplicate, try to find and return existing participant
+        if (error.code === "23505") {
+          const { data: existing } = await supabase
+            .from("participants")
+            .select("*")
+            .or(`email.ilike.${participant.email},and(nome.ilike.${participant.nome},cognome.ilike.${participant.cognome})`)
+            .limit(1)
+            .single();
+          if (existing) {
+            return new Response(JSON.stringify({ success: true, participant: existing }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+        throw error;
+      }
 
       return new Response(JSON.stringify({ success: true, participant: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -174,6 +190,22 @@ Deno.serve(async (req) => {
         .eq("id", participant_id)
         .single();
       if (partErr) throw partErr;
+
+      // Check for existing completed registration
+      const { data: existingReg } = await supabase
+        .from("registrations")
+        .select("id")
+        .eq("participant_id", participant_id)
+        .eq("event_id", event_id)
+        .eq("payment_status", "completed")
+        .limit(1);
+
+      if (existingReg && existingReg.length > 0) {
+        return new Response(JSON.stringify({ error: "Già iscritto a questo evento" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // Delete any existing pending registration for same participant+event
       await supabase
