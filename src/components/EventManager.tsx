@@ -19,7 +19,7 @@ import {
   AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import {
-  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, Upload, Image, FileText, Link as LinkIcon,
+  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, Upload, Image, FileText, Link as LinkIcon, Smartphone,
 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
 
@@ -171,6 +171,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         custom_fields: normalizeCustomFields(ev.custom_fields),
         external_url: ev.external_url || "",
         regulation_url: ev.regulation_url || "",
+        satispay_api_url: (ev as any).satispay_api_url || "",
+        satispay_api_token: (ev as any).satispay_api_token || "",
       });
     } else {
       setCreating(true);
@@ -197,6 +199,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         custom_fields: [],
         external_url: "",
         regulation_url: "",
+        satispay_api_url: "",
+        satispay_api_token: "",
       });
     }
   };
@@ -236,6 +240,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: editFields.location_label || null,
         external_url: editFields.external_url || null,
         regulation_url: editFields.regulation_url || null,
+        satispay_api_url: editFields.satispay_api_url || null,
+        satispay_api_token: editFields.satispay_api_token || null,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
 
@@ -582,6 +588,33 @@ const EventManager = ({ password }: EventManagerProps) => {
                 })}
               </div>
             </div>
+
+            {/* Satispay custom endpoint */}
+            {(editFields.payment_methods || []).includes("satispay") && (
+              <div className="space-y-3 border border-border/50 rounded-lg p-3 bg-muted/10">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <Smartphone className="h-4 w-4 text-primary" />
+                  Endpoint Satispay personalizzato
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Se vuoto, verrà usato l'endpoint predefinito (xpay.ginepro.cc).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">API URL</Label>
+                    <Input value={editFields.satispay_api_url || ""} placeholder="https://..."
+                      className="h-8 text-sm"
+                      onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_url: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Bearer Token</Label>
+                    <Input type="password" value={editFields.satispay_api_token || ""} placeholder="Token..."
+                      className="h-8 text-sm"
+                      onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_token: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {editFields.is_coppia && (
               <div className="space-y-1.5">

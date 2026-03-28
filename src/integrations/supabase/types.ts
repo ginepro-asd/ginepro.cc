@@ -121,6 +121,8 @@ export type Database = {
           pettorale_start: number | null
           prezzo: number
           regulation_url: string | null
+          satispay_api_token: string | null
+          satispay_api_url: string | null
           scadenza_iscrizioni: string | null
           service_fee: number
           slug: string
@@ -147,6 +149,8 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          satispay_api_token?: string | null
+          satispay_api_url?: string | null
           scadenza_iscrizioni?: string | null
           service_fee?: number
           slug: string
@@ -173,6 +177,8 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          satispay_api_token?: string | null
+          satispay_api_url?: string | null
           scadenza_iscrizioni?: string | null
           service_fee?: number
           slug?: string

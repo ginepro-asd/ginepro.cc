@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const XPAY_BASE = "https://xpay.ginepro.cc";
+const XPAY_BASE_DEFAULT = "https://xpay.ginepro.cc";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -22,7 +22,35 @@ serve(async (req) => {
       throw new Error("Missing payment_id or registration_id");
     }
 
-    const res = await fetch(`${XPAY_BASE}/paymentState/${payment_id}`);
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Look up the event's custom Satispay config via the registration
+    const { data: regData } = await supabaseAdmin
+      .from("registrations")
+      .select("event_id")
+      .eq("id", registration_id)
+      .single();
+
+    let satispayBaseUrl = XPAY_BASE_DEFAULT;
+    let satispayToken: string | null = null;
+    if (regData?.event_id) {
+      const { data: eventData } = await supabaseAdmin
+        .from("events")
+        .select("satispay_api_url, satispay_api_token")
+        .eq("id", regData.event_id)
+        .single();
+      if (eventData?.satispay_api_url) satispayBaseUrl = eventData.satispay_api_url;
+      if (eventData?.satispay_api_token) satispayToken = eventData.satispay_api_token;
+    }
+
+    const checkHeaders: Record<string, string> = {};
+    if (satispayToken) {
+      checkHeaders["Authorization"] = `Bearer ${satispayToken}`;
+    }
+    const res = await fetch(`${satispayBaseUrl}/paymentState/${payment_id}`, { headers: checkHeaders });
 
     if (!res.ok) {
       const errText = await res.text();
@@ -32,10 +60,6 @@ serve(async (req) => {
 
     const payment = await res.json();
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     if (payment.status === "ACCEPTED") {
       // Update the main registration
