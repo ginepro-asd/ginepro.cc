@@ -19,7 +19,7 @@ import {
   AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import {
-  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, Upload, Image, FileText, Link as LinkIcon,
+  Loader2, Plus, Pencil, Trash2, MapPin, Calendar, Check, Eye, EyeOff, Upload, Image, FileText, Link as LinkIcon, Smartphone,
 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
 
