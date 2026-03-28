@@ -171,6 +171,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         custom_fields: normalizeCustomFields(ev.custom_fields),
         external_url: ev.external_url || "",
         regulation_url: ev.regulation_url || "",
+        satispay_api_url: (ev as any).satispay_api_url || "",
+        satispay_api_token: (ev as any).satispay_api_token || "",
       });
     } else {
       setCreating(true);
@@ -197,6 +199,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         custom_fields: [],
         external_url: "",
         regulation_url: "",
+        satispay_api_url: "",
+        satispay_api_token: "",
       });
     }
   };
@@ -236,6 +240,8 @@ const EventManager = ({ password }: EventManagerProps) => {
         location_label: editFields.location_label || null,
         external_url: editFields.external_url || null,
         regulation_url: editFields.regulation_url || null,
+        satispay_api_url: editFields.satispay_api_url || null,
+        satispay_api_token: editFields.satispay_api_token || null,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
 
