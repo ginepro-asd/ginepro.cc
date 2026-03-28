@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const XPAY_BASE = "https://xpay.ginepro.cc";
+const XPAY_BASE_DEFAULT = "https://xpay.ginepro.cc";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -38,7 +38,7 @@ serve(async (req) => {
     // Fetch event for pricing
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, custom_fields, service_fee")
+      .select("id, nome, prezzo, slug, custom_fields, service_fee, satispay_api_url, satispay_api_token")
       .eq("id", eventId)
       .single();
 
@@ -122,9 +122,14 @@ serve(async (req) => {
     }
 
     const orderId = `${event.nome} ${cognome} ${nome}`;
-    const res = await fetch(`${XPAY_BASE}/payment`, {
+    const satispayBaseUrl = event.satispay_api_url || XPAY_BASE_DEFAULT;
+    const satispayHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (event.satispay_api_token) {
+      satispayHeaders["Authorization"] = `Bearer ${event.satispay_api_token}`;
+    }
+    const res = await fetch(`${satispayBaseUrl}/payment`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: satispayHeaders,
       body: JSON.stringify({
         orderId,
         phoneNumber: telefono,
