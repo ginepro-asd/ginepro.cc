@@ -127,7 +127,7 @@ serve(async (req) => {
     const satispayToken = event.satispay_api_token || SATISPAY_TOKEN_DEFAULT;
     const satispayHeaders: Record<string, string> = { "Content-Type": "application/json" };
     satispayHeaders["Authorization"] = `Bearer ${satispayToken}`;
-    const res = await fetch(`${satispayBaseUrl}/payment`, {
+    const res = await fetch(satispayBaseUrl, {
       method: "POST",
       headers: satispayHeaders,
       body: JSON.stringify({
