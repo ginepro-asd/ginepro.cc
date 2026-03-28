@@ -60,10 +60,6 @@ serve(async (req) => {
 
     const payment = await res.json();
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     if (payment.status === "ACCEPTED") {
       // Update the main registration
