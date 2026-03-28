@@ -589,6 +589,33 @@ const EventManager = ({ password }: EventManagerProps) => {
               </div>
             </div>
 
+            {/* Satispay custom endpoint */}
+            {(editFields.payment_methods || []).includes("satispay") && (
+              <div className="space-y-3 border border-border/50 rounded-lg p-3 bg-muted/10">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <Smartphone className="h-4 w-4 text-primary" />
+                  Endpoint Satispay personalizzato
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Se vuoto, verrà usato l'endpoint predefinito (xpay.ginepro.cc).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">API URL</Label>
+                    <Input value={editFields.satispay_api_url || ""} placeholder="https://..."
+                      className="h-8 text-sm"
+                      onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_url: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Bearer Token</Label>
+                    <Input type="password" value={editFields.satispay_api_token || ""} placeholder="Token..."
+                      className="h-8 text-sm"
+                      onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_token: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {editFields.is_coppia && (
               <div className="space-y-1.5">
                 <Label className="text-sm">Pettorale di partenza</Label>
