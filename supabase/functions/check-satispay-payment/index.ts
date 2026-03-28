@@ -50,7 +50,7 @@ serve(async (req) => {
     const checkHeaders: Record<string, string> = {
       "Authorization": `Bearer ${satispayToken}`,
     };
-    const res = await fetch(`${satispayBaseUrl}/paymentState/${payment_id}`, { headers: checkHeaders });
+    const res = await fetch(`${satispayBaseUrl}/${payment_id}`, { headers: checkHeaders, method: "GET" });
 
     if (!res.ok) {
       const errText = await res.text();
