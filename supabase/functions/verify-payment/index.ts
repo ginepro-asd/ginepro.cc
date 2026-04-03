@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { createMembershipCardIfNeeded } from "../_shared/membership-card.ts";
+import { sendRegistrationConfirmation } from "../_shared/send-registration-confirmation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,80 +50,7 @@ serve(async (req) => {
       // Create membership card if tesseramento
       const card = await createMembershipCardIfNeeded(supabaseAdmin, registration_id);
 
-      // Fetch registration data with event info for confirmation
-      const { data: registration } = await supabaseAdmin
-        .from("registrations")
-        .select("nome, cognome, email, payment_method, event_id")
-        .eq("id", registration_id)
-        .single();
-
-      // Send confirmation email via send-event-email (fire-and-forget)
-      if (registration) {
-        try {
-          // Find the on_payment template for this event
-          if (registration.event_id) {
-            const { data: emailTemplate } = await supabaseAdmin
-              .from("event_emails")
-              .select("id")
-              .eq("event_id", registration.event_id)
-              .eq("trigger_type", "on_payment")
-              .maybeSingle();
-
-            if (emailTemplate) {
-              const emailRes = await fetch(
-                `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-event-email`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    event_email_id: emailTemplate.id,
-                    registration_id,
-                    mode: "single",
-                  }),
-                }
-              );
-              if (!emailRes.ok) {
-                console.error("Event email send failed:", await emailRes.text());
-              }
-            } else {
-              // Fallback to old send-confirmation-email
-              let event = null;
-              const { data: eventData } = await supabaseAdmin
-                .from("events")
-                .select("nome, data_evento, luogo, is_tesseramento")
-                .eq("id", registration.event_id)
-                .single();
-              event = eventData;
-
-              await fetch(
-                `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-confirmation-email`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    nome: registration.nome,
-                    cognome: registration.cognome,
-                    email: registration.email,
-                    payment_method: registration.payment_method,
-                    registration_id,
-                    event,
-                    card: card ? { id: card.id, card_number: card.card_number } : null,
-                    participant_id: registration.participant_id,
-                  }),
-                }
-              );
-            }
-          }
-        } catch (emailErr) {
-          console.error("Email send error:", emailErr.message);
-        }
-      }
+      const registration = await sendRegistrationConfirmation(supabaseAdmin, registration_id, card);
 
       return new Response(
         JSON.stringify({ status: "completed", registration, card }),
