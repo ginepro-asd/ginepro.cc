@@ -77,12 +77,21 @@ serve(async (req) => {
       const idempotencyKey = `event-email-${event_email_id}-${reg.id}`;
 
       try {
+        const textBody = htmlBody
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/\s+/g, ' ')
+          .trim();
+
         const payload = {
           to: reg.email,
           from: FROM_ADDRESS,
           sender_domain: SENDER_DOMAIN,
           subject,
           html: htmlBody,
+          text: textBody,
           purpose: "transactional",
           label: `event-email-${template.slug}`,
           idempotency_key: idempotencyKey,

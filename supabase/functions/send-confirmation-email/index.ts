@@ -153,6 +153,18 @@ serve(async (req) => {
       ? `Tesseramento completato — ${eventName}`
       : `Iscrizione confermata — ${eventName}`;
 
+    // Generate plain text version by stripping HTML
+    const textBody = htmlBody
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#169;/g, '©')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     const messageId = crypto.randomUUID();
     const idempotencyKey = `confirmation-${registration_id || email}-${Date.now()}`;
 
@@ -162,6 +174,7 @@ serve(async (req) => {
       sender_domain: SENDER_DOMAIN,
       subject,
       html: htmlBody,
+      text: textBody,
       purpose: "transactional",
       label: "confirmation-email",
       idempotency_key: idempotencyKey,
