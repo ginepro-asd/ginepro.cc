@@ -34,14 +34,6 @@ export async function sendRegistrationConfirmation(
     return registration;
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const internalHeaders = {
-    "Authorization": `Bearer ${serviceRoleKey}`,
-    "apikey": serviceRoleKey,
-    "Content-Type": "application/json",
-  };
-
   const { data: emailTemplate } = await supabaseAdmin
     .from("event_emails")
     .select("id")
@@ -50,18 +42,16 @@ export async function sendRegistrationConfirmation(
     .maybeSingle();
 
   if (emailTemplate) {
-    const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-event-email`, {
-      method: "POST",
-      headers: internalHeaders,
-      body: JSON.stringify({
+    const { error: eventEmailError } = await supabaseAdmin.functions.invoke("send-event-email", {
+      body: {
         event_email_id: emailTemplate.id,
         registration_id: registrationId,
         mode: "single",
-      }),
+      },
     });
 
-    if (!emailRes.ok) {
-      console.error("Event email send failed:", await emailRes.text());
+    if (eventEmailError) {
+      console.error("Event email send failed:", eventEmailError.message);
     }
 
     return registration;
@@ -73,10 +63,8 @@ export async function sendRegistrationConfirmation(
     .eq("id", registration.event_id)
     .single();
 
-  const confirmationRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-    method: "POST",
-    headers: internalHeaders,
-    body: JSON.stringify({
+  const { error: confirmationError } = await supabaseAdmin.functions.invoke("send-transactional-email", {
+    body: {
       templateName: "registration-confirmation",
       recipientEmail: registration.email,
       idempotencyKey: `registration-confirmation-${registrationId}`,
@@ -89,11 +77,11 @@ export async function sendRegistrationConfirmation(
         card: card ? { id: card.id, card_number: card.card_number } : null,
         participantId: registration.participant_id,
       },
-    }),
+    },
   });
 
-  if (!confirmationRes.ok) {
-    console.error("Confirmation app email send failed:", await confirmationRes.text());
+  if (confirmationError) {
+    console.error("Confirmation app email send failed:", confirmationError.message);
   }
 
   return registration;
