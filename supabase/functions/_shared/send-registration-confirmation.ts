@@ -34,6 +34,14 @@ export async function sendRegistrationConfirmation(
     return registration;
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const internalAuthKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+  const internalHeaders = {
+    "Authorization": `Bearer ${internalAuthKey}`,
+    "apikey": internalAuthKey,
+    "Content-Type": "application/json",
+  };
+
   const { data: emailTemplate } = await supabaseAdmin
     .from("event_emails")
     .select("id")
@@ -63,8 +71,10 @@ export async function sendRegistrationConfirmation(
     .eq("id", registration.event_id)
     .single();
 
-  const { error: confirmationError } = await supabaseAdmin.functions.invoke("send-transactional-email", {
-    body: {
+  const confirmationRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: internalHeaders,
+    body: JSON.stringify({
       templateName: "registration-confirmation",
       recipientEmail: registration.email,
       idempotencyKey: `registration-confirmation-${registrationId}`,
@@ -77,11 +87,11 @@ export async function sendRegistrationConfirmation(
         card: card ? { id: card.id, card_number: card.card_number } : null,
         participantId: registration.participant_id,
       },
-    },
+    }),
   });
 
-  if (confirmationError) {
-    console.error("Confirmation app email send failed:", confirmationError.message);
+  if (!confirmationRes.ok) {
+    console.error("Confirmation app email send failed:", await confirmationRes.text());
   }
 
   return registration;
