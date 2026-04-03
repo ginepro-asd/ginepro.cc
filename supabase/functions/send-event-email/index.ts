@@ -7,7 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const RESEND_API_URL = "https://api.resend.com/emails";
+const SENDER_DOMAIN = "notify.ginepro.cc";
+const FROM_ADDRESS = "Ginepro ASD <info@ginepro.cc>";
 
 function resolveTemplate(
   html: string,
@@ -28,7 +29,6 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { event_email_id, registration_id, event_id, mode, password, test_email } = body;
-    // mode: "single" (default) | "bulk" | "test"
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -55,13 +55,10 @@ serve(async (req) => {
       .single();
     if (templateErr || !template) throw new Error("Template not found");
 
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
-
     const orarioMap: Record<string, string> = template.orario_map || {};
 
-    // Helper to send a single email
-    const sendOne = async (reg: any): Promise<{ registration_id: string; status: string; error?: string }> => {
+    // Helper to enqueue a single email via Lovable Email queue
+    const enqueueOne = async (reg: any): Promise<{ registration_id: string; status: string; error?: string }> => {
       const disciplina = reg.custom_data?.disciplina || "";
       const orario = orarioMap[disciplina] || "";
 
@@ -76,36 +73,48 @@ serve(async (req) => {
 
       const htmlBody = resolveTemplate(template.body_html || "", vars);
       const subject = resolveTemplate(template.subject || "", vars);
+      const messageId = crypto.randomUUID();
+      const idempotencyKey = `event-email-${event_email_id}-${reg.id}`;
 
       try {
-        const res = await fetch(RESEND_API_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "Ginepro ASD <info@ginepro.cc>",
-            to: [reg.email],
-            subject,
-            html: htmlBody,
-          }),
+        const payload = {
+          to: reg.email,
+          from: FROM_ADDRESS,
+          sender_domain: SENDER_DOMAIN,
+          subject,
+          html: htmlBody,
+          purpose: "transactional",
+          label: `event-email-${template.slug}`,
+          idempotency_key: idempotencyKey,
+          message_id: messageId,
+          queued_at: new Date().toISOString(),
+        };
+
+        const { error: enqueueError } = await supabaseAdmin.rpc("enqueue_email", {
+          queue_name: "transactional_emails",
+          payload,
         });
 
-        const result = await res.json();
-        if (!res.ok) {
-          console.error("Resend error:", res.status, JSON.stringify(result));
-          // Log failure
+        if (enqueueError) {
+          console.error("Enqueue error:", enqueueError);
           await supabaseAdmin.from("event_email_sends").upsert({
             event_email_id,
             registration_id: reg.id,
             status: "failed",
-            error: JSON.stringify(result),
+            error: enqueueError.message,
           }, { onConflict: "event_email_id,registration_id" });
-          return { registration_id: reg.id, status: "failed", error: JSON.stringify(result) };
+          return { registration_id: reg.id, status: "failed", error: enqueueError.message };
         }
 
-        // Log success
+        // Log pending in email_send_log
+        await supabaseAdmin.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: `event-email-${template.slug}`,
+          recipient_email: reg.email,
+          status: "pending",
+        });
+
+        // Log success in event_email_sends
         await supabaseAdmin.from("event_email_sends").upsert({
           event_email_id,
           registration_id: reg.id,
@@ -137,34 +146,47 @@ serve(async (req) => {
         custom_data: { disciplina: Object.keys(orarioMap)[0] || "" },
       };
 
+      const disciplina = fakeReg.custom_data.disciplina;
       const htmlBody = resolveTemplate(template.body_html || "", {
         nome: fakeReg.nome,
         cognome: fakeReg.cognome,
         email: fakeReg.email,
-        orario: orarioMap[fakeReg.custom_data.disciplina] || "",
-        disciplina: fakeReg.custom_data.disciplina,
+        orario: orarioMap[disciplina] || "",
+        disciplina,
         telefono: fakeReg.telefono,
       });
       const subject = resolveTemplate(template.subject || "", { nome: fakeReg.nome });
+      const messageId = crypto.randomUUID();
 
-      const res = await fetch(RESEND_API_URL, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "Ginepro ASD <info@ginepro.cc>",
-          to: [test_email],
-          subject: `[TEST] ${subject}`,
-          html: htmlBody,
-        }),
+      const payload = {
+        to: test_email,
+        from: FROM_ADDRESS,
+        sender_domain: SENDER_DOMAIN,
+        subject: `[TEST] ${subject}`,
+        html: htmlBody,
+        purpose: "transactional",
+        label: `event-email-${template.slug}-test`,
+        idempotency_key: `test-${event_email_id}-${Date.now()}`,
+        message_id: messageId,
+        queued_at: new Date().toISOString(),
+      };
+
+      const { error: enqueueError } = await supabaseAdmin.rpc("enqueue_email", {
+        queue_name: "transactional_emails",
+        payload,
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(`Resend error: ${JSON.stringify(result)}`);
+
+      if (enqueueError) throw new Error(`Enqueue error: ${enqueueError.message}`);
+
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: `event-email-${template.slug}-test`,
+        recipient_email: test_email,
+        status: "pending",
+      });
 
       return new Response(
-        JSON.stringify({ status: "test_sent", email_id: result.id }),
+        JSON.stringify({ status: "test_queued", message_id: messageId }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -180,7 +202,7 @@ serve(async (req) => {
         .single();
       if (!reg) throw new Error("Registration not found");
 
-      const result = await sendOne(reg);
+      const result = await enqueueOne(reg);
       return new Response(
         JSON.stringify(result),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -192,7 +214,6 @@ serve(async (req) => {
       const targetEventId = event_id || template.event_id;
       if (!targetEventId) throw new Error("Missing event_id for bulk send");
 
-      // Get all completed registrations
       const { data: registrations } = await supabaseAdmin
         .from("registrations")
         .select("id, nome, cognome, email, telefono, custom_data")
@@ -227,17 +248,12 @@ serve(async (req) => {
       let failed = 0;
       const errors: any[] = [];
 
-      // Send with small delay to respect rate limits
       for (const reg of toSend) {
-        const result = await sendOne(reg);
+        const result = await enqueueOne(reg);
         if (result.status === "sent") sent++;
         else {
           failed++;
           errors.push(result);
-        }
-        // Small delay between sends
-        if (toSend.indexOf(reg) < toSend.length - 1) {
-          await new Promise(r => setTimeout(r, 300));
         }
       }
 
