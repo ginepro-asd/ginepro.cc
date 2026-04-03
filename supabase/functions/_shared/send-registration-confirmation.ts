@@ -35,10 +35,10 @@ export async function sendRegistrationConfirmation(
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const internalAuthKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const internalHeaders = {
-    "Authorization": `Bearer ${internalAuthKey}`,
-    "apikey": internalAuthKey,
+    "Authorization": `Bearer ${serviceRoleKey}`,
+    "apikey": serviceRoleKey,
     "Content-Type": "application/json",
   };
 
