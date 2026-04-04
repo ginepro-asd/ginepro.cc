@@ -156,6 +156,22 @@ serve(async (req) => {
     const messageId = crypto.randomUUID();
     const idempotencyKey = `confirmation-${registration_id || email}-${Date.now()}`;
 
+    // Get or create unsubscribe token for this email
+    const { data: existingToken } = await supabaseAdmin
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", email)
+      .maybeSingle();
+
+    let unsubscribeToken = existingToken?.token;
+    if (!unsubscribeToken) {
+      unsubscribeToken = crypto.randomUUID();
+      await supabaseAdmin.from("email_unsubscribe_tokens").insert({
+        email,
+        token: unsubscribeToken,
+      });
+    }
+
     // Generate plain text version from key fields
     const textBody = isTesseramento
       ? `Ciao ${nome}, il tuo tesseramento ${eventName} è stato completato con successo.\n\nNome: ${nome} ${cognome}\nEmail: ${email}\nPagamento: ${paymentLabel}${card?.card_number ? `\nN° Tessera: ${card.card_number}` : ''}${cardLink ? `\n\nVisualizza la tua tessera: ${cardLink}` : ''}${isTesseramento && setupLink ? `\nConfigura la tua area riservata: ${setupLink}` : ''}\n\n${footerText}`
@@ -172,6 +188,7 @@ serve(async (req) => {
       label: "confirmation-email",
       idempotency_key: idempotencyKey,
       message_id: messageId,
+      unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
     };
 
