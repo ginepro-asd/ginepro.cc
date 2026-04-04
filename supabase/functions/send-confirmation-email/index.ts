@@ -156,12 +156,18 @@ serve(async (req) => {
     const messageId = crypto.randomUUID();
     const idempotencyKey = `confirmation-${registration_id || email}-${Date.now()}`;
 
+    // Generate plain text version from key fields
+    const textBody = isTesseramento
+      ? `Ciao ${nome}, il tuo tesseramento ${eventName} è stato completato con successo.\n\nNome: ${nome} ${cognome}\nEmail: ${email}\nPagamento: ${paymentLabel}${card?.card_number ? `\nN° Tessera: ${card.card_number}` : ''}${cardLink ? `\n\nVisualizza la tua tessera: ${cardLink}` : ''}${isTesseramento && setupLink ? `\nConfigura la tua area riservata: ${setupLink}` : ''}\n\n${footerText}`
+      : `Ciao ${nome}, la tua iscrizione a ${eventName} è stata completata con successo.\n\nNome: ${nome} ${cognome}\nEmail: ${email}\nPagamento: ${paymentLabel}\nEvento: ${eventDate}${eventLocation ? `\nLuogo: ${eventLocation}` : ''}\n\n${footerText}`;
+
     const payload = {
       to: email,
       from: FROM_ADDRESS,
       sender_domain: SENDER_DOMAIN,
       subject,
       html: htmlBody,
+      text: textBody,
       purpose: "transactional",
       label: "confirmation-email",
       idempotency_key: idempotencyKey,
