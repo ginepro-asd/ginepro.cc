@@ -77,6 +77,22 @@ serve(async (req) => {
       const idempotencyKey = `event-email-${event_email_id}-${reg.id}`;
 
       try {
+        // Get or create unsubscribe token
+        const { data: existingToken } = await supabaseAdmin
+          .from("email_unsubscribe_tokens")
+          .select("token")
+          .eq("email", reg.email)
+          .maybeSingle();
+
+        let unsubscribeToken = existingToken?.token;
+        if (!unsubscribeToken) {
+          unsubscribeToken = crypto.randomUUID();
+          await supabaseAdmin.from("email_unsubscribe_tokens").insert({
+            email: reg.email,
+            token: unsubscribeToken,
+          });
+        }
+
         // Strip HTML tags for plain text version
         const textBody = htmlBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
@@ -91,6 +107,7 @@ serve(async (req) => {
           label: `event-email-${template.slug}`,
           idempotency_key: idempotencyKey,
           message_id: messageId,
+          unsubscribe_token: unsubscribeToken,
           queued_at: new Date().toISOString(),
         };
 
