@@ -162,12 +162,15 @@ serve(async (req) => {
       const subject = resolveTemplate(template.subject || "", { nome: fakeReg.nome });
       const messageId = crypto.randomUUID();
 
+      const textBody = htmlBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
       const payload = {
         to: test_email,
         from: FROM_ADDRESS,
         sender_domain: SENDER_DOMAIN,
         subject: `[TEST] ${subject}`,
         html: htmlBody,
+        text: textBody,
         purpose: "transactional",
         label: `event-email-${template.slug}-test`,
         idempotency_key: `test-${event_email_id}-${Date.now()}`,
