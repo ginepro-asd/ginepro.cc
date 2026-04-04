@@ -33,18 +33,24 @@ serve(async (req) => {
     );
 
     if (session.payment_status === "paid") {
-      // Update the main registration
-      await supabaseAdmin
+      // Transition to completed only once to avoid duplicate side effects on refresh/retry
+      const { data: justCompletedRow } = await supabaseAdmin
         .from("registrations")
         .update({ payment_status: "completed", payment_id: session_id })
-        .eq("id", registration_id);
+        .eq("id", registration_id)
+        .neq("payment_status", "completed")
+        .select("id")
+        .maybeSingle();
+
+      const justCompleted = Boolean(justCompletedRow);
 
       // Also update any paired registration sharing the same payment_id
       await supabaseAdmin
         .from("registrations")
         .update({ payment_status: "completed" })
         .eq("payment_id", session_id)
-        .neq("id", registration_id);
+        .neq("id", registration_id)
+        .neq("payment_status", "completed");
 
       // Create membership card if tesseramento
       const card = await createMembershipCardIfNeeded(supabaseAdmin, registration_id);
@@ -52,12 +58,12 @@ serve(async (req) => {
       // Fetch registration data with event info for confirmation
       const { data: registration } = await supabaseAdmin
         .from("registrations")
-        .select("nome, cognome, email, payment_method, event_id")
+        .select("nome, cognome, email, payment_method, event_id, participant_id")
         .eq("id", registration_id)
         .single();
 
-      // Send confirmation email via send-event-email (fire-and-forget)
-      if (registration) {
+      // Send confirmation email only the first time the payment becomes completed
+      if (registration && justCompleted) {
         try {
           // Find the on_payment template for this event
           if (registration.event_id) {

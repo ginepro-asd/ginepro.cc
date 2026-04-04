@@ -154,7 +154,7 @@ serve(async (req) => {
       : `Iscrizione confermata — ${eventName}`;
 
     const messageId = crypto.randomUUID();
-    const idempotencyKey = `confirmation-${registration_id || email}-${Date.now()}`;
+    const idempotencyKey = `confirmation-email-${registration_id || email.toLowerCase()}`;
 
     // Get or create unsubscribe token for this email
     const { data: existingToken } = await supabaseAdmin
