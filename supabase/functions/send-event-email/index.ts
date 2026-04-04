@@ -21,66 +21,6 @@ function resolveTemplate(
   return result;
 }
 
-function htmlToText(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#169;/g, '©')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function generateToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function getOrCreateUnsubscribeToken(supabaseAdmin: any, email: string): Promise<string> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  const { data: existingToken, error: lookupError } = await supabaseAdmin
-    .from("email_unsubscribe_tokens")
-    .select("token, used_at")
-    .eq("email", normalizedEmail)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw new Error(`Failed to look up unsubscribe token: ${lookupError.message}`);
-  }
-
-  if (existingToken && !existingToken.used_at) {
-    return existingToken.token;
-  }
-
-  const token = generateToken();
-  const { error: upsertError } = await supabaseAdmin
-    .from("email_unsubscribe_tokens")
-    .upsert({ email: normalizedEmail, token }, { onConflict: "email", ignoreDuplicates: true });
-
-  if (upsertError) {
-    throw new Error(`Failed to create unsubscribe token: ${upsertError.message}`);
-  }
-
-  const { data: storedToken, error: readError } = await supabaseAdmin
-    .from("email_unsubscribe_tokens")
-    .select("token")
-    .eq("email", normalizedEmail)
-    .maybeSingle();
-
-  if (readError || !storedToken) {
-    throw new Error(`Failed to confirm unsubscribe token storage: ${readError?.message || 'missing token'}`);
-  }
-
-  return storedToken.token;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -122,10 +62,6 @@ serve(async (req) => {
       const disciplina = reg.custom_data?.disciplina || "";
       const orario = orarioMap[disciplina] || "";
 
-      if (!reg.email) {
-        throw new Error("Missing recipient email");
-      }
-
       const vars: Record<string, string> = {
         nome: reg.nome || "",
         cognome: reg.cognome || "",
@@ -139,23 +75,18 @@ serve(async (req) => {
       const subject = resolveTemplate(template.subject || "", vars);
       const messageId = crypto.randomUUID();
       const idempotencyKey = `event-email-${event_email_id}-${reg.id}`;
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabaseAdmin, reg.email);
 
       try {
-        const textBody = htmlToText(htmlBody);
-
         const payload = {
           to: reg.email,
           from: FROM_ADDRESS,
           sender_domain: SENDER_DOMAIN,
           subject,
           html: htmlBody,
-          text: textBody,
           purpose: "transactional",
           label: `event-email-${template.slug}`,
           idempotency_key: idempotencyKey,
           message_id: messageId,
-          unsubscribe_token: unsubscribeToken,
           queued_at: new Date().toISOString(),
         };
 
@@ -226,8 +157,6 @@ serve(async (req) => {
       });
       const subject = resolveTemplate(template.subject || "", { nome: fakeReg.nome });
       const messageId = crypto.randomUUID();
-      const textBody = htmlToText(htmlBody);
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabaseAdmin, test_email);
 
       const payload = {
         to: test_email,
@@ -235,12 +164,10 @@ serve(async (req) => {
         sender_domain: SENDER_DOMAIN,
         subject: `[TEST] ${subject}`,
         html: htmlBody,
-        text: textBody,
         purpose: "transactional",
         label: `event-email-${template.slug}-test`,
         idempotency_key: `test-${event_email_id}-${Date.now()}`,
         message_id: messageId,
-        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       };
 

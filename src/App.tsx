@@ -14,7 +14,6 @@ import AreaRiservataLogin from "./pages/AreaRiservataLogin";
 import AreaRiservataSetup from "./pages/AreaRiservataSetup";
 import AreaRiservataDashboard from "./pages/AreaRiservataDashboard";
 import NewsletterLanding from "./pages/NewsletterLanding";
-import EmailUnsubscribe from "./pages/EmailUnsubscribe";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -33,7 +32,6 @@ const App = () => (
             <Route path="/area-riservata" element={<AreaRiservataLogin />} />
             <Route path="/area-riservata/setup" element={<AreaRiservataSetup />} />
             <Route path="/area-riservata/dashboard" element={<AreaRiservataDashboard />} />
-            <Route path="/unsubscribe" element={<EmailUnsubscribe />} />
             <Route path="/newsletter/:slug" element={<NewsletterLanding />} />
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
