@@ -77,6 +77,22 @@ serve(async (req) => {
       const idempotencyKey = `event-email-${event_email_id}-${reg.id}`;
 
       try {
+        // Get or create unsubscribe token
+        const { data: existingToken } = await supabaseAdmin
+          .from("email_unsubscribe_tokens")
+          .select("token")
+          .eq("email", reg.email)
+          .maybeSingle();
+
+        let unsubscribeToken = existingToken?.token;
+        if (!unsubscribeToken) {
+          unsubscribeToken = crypto.randomUUID();
+          await supabaseAdmin.from("email_unsubscribe_tokens").insert({
+            email: reg.email,
+            token: unsubscribeToken,
+          });
+        }
+
         // Strip HTML tags for plain text version
         const textBody = htmlBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
@@ -91,6 +107,7 @@ serve(async (req) => {
           label: `event-email-${template.slug}`,
           idempotency_key: idempotencyKey,
           message_id: messageId,
+          unsubscribe_token: unsubscribeToken,
           queued_at: new Date().toISOString(),
         };
 
@@ -162,6 +179,22 @@ serve(async (req) => {
       const subject = resolveTemplate(template.subject || "", { nome: fakeReg.nome });
       const messageId = crypto.randomUUID();
 
+      // Get or create unsubscribe token for test email
+      const { data: existingToken } = await supabaseAdmin
+        .from("email_unsubscribe_tokens")
+        .select("token")
+        .eq("email", test_email)
+        .maybeSingle();
+
+      let unsubscribeToken = existingToken?.token;
+      if (!unsubscribeToken) {
+        unsubscribeToken = crypto.randomUUID();
+        await supabaseAdmin.from("email_unsubscribe_tokens").insert({
+          email: test_email,
+          token: unsubscribeToken,
+        });
+      }
+
       const textBody = htmlBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
       const payload = {
@@ -175,6 +208,7 @@ serve(async (req) => {
         label: `event-email-${template.slug}-test`,
         idempotency_key: `test-${event_email_id}-${Date.now()}`,
         message_id: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       };
 
