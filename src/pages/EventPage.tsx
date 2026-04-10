@@ -15,8 +15,14 @@ import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getStartingPrice, hasVariablePricing, getRouteSelectionField,
-  isOptionCoppia, hasCoppiaOptions, getOptionPrice, getOptionMaxSpots, hasMaxSpotsOptions,
+  getStartingPrice,
+  hasVariablePricing,
+  getRouteSelectionField,
+  isOptionCoppia,
+  hasCoppiaOptions,
+  getOptionPrice,
+  getOptionMaxSpots,
+  hasMaxSpotsOptions,
   isOptionFeatured,
 } from "@/lib/event-pricing";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +36,9 @@ const EventPage = () => {
     if (event) {
       document.title = `Ginepro - ${event.nome}`;
     }
-    return () => { document.title = "Ginepro"; };
+    return () => {
+      document.title = "Ginepro";
+    };
   }, [event?.nome]);
 
   const routeField = event ? getRouteSelectionField(event.custom_fields) : null;
@@ -89,10 +97,12 @@ const EventPage = () => {
   const variablePricing = hasVariablePricing(event.custom_fields);
   const startingPrice = getStartingPrice(event.prezzo, event.custom_fields);
 
-  const hasMixedCoppia = hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
+  const hasMixedCoppia =
+    hasCoppiaOptions(event.custom_fields) && routeField?.options?.some((o) => !isOptionCoppia(routeField, o));
   const allCoppia = event.is_coppia && !hasMixedCoppia;
   const isCoppiaForSelected = allCoppia || (hasMixedCoppia && isOptionCoppia(routeField, selectedDiscipline));
-  const showDisciplineSelector = routeField && (hasMixedCoppia || showDisciplineSelectorForSpots || hasVariablePricing(event!.custom_fields));
+  const showDisciplineSelector =
+    routeField && (hasMixedCoppia || showDisciplineSelectorForSpots || hasVariablePricing(event!.custom_fields));
 
   // Split event name for styled display
   const nameParts = event.nome.split(" ");
@@ -175,15 +185,15 @@ const EventPage = () => {
             className="mb-8 flex flex-col"
           >
             {startingPrice > 0 ? (
-            <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
-              <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
-                {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
+              <div className="bg-secondary/15 border border-secondary/30 rounded-full px-6 py-2.5">
+                <span className="font-display text-2xl sm:text-3xl font-bold text-secondary">
+                  {variablePricing ? `da ${formatPrice(startingPrice)}` : formatPrice(startingPrice)}
                 </span>
-              {(event.is_coppia || hasMixedCoppia) && (
-                <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
-              )}
-            </div>
-              ) : undefined }
+                {(event.is_coppia || hasMixedCoppia) && (
+                  <span className="text-sm text-secondary/70 ml-1">/ partecipante</span>
+                )}
+              </div>
+            ) : undefined}
           </motion.div>
 
           {event.scadenza_iscrizioni && (
@@ -205,13 +215,13 @@ const EventPage = () => {
       </section>
 
       {/* Info Section */}
-      {(!event.is_tesseramento &&  (event.descrizione || event.regulation_url)) && (
+      {!event.is_tesseramento && (event.descrizione || event.regulation_url) && (
         <section className="relative py-16 sm:py-24 px-4 bg-muted/30">
           <div className="max-w-3xl mx-auto text-center">
             <Mountain className="h-10 w-10 mx-auto mb-6 text-primary" />
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-6 text-foreground">L'evento</h2>
             {event.descrizione && (
-              <p className="text-muted-foreground text-lg leading-relaxed mb-6 max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-lg leading-relaxed mb-6 max-w-2xl mx-auto whitespace-pre-line">
                 {event.descrizione}
               </p>
             )}
@@ -279,7 +289,13 @@ const EventPage = () => {
                 <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
                   <CardContent className="pt-6 space-y-3">
                     <Label className="text-sm font-medium">{routeField.label} *</Label>
-                    <RadioGroup value={selectedDiscipline} onValueChange={(v) => { if (!isOptionSoldOut(v)) setSelectedDiscipline(v); }} className="grid grid-cols-1 gap-3">
+                    <RadioGroup
+                      value={selectedDiscipline}
+                      onValueChange={(v) => {
+                        if (!isOptionSoldOut(v)) setSelectedDiscipline(v);
+                      }}
+                      className="grid grid-cols-1 gap-3"
+                    >
                       {routeField.options.map((opt) => {
                         const price = getOptionPrice(routeField, opt);
                         const coppia = isOptionCoppia(routeField, opt);
@@ -306,18 +322,21 @@ const EventPage = () => {
                               {coppia && <span className="ml-1.5 text-xs text-secondary font-medium">(in coppia)</span>}
                               {price !== null && (
                                 <span className="block text-xs text-muted-foreground">
-                                  {formatPrice(price)}{coppia ? " a partecipante" : ""}
+                                  {formatPrice(price)}
+                                  {coppia ? " a partecipante" : ""}
                                 </span>
                               )}
                             </div>
                             {remaining !== null && (
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                soldOut
-                                  ? "bg-destructive/10 text-destructive"
-                                  : remaining <= 5
-                                    ? "bg-orange-500/10 text-orange-600"
-                                    : "bg-green-500/10 text-green-600"
-                              }`}>
+                              <span
+                                className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  soldOut
+                                    ? "bg-destructive/10 text-destructive"
+                                    : remaining <= 5
+                                      ? "bg-orange-500/10 text-orange-600"
+                                      : "bg-green-500/10 text-green-600"
+                                }`}
+                              >
                                 {soldOut ? "Esaurito" : `${remaining} posti`}
                               </span>
                             )}
@@ -331,7 +350,10 @@ const EventPage = () => {
             </section>
           )}
           {isCoppiaForSelected ? (
-            <PairRegistrationForm event={event} preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined} />
+            <PairRegistrationForm
+              event={event}
+              preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
+            />
           ) : (
             <RegistrationForm
               event={event}
@@ -346,11 +368,19 @@ const EventPage = () => {
       <footer className="py-8 px-4 border-t border-border/50 text-center">
         <p className="text-sm text-muted-foreground">
           © 2025{" "}
-          <a href="https://ginepro.cc" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          <a
+            href="https://ginepro.cc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
             GINEPRO
           </a>{" "}
           — {event.nome} ·{" "}
-          <Link to={`/${slug}/admin`} className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+          <Link
+            to={`/${slug}/admin`}
+            className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
             ⚙
           </Link>
         </p>
