@@ -88,42 +88,41 @@ serve(async (req) => {
     async function createParticipantAndRegistration(
       p: any, pettorale: string, suffix: string
     ) {
-      // Look up existing participant by nome+cognome first, then by email as fallback
-      let existingPart = await supabaseAdmin
-        .from("participants")
-        .select("id")
-        .eq("nome", p.nome)
-        .eq("cognome", p.cognome)
-        .maybeSingle()
-        .then(r => r.data);
+      let participantId: string | null = p.participantId ?? null;
 
-      if (!existingPart) {
-        // Fallback: check by email
-        existingPart = await supabaseAdmin
+      if (!participantId) {
+        const { data: existingPart, error: existingPartError } = await supabaseAdmin
           .from("participants")
           .select("id")
-          .eq("email", p.email)
-          .maybeSingle()
-          .then(r => r.data);
+          .eq("nome", p.nome)
+          .eq("cognome", p.cognome)
+          .maybeSingle();
+
+        if (existingPartError) {
+          throw new Error(`Participant ${suffix} lookup error: ${existingPartError.message}`);
+        }
+
+        participantId = existingPart?.id ?? null;
       }
 
-      let participantId: string;
-
-      if (existingPart) {
-        // Update existing participant with latest data
-        await supabaseAdmin
+      if (participantId) {
+        const { error: updateParticipantError } = await supabaseAdmin
           .from("participants")
           .update({
             nome: p.nome,
             cognome: p.cognome,
+            email: p.email,
             telefono: p.telefono,
             codice_fiscale: p.codiceFiscale || null,
             birth_date: p.birthDate || null,
             birth_place: p.birthPlace || null,
             identification_type: p.identificationType,
           })
-          .eq("id", existingPart.id);
-        participantId = existingPart.id;
+          .eq("id", participantId);
+
+        if (updateParticipantError) {
+          throw new Error(`Participant ${suffix} error: ${updateParticipantError.message}`);
+        }
       } else {
         const { data: newPart, error: partError } = await supabaseAdmin
           .from("participants")
@@ -139,8 +138,16 @@ serve(async (req) => {
           })
           .select("id")
           .single();
-        if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
-        participantId = newPart.id;
+
+        if (partError) {
+          if (partError.message.includes("participants_email_key")) {
+            participantId = null;
+          } else {
+            throw new Error(`Participant ${suffix} error: ${partError.message}`);
+          }
+        } else {
+          participantId = newPart.id;
+        }
       }
 
       const regCustomData = {
@@ -151,6 +158,64 @@ serve(async (req) => {
         pair_suffix: suffix,
         disciplina: disciplina || null,
       };
+
+      const { data: existingRegistration, error: existingRegistrationError } = await supabaseAdmin
+        .from("registrations")
+        .select("id, participant_id, payment_status")
+        .eq("event_id", eventId)
+        .eq("nome", p.nome)
+        .eq("cognome", p.cognome)
+        .maybeSingle();
+
+      if (existingRegistrationError) {
+        throw new Error(`Registration ${suffix} lookup error: ${existingRegistrationError.message}`);
+      }
+
+      if (existingRegistration) {
+        if (existingRegistration.participant_id !== participantId) {
+          const { error: realignRegistrationError } = await supabaseAdmin
+            .from("registrations")
+            .update({ participant_id: participantId })
+            .eq("id", existingRegistration.id);
+
+          if (realignRegistrationError) {
+            throw new Error(`Registration ${suffix} realign error: ${realignRegistrationError.message}`);
+          }
+        }
+
+        return { id: existingRegistration.id };
+      }
+
+      if (participantId) {
+        const { data: conflictingRegistration, error: conflictingRegistrationError } = await supabaseAdmin
+          .from("registrations")
+          .select("id, nome, cognome, payment_status")
+          .eq("event_id", eventId)
+          .eq("participant_id", participantId)
+          .maybeSingle();
+
+        if (conflictingRegistrationError) {
+          throw new Error(`Registration ${suffix} conflict check error: ${conflictingRegistrationError.message}`);
+        }
+
+        if (
+          conflictingRegistration &&
+          (conflictingRegistration.nome !== p.nome || conflictingRegistration.cognome !== p.cognome)
+        ) {
+          if (conflictingRegistration.payment_status !== "pending") {
+            throw new Error(`Registration ${suffix} error: partecipante già associato a un'altra iscrizione per questo evento`);
+          }
+
+          const { error: detachRegistrationError } = await supabaseAdmin
+            .from("registrations")
+            .update({ participant_id: null })
+            .eq("id", conflictingRegistration.id);
+
+          if (detachRegistrationError) {
+            throw new Error(`Registration ${suffix} detach error: ${detachRegistrationError.message}`);
+          }
+        }
+      }
 
       const { data: registration, error: dbError } = await supabaseAdmin
         .from("registrations")
