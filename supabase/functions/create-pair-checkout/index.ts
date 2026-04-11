@@ -282,6 +282,10 @@ serve(async (req) => {
 
     if (paymentMethod === "satispay") {
       const payer = satispayPayer || "a"; // default: first participant pays all
+      const satispayUrl = event.satispay_api_url || XPAY_BASE;
+      const satispayToken = event.satispay_api_token || "";
+      const satispayHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (satispayToken) satispayHeaders["Authorization"] = `Bearer ${satispayToken}`;
 
       if (payer === "each") {
         // Two separate payments, one per participant
@@ -293,14 +297,14 @@ serve(async (req) => {
         const phoneB = participantB.telefono || participantB.phoneNumber;
 
         const [resA, resB] = await Promise.all([
-          fetch(`${XPAY_BASE}/payment`, {
+          fetch(satispayUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: satispayHeaders,
             body: JSON.stringify({ orderId: orderIdA, phoneNumber: phoneA, price: halfPrice }),
           }),
-          fetch(`${XPAY_BASE}/payment`, {
+          fetch(satispayUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: satispayHeaders,
             body: JSON.stringify({ orderId: orderIdB, phoneNumber: phoneB, price: halfPrice }),
           }),
         ]);
@@ -336,9 +340,9 @@ serve(async (req) => {
         const phoneNumber = payerData.telefono || payerData.phoneNumber;
         const orderId = `${event.nome} Coppia ${bibNumber}`;
 
-        const res = await fetch(`${XPAY_BASE}/payment`, {
+        const res = await fetch(satispayUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: satispayHeaders,
           body: JSON.stringify({ orderId, phoneNumber, price: totalPrice }),
         });
 
