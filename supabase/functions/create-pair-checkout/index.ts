@@ -88,22 +88,34 @@ serve(async (req) => {
     async function createParticipantAndRegistration(
       p: any, pettorale: string, suffix: string
     ) {
-      // Look up existing participant by nome+cognome first
-      const { data: existingPart } = await supabaseAdmin
+      // Look up existing participant by nome+cognome first, then by email as fallback
+      let existingPart = await supabaseAdmin
         .from("participants")
         .select("id")
         .eq("nome", p.nome)
         .eq("cognome", p.cognome)
-        .maybeSingle();
+        .maybeSingle()
+        .then(r => r.data);
+
+      if (!existingPart) {
+        // Fallback: check by email
+        existingPart = await supabaseAdmin
+          .from("participants")
+          .select("id")
+          .eq("email", p.email)
+          .maybeSingle()
+          .then(r => r.data);
+      }
 
       let participantId: string;
 
       if (existingPart) {
-        // Update existing participant
+        // Update existing participant with latest data
         await supabaseAdmin
           .from("participants")
           .update({
-            email: p.email,
+            nome: p.nome,
+            cognome: p.cognome,
             telefono: p.telefono,
             codice_fiscale: p.codiceFiscale || null,
             birth_date: p.birthDate || null,
@@ -130,10 +142,6 @@ serve(async (req) => {
         if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
         participantId = newPart.id;
       }
-
-      const participant = { id: participantId };
-
-      if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
 
       const regCustomData = {
         ...selectedOptions,
