@@ -155,7 +155,7 @@ serve(async (req) => {
       const { data: registration, error: dbError } = await supabaseAdmin
         .from("registrations")
         .insert({
-          participant_id: participant.id,
+          participant_id: participantId,
           nome: p.nome,
           cognome: p.cognome,
           email: p.email,
