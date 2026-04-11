@@ -604,12 +604,18 @@ const EventManager = ({ password }: EventManagerProps) => {
                     <Label className="text-xs">API URL</Label>
                     <Input value={editFields.satispay_api_url || ""} placeholder="https://..."
                       className="h-8 text-sm"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_url: e.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Bearer Token</Label>
                     <Input type="password" value={editFields.satispay_api_token || ""} placeholder="Token..."
                       className="h-8 text-sm"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_token: e.target.value }))} />
                   </div>
                 </div>
