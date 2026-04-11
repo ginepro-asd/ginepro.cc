@@ -88,20 +88,50 @@ serve(async (req) => {
     async function createParticipantAndRegistration(
       p: any, pettorale: string, suffix: string
     ) {
-      const { data: participant, error: partError } = await supabaseAdmin
+      // Look up existing participant by nome+cognome first
+      const { data: existingPart } = await supabaseAdmin
         .from("participants")
-        .upsert({
-          nome: p.nome,
-          cognome: p.cognome,
-          email: p.email,
-          telefono: p.telefono,
-          codice_fiscale: p.codiceFiscale || null,
-          birth_date: p.birthDate || null,
-          birth_place: p.birthPlace || null,
-          identification_type: p.identificationType,
-        }, { onConflict: "email" })
         .select("id")
-        .single();
+        .eq("nome", p.nome)
+        .eq("cognome", p.cognome)
+        .maybeSingle();
+
+      let participantId: string;
+
+      if (existingPart) {
+        // Update existing participant
+        await supabaseAdmin
+          .from("participants")
+          .update({
+            email: p.email,
+            telefono: p.telefono,
+            codice_fiscale: p.codiceFiscale || null,
+            birth_date: p.birthDate || null,
+            birth_place: p.birthPlace || null,
+            identification_type: p.identificationType,
+          })
+          .eq("id", existingPart.id);
+        participantId = existingPart.id;
+      } else {
+        const { data: newPart, error: partError } = await supabaseAdmin
+          .from("participants")
+          .insert({
+            nome: p.nome,
+            cognome: p.cognome,
+            email: p.email,
+            telefono: p.telefono,
+            codice_fiscale: p.codiceFiscale || null,
+            birth_date: p.birthDate || null,
+            birth_place: p.birthPlace || null,
+            identification_type: p.identificationType,
+          })
+          .select("id")
+          .single();
+        if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
+        participantId = newPart.id;
+      }
+
+      const participant = { id: participantId };
 
       if (partError) throw new Error(`Participant ${suffix} error: ${partError.message}`);
 
