@@ -50,7 +50,7 @@ serve(async (req) => {
     // Fetch event
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, is_coppia, pettorale_start, custom_fields")
+      .select("id, nome, prezzo, slug, is_coppia, pettorale_start, custom_fields, satispay_api_url, satispay_api_token")
       .eq("id", eventId)
       .single();
 
