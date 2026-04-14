@@ -42,7 +42,7 @@ import {
   optionRequiresCertificate,
   getOptionMaxSpots,
 } from "@/lib/event-pricing";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
