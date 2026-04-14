@@ -169,6 +169,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
       gender: undefined,
       codiceFiscale: "",
       paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
+      isReturning: false,
     },
   });
 
