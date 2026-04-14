@@ -42,7 +42,7 @@ import {
   optionRequiresCertificate,
   getOptionMaxSpots,
 } from "@/lib/event-pricing";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
@@ -480,7 +480,38 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                   />
                 </div>
 
-                {!returningUserData && (
+                {returningUserData ? (
+                  <>
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <Input
+                        value={obfuscateEmail(returningUserData.email)}
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
+                      />
+                    </FormItem>
+
+                    <FormItem>
+                      <FormLabel>Telefono</FormLabel>
+                      <Input
+                        value={obfuscatePhone(returningUserData.telefono)}
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
+                      />
+                    </FormItem>
+
+                    {returningUserData.codice_fiscale && (
+                      <FormItem>
+                        <FormLabel>Codice Fiscale</FormLabel>
+                        <Input
+                          value={obfuscateCF(returningUserData.codice_fiscale)}
+                          readOnly
+                          className="bg-muted/50 cursor-not-allowed uppercase"
+                        />
+                      </FormItem>
+                    )}
+                  </>
+                ) : (
                   <>
                     <FormField
                       control={form.control}
