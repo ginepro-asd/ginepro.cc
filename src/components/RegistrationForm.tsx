@@ -465,229 +465,228 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type={returningUserData ? "text" : "email"}
-                          placeholder="mario@email.com"
-                          readOnly={!!returningUserData}
-                          className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!returningUserData && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="mario@email.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="telefono"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefono *</FormLabel>
-                      <div className="flex gap-2">
-                        <select
-                          value={countryCode}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                          className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0"
-                        >
-                          {COUNTRY_CODES.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.country} {c.code}
-                            </option>
-                          ))}
-                        </select>
-                        <FormControl>
-                          <Input
-                            type="tel"
-                            placeholder="333 1234567"
-                            readOnly={!!returningUserData}
-                            className={returningUserData ? "bg-muted/50 cursor-not-allowed" : ""}
-                            {...field}
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Identification type */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Identificazione *</Label>
-                  <RadioGroup
-                    value={identificationType}
-                    onValueChange={(v) => {
-                      setIdentificationType(v as "birth" | "fiscal");
-                      form.setValue("identificationType", v as "birth" | "fiscal");
-                      setComputedCF(null);
-                      setExtractedData(null);
-                    }}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="birth" id="birth" />
-                      <Label htmlFor="birth" className="cursor-pointer">
-                        Data/Luogo di nascita
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="fiscal" id="fiscal" />
-                      <Label htmlFor="fiscal" className="cursor-pointer">
-                        Codice Fiscale
-                      </Label>
-                    </div>
-                  </RadioGroup>
-
-                  {identificationType === "fiscal" ? (
-                    <div className="space-y-3">
-                      <FormField
-                        control={form.control}
-                        name="codiceFiscale"
-                        render={({ field }) => (
-                          <FormItem>
+                    <FormField
+                      control={form.control}
+                      name="telefono"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefono *</FormLabel>
+                          <div className="flex gap-2">
+                            <select
+                              value={countryCode}
+                              onChange={(e) => setCountryCode(e.target.value)}
+                              className="flex h-10 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-[90px] shrink-0"
+                            >
+                              {COUNTRY_CODES.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.country} {c.code}
+                                </option>
+                              ))}
+                            </select>
                             <FormControl>
                               <Input
-                                placeholder="RSSMRA85M01H501Z"
-                                maxLength={16}
-                                className={`uppercase ${returningUserData?.codice_fiscale ? "bg-muted/50 cursor-not-allowed" : ""}`}
-                                readOnly={!!returningUserData?.codice_fiscale}
+                                type="tel"
+                                placeholder="333 1234567"
                                 {...field}
                               />
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      {extractedData && (
-                        <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1.5">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                            <Calculator className="h-3.5 w-3.5" />
-                            Dati estratti dal Codice Fiscale
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Nato/a il: </span>
-                              <span className="font-medium text-foreground">
-                                {new Date(extractedData.birthDate).toLocaleDateString("it-IT")}
-                              </span>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Identification type */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Identificazione *</Label>
+                      <RadioGroup
+                        value={identificationType}
+                        onValueChange={(v) => {
+                          setIdentificationType(v as "birth" | "fiscal");
+                          form.setValue("identificationType", v as "birth" | "fiscal");
+                          setComputedCF(null);
+                          setExtractedData(null);
+                        }}
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="birth" id="birth" />
+                          <Label htmlFor="birth" className="cursor-pointer">
+                            Data/Luogo di nascita
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="fiscal" id="fiscal" />
+                          <Label htmlFor="fiscal" className="cursor-pointer">
+                            Codice Fiscale
+                          </Label>
+                        </div>
+                      </RadioGroup>
+
+                      {identificationType === "fiscal" ? (
+                        <div className="space-y-3">
+                          <FormField
+                            control={form.control}
+                            name="codiceFiscale"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input
+                                    placeholder="RSSMRA85M01H501Z"
+                                    maxLength={16}
+                                    className="uppercase"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          {extractedData && (
+                            <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                                <Calculator className="h-3.5 w-3.5" />
+                                Dati estratti dal Codice Fiscale
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Nato/a il: </span>
+                                  <span className="font-medium text-foreground">
+                                    {new Date(extractedData.birthDate).toLocaleDateString("it-IT")}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Sesso: </span>
+                                  <span className="font-medium text-foreground">{extractedData.gender}</span>
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="text-muted-foreground">Luogo: </span>
+                                  <span className="font-medium text-foreground">
+                                    {extractedData.birthPlace}
+                                    {extractedData.birthPlaceProvincia && extractedData.birthPlaceProvincia !== "EE"
+                                      ? ` (${extractedData.birthPlaceProvincia})`
+                                      : ""}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-muted-foreground">Sesso: </span>
-                              <span className="font-medium text-foreground">{extractedData.gender}</span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-muted-foreground">Luogo: </span>
-                              <span className="font-medium text-foreground">
-                                {extractedData.birthPlace}
-                                {extractedData.birthPlaceProvincia && extractedData.birthPlaceProvincia !== "EE"
-                                  ? ` (${extractedData.birthPlaceProvincia})`
-                                  : ""}
-                              </span>
-                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="born-abroad"
+                              checked={bornAbroad}
+                              onCheckedChange={(checked) => {
+                                setBornAbroad(!!checked);
+                                form.setValue("birthPlace", "");
+                              }}
+                            />
+                            <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
+                              Nato/a all'estero
+                            </Label>
                           </div>
+                          <FormField
+                            control={form.control}
+                            name="gender"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Sesso *</FormLabel>
+                                <FormControl>
+                                  <RadioGroup
+                                    value={field.value || ""}
+                                    onValueChange={field.onChange}
+                                    className="flex gap-4"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <RadioGroupItem value="M" id="gender-m" />
+                                      <Label htmlFor="gender-m" className="cursor-pointer">
+                                        M
+                                      </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <RadioGroupItem value="F" id="gender-f" />
+                                      <Label htmlFor="gender-f" className="cursor-pointer">
+                                        F
+                                      </Label>
+                                    </div>
+                                  </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="birthDate"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Data di nascita</FormLabel>
+                                  <FormControl>
+                                    <Input type="date" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="birthPlace"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
+                                  <FormControl>
+                                    <SearchableSelect
+                                      options={bornAbroad ? COUNTRIES : comuni}
+                                      value={field.value || ""}
+                                      onChange={(v) => field.onChange(v)}
+                                      placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
+                                      searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
+                                      emptyMessage="Nessun risultato trovato."
+                                      loading={!bornAbroad && comuniLoading}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          {computedCF && (
+                            <div className="bg-muted/50 border border-border rounded-lg p-3">
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                                <Calculator className="h-3.5 w-3.5" />
+                                Codice Fiscale calcolato
+                              </div>
+                              <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{computedCF}</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="born-abroad"
-                          checked={bornAbroad}
-                          onCheckedChange={(checked) => {
-                            setBornAbroad(!!checked);
-                            form.setValue("birthPlace", "");
-                          }}
-                        />
-                        <Label htmlFor="born-abroad" className="cursor-pointer text-sm text-muted-foreground">
-                          Nato/a all'estero
-                        </Label>
-                      </div>
-                      <FormField
-                        control={form.control}
-                        name="gender"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sesso *</FormLabel>
-                            <FormControl>
-                              <RadioGroup
-                                value={field.value || ""}
-                                onValueChange={field.onChange}
-                                className="flex gap-4"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <RadioGroupItem value="M" id="gender-m" />
-                                  <Label htmlFor="gender-m" className="cursor-pointer">
-                                    M
-                                  </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <RadioGroupItem value="F" id="gender-f" />
-                                  <Label htmlFor="gender-f" className="cursor-pointer">
-                                    F
-                                  </Label>
-                                </div>
-                              </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="birthDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Data di nascita</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="birthPlace"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{bornAbroad ? "Nazione di nascita" : "Comune di nascita"}</FormLabel>
-                              <FormControl>
-                                <SearchableSelect
-                                  options={bornAbroad ? COUNTRIES : comuni}
-                                  value={field.value || ""}
-                                  onChange={(v) => field.onChange(v)}
-                                  placeholder={bornAbroad ? "Seleziona nazione..." : "Seleziona comune..."}
-                                  searchPlaceholder={bornAbroad ? "Cerca nazione..." : "Cerca comune..."}
-                                  emptyMessage="Nessun risultato trovato."
-                                  loading={!bornAbroad && comuniLoading}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      {computedCF && (
-                        <div className="bg-muted/50 border border-border rounded-lg p-3">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                            <Calculator className="h-3.5 w-3.5" />
-                            Codice Fiscale calcolato
-                          </div>
-                          <p className="font-mono text-sm font-semibold text-foreground tracking-wider">{computedCF}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  </>
+                )}
 
                 {/* Custom fields */}
                 {event.custom_fields.filter((cf) => {
