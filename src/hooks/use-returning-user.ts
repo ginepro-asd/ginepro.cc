@@ -67,6 +67,7 @@ export function useReturningUser({
 
   const handleSelectMatch = async (match: MatchedRegistration) => {
     setReturningUserData(match);
+    form.setValue("isReturning", true);
     form.setValue("email", obfuscateEmail(match.email));
     form.setValue("telefono", obfuscatePhone(match.telefono));
     const phoneMatch = match.telefono.match(/^(\+\d{1,3})/);
