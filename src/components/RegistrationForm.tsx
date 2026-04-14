@@ -480,7 +480,38 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
                   />
                 </div>
 
-                {!returningUserData && (
+                {returningUserData ? (
+                  <>
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <Input
+                        value={obfuscateEmail(returningUserData.email)}
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
+                      />
+                    </FormItem>
+
+                    <FormItem>
+                      <FormLabel>Telefono</FormLabel>
+                      <Input
+                        value={obfuscatePhone(returningUserData.telefono)}
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
+                      />
+                    </FormItem>
+
+                    {returningUserData.codice_fiscale && (
+                      <FormItem>
+                        <FormLabel>Codice Fiscale</FormLabel>
+                        <Input
+                          value={obfuscateCF(returningUserData.codice_fiscale)}
+                          readOnly
+                          className="bg-muted/50 cursor-not-allowed uppercase"
+                        />
+                      </FormItem>
+                    )}
+                  </>
+                ) : (
                   <>
                     <FormField
                       control={form.control}
