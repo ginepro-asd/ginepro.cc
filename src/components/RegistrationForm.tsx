@@ -53,33 +53,47 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
 };
 
-const formSchema = z
-  .object({
-    nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-    cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
-    email: z.string().trim().min(1, "Campo obbligatorio").max(255),
-    telefono: z.string().trim().min(6, "Numero non valido").max(20),
-    identificationType: z.enum(["birth", "fiscal"]),
-    birthDate: z.string().optional(),
-    birthPlace: z.string().optional(),
-    gender: z.enum(["M", "F"]).optional(),
-    codiceFiscale: z.string().optional(),
-    paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
-  })
-  .refine(
-    (data) => {
-      if (data.identificationType === "birth") {
-        return (
-          data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0 && data.gender
-        );
-      }
-      return data.codiceFiscale && data.codiceFiscale.length >= 11;
-    },
-    {
-      message: "Compila i campi di identificazione",
-      path: ["codiceFiscale"],
-    },
-  );
+const formSchemaBase = z.object({
+  nome: z.string().trim().min(1, "Campo obbligatorio").max(100),
+  cognome: z.string().trim().min(1, "Campo obbligatorio").max(100),
+  email: z.string().trim().max(255).default(""),
+  telefono: z.string().trim().max(20).default(""),
+  identificationType: z.enum(["birth", "fiscal"]),
+  birthDate: z.string().optional(),
+  birthPlace: z.string().optional(),
+  gender: z.enum(["M", "F"]).optional(),
+  codiceFiscale: z.string().optional(),
+  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  isReturning: z.boolean().optional(),
+});
+
+const formSchema = formSchemaBase.refine(
+  (data) => {
+    if (data.isReturning) return true;
+    if (data.identificationType === "birth") {
+      return (
+        data.birthDate && data.birthDate.length > 0 && data.birthPlace && data.birthPlace.length > 0 && data.gender
+      );
+    }
+    return data.codiceFiscale && data.codiceFiscale.length >= 11;
+  },
+  {
+    message: "Compila i campi di identificazione",
+    path: ["codiceFiscale"],
+  },
+).refine(
+  (data) => {
+    if (data.isReturning) return true;
+    return data.email.length >= 1;
+  },
+  { message: "Campo obbligatorio", path: ["email"] },
+).refine(
+  (data) => {
+    if (data.isReturning) return true;
+    return data.telefono.length >= 6;
+  },
+  { message: "Numero non valido", path: ["telefono"] },
+);
 
 type FormData = z.infer<typeof formSchema>;
 
