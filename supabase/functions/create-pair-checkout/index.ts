@@ -36,10 +36,16 @@ serve(async (req) => {
   }
 
   try {
-    const { participantA, participantB, paymentMethod, eventId, customData, disciplina, satispayPayer } = await req.json();
+    const { participantA, participantB, paymentMethod, eventId, customData, disciplina, satispayPayer, adminToken } = await req.json();
 
     if (!participantA || !participantB || !paymentMethod || !eventId) {
       throw new Error("Campi obbligatori mancanti");
+    }
+
+    const ADMIN_BYPASS_TOKEN = "gin";
+    const isCash = paymentMethod === "contanti";
+    if (isCash && adminToken !== ADMIN_BYPASS_TOKEN) {
+      throw new Error("Pagamento in contanti riservato agli amministratori");
     }
 
     const supabaseAdmin = createClient(
@@ -65,7 +71,7 @@ serve(async (req) => {
     const totalPrice = unitPrice * 2;
     const pairId = crypto.randomUUID();
 
-    // Determine next bib number
+    // Determine next two sequential bib numbers (no AB suffix anymore)
     const { data: existingRegs } = await supabaseAdmin
       .from("registrations")
       .select("custom_data")
@@ -75,14 +81,19 @@ serve(async (req) => {
     if (existingRegs) {
       for (const r of existingRegs) {
         const cd = r.custom_data as Record<string, any> | null;
-        if (cd?.pettorale_num && cd.pettorale_num > maxBib) {
-          maxBib = cd.pettorale_num;
+        const candidates = [
+          typeof cd?.pettorale === "number" ? cd.pettorale : Number.parseInt(String(cd?.pettorale ?? ""), 10),
+          typeof cd?.pettorale_num === "number" ? cd.pettorale_num : Number.parseInt(String(cd?.pettorale_num ?? ""), 10),
+        ].filter((n) => Number.isFinite(n)) as number[];
+        for (const n of candidates) {
+          if (n > maxBib) maxBib = n;
         }
       }
     }
-    const bibNumber = maxBib + 1;
-    const pettoraleA = `${bibNumber}A`;
-    const pettoraleB = `${bibNumber}B`;
+    const bibNumberA = maxBib + 1;
+    const bibNumberB = maxBib + 2;
+    const pettoraleA = String(bibNumberA);
+    const pettoraleB = String(bibNumberB);
 
     // Helper to upsert participant and create registration
     async function createParticipantAndRegistration(
