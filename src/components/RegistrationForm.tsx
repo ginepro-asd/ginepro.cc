@@ -152,7 +152,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
   const displayPriceLabel =
     hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
-  const defaultPayment = event.payment_methods[0] || "stripe";
+  const defaultPayment = adminBypass ? "satispay" : event.payment_methods[0] || "stripe";
 
   // Determine if current discipline requires certificate
   const routeField = getRouteSelectionField(event.custom_fields);
@@ -172,7 +172,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       birthPlace: "",
       gender: undefined,
       codiceFiscale: "",
-      paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
+      paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal" | "contanti",
       isReturning: false,
     },
   });
