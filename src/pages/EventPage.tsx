@@ -13,6 +13,8 @@ import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
+import { useIsExpired } from "@/components/Countdown";
+import { getEffectiveDeadline } from "@/lib/registration-deadline";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getStartingPrice,
@@ -74,6 +76,13 @@ const EventPage = () => {
       setSelectedDiscipline(routeField.options[0]);
     }
   }, [routeField?.options?.join("|")]);
+
+  // Compute deadline (stable Date for hook); use far-future placeholder when event not yet loaded
+  const deadline = React.useMemo(
+    () => (event ? getEffectiveDeadline(event) : new Date("2099-12-31")),
+    [event?.scadenza_iscrizioni, event?.data_evento, event?.chiusura_ore_prima],
+  );
+  const expired = useIsExpired(deadline);
 
   if (isLoading) {
     return (
@@ -203,14 +212,16 @@ const EventPage = () => {
             </div>
           )}
 
-          <Button
-            size="lg"
-            className="font-display font-semibold text-lg px-10 h-13 shadow-lg hover:shadow-xl transition-shadow"
-            onClick={() => document.getElementById("iscrizione")?.scrollIntoView({ behavior: "smooth" })}
-          >
-            Iscriviti ora
-            <ArrowDown className="ml-2 h-4 w-4" />
-          </Button>
+          {!expired && !event.external_url && (
+            <Button
+              size="lg"
+              className="font-display font-semibold text-lg px-10 h-13 shadow-lg hover:shadow-xl transition-shadow"
+              onClick={() => document.getElementById("iscrizione")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Iscriviti ora
+              <ArrowDown className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </motion.div>
       </section>
 
@@ -283,7 +294,7 @@ const EventPage = () => {
       ) : (
         <>
           {/* Discipline selector */}
-          {showDisciplineSelector && routeField && (
+          {showDisciplineSelector && routeField && !expired && (
             <section className="py-8 px-4">
               <div className="max-w-xl mx-auto">
                 <Card className="border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
