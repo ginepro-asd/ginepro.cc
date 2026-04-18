@@ -85,9 +85,6 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 const ADMIN_BYPASS_PAYMENT_METHODS = ["satispay", "contanti"];
-  satispay: "Satispay",
-  paypal: "PayPal",
-};
 
 function stripProvincia(comune: string): string {
   return comune.replace(/\s*\([A-Z]{2}\)$/, "");
