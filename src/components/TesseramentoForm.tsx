@@ -365,19 +365,20 @@ const TesseramentoForm = ({ event, adminBypass }: TesseramentoFormProps) => {
         isTesseramento: true,
       };
 
+      const adminPayload = adminBypass ? { ...payload, adminToken: "gin" } : payload;
       if (data.paymentMethod === "stripe") {
-        const { data: result, error } = await supabase.functions.invoke("create-checkout", { body: payload });
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", { body: adminPayload });
         if (error) throw error;
         if (result?.url) window.location.href = result.url;
         else throw new Error("Nessun URL di pagamento ricevuto");
       } else if (data.paymentMethod === "satispay") {
-        const { data: result, error } = await supabase.functions.invoke("create-satispay-payment", { body: payload });
+        const { data: result, error } = await supabase.functions.invoke("create-satispay-payment", { body: adminPayload });
         if (error) throw error;
         if (result?.payment_id && result?.registration_id) {
           setSatispayState({ paymentId: result.payment_id, registrationId: result.registration_id });
         } else throw new Error("Errore nella creazione del pagamento Satispay");
       } else if (data.paymentMethod === "paypal") {
-        const { data: result, error } = await supabase.functions.invoke("create-paypal-order", { body: payload });
+        const { data: result, error } = await supabase.functions.invoke("create-paypal-order", { body: adminPayload });
         if (error) throw error;
         if (result?.url) window.location.href = result.url;
         else throw new Error("Nessun URL PayPal ricevuto");

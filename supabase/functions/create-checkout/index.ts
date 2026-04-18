@@ -161,8 +161,8 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/${event.slug}?cancelled=true`,
+      success_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
+      cancel_url: `${origin}/${event.slug}?cancelled=true${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
       metadata: { registration_id: registration.id, event_id: eventId },
     });
 
