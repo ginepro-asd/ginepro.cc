@@ -24,6 +24,7 @@ export interface EventData {
   external_url: string | null;
   regulation_url: string | null;
   service_fee: number;
+  chiusura_ore_prima: number;
 }
 
 export interface CustomField {
@@ -66,6 +67,7 @@ export function useEvent(slug: string | undefined) {
         external_url: (data as any).external_url ?? null,
         regulation_url: (data as any).regulation_url ?? null,
         service_fee: (data as any).service_fee ?? 0,
+        chiusura_ore_prima: (data as any).chiusura_ore_prima ?? 24,
       };
     },
     enabled: !!slug,
@@ -108,6 +110,7 @@ export function useEvents() {
         external_url: (e as any).external_url ?? null,
         regulation_url: (e as any).regulation_url ?? null,
         service_fee: (e as any).service_fee ?? 0,
+        chiusura_ore_prima: (e as any).chiusura_ore_prima ?? 24,
       }));
     },
     staleTime: 5 * 60 * 1000,

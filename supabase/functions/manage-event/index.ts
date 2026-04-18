@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
         "is_tesseramento", "is_coppia", "pettorale_start", "custom_fields",
         "location_lat", "location_lng", "location_label", "visibile_in_landing",
         "external_url", "regulation_url", "satispay_api_url", "satispay_api_token",
+        "service_fee", "chiusura_ore_prima",
       ];
       const sanitized: Record<string, any> = {};
       for (const [key, val] of Object.entries(fields)) {
