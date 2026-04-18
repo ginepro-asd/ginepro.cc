@@ -12,11 +12,19 @@ interface RegistrationData {
   email: string;
   payment_method: string;
   participant_id?: string | null;
+  custom_data?: Record<string, any> | null;
+  payment_id?: string | null;
 }
 
 interface CardData {
   id: string;
   card_number: string;
+}
+
+interface PairMate {
+  nome: string;
+  cognome: string;
+  pettorale: string | null;
 }
 
 const Conferma = () => {
@@ -25,6 +33,25 @@ const Conferma = () => {
   const [status, setStatus] = useState<"loading" | "paid" | "error">("loading");
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
   const [memberCard, setMemberCard] = useState<CardData | null>(null);
+  const [pairMate, setPairMate] = useState<PairMate | null>(null);
+
+  const isPair = searchParams.get("pair") === "true";
+  const tokenParam = searchParams.get("token");
+
+  // Fetch the pair partner if needed
+  const loadPairMate = async (reg: RegistrationData, registrationId: string) => {
+    if (!reg.payment_id) return;
+    const { data: mates } = await supabase
+      .from("registrations")
+      .select("nome, cognome, custom_data")
+      .eq("payment_id", reg.payment_id)
+      .neq("id", registrationId);
+    if (mates && mates.length > 0) {
+      const m = mates[0];
+      const cd = m.custom_data as Record<string, any> | null;
+      setPairMate({ nome: m.nome, cognome: m.cognome, pettorale: cd?.pettorale ?? null });
+    }
+  };
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -36,29 +63,26 @@ const Conferma = () => {
       return;
     }
 
-    if (provider === "satispay") {
-      const fetchRegistration = async () => {
-        try {
-          const { data, error } = await supabase
-            .from("registrations")
-            .select("nome, cognome, email, payment_method, participant_id")
-            .eq("id", registrationId)
-            .single();
-          if (error) throw error;
-          setRegistration(data);
-          // Check for membership card
-          const { data: cards } = await supabase
-            .from("membership_cards")
-            .select("id, card_number")
-            .eq("registration_id", registrationId)
-            .limit(1);
-          if (cards && cards.length > 0) setMemberCard(cards[0]);
-          setStatus("paid");
-        } catch {
-          setStatus("error");
-        }
-      };
-      fetchRegistration();
+    const fetchRegAndCard = async (markPaid = true) => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .select("nome, cognome, email, payment_method, participant_id, custom_data, payment_id")
+        .eq("id", registrationId)
+        .single();
+      if (error) throw error;
+      setRegistration(data);
+      const { data: cards } = await supabase
+        .from("membership_cards")
+        .select("id, card_number")
+        .eq("registration_id", registrationId)
+        .limit(1);
+      if (cards && cards.length > 0) setMemberCard(cards[0]);
+      if (isPair) await loadPairMate(data, registrationId);
+      if (markPaid) setStatus("paid");
+    };
+
+    if (provider === "satispay" || provider === "contanti") {
+      fetchRegAndCard().catch(() => setStatus("error"));
       return;
     }
 
@@ -75,6 +99,7 @@ const Conferma = () => {
             setStatus("paid");
             setRegistration(data.registration);
             if (data.card) setMemberCard(data.card);
+            if (isPair && data.registration) await loadPairMate(data.registration, registrationId);
           } else {
             setStatus("error");
           }
@@ -101,6 +126,7 @@ const Conferma = () => {
           setStatus("paid");
           setRegistration(data.registration);
           if (data.card) setMemberCard(data.card);
+          if (isPair && data.registration) await loadPairMate(data.registration, registrationId);
         } else {
           setStatus("error");
         }
@@ -111,7 +137,11 @@ const Conferma = () => {
     verify();
   }, [searchParams]);
 
-  const homePath = slug ? `/${slug}` : "/";
+  // Preserve admin token when returning home
+  const isAdmin = tokenParam === "gin";
+  const homePath = slug ? `/${slug}${isAdmin ? "?token=gin" : ""}` : "/";
+
+  const myPettorale = registration?.custom_data?.pettorale ?? null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
@@ -150,6 +180,26 @@ const Conferma = () => {
                   <span className="text-muted-foreground">Pagamento:</span>{" "}
                   <strong className="text-foreground capitalize">{registration.payment_method}</strong>
                 </p>
+                {myPettorale && (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Pettorale:</span>{" "}
+                    <strong className="text-foreground font-mono text-base">{myPettorale}</strong>
+                  </p>
+                )}
+                {pairMate && (
+                  <div className="pt-2 mt-2 border-t border-border/50">
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Compagno/a:</span>{" "}
+                      <strong className="text-foreground">{pairMate.nome} {pairMate.cognome}</strong>
+                    </p>
+                    {pairMate.pettorale && (
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Pettorale compagno/a:</span>{" "}
+                        <strong className="text-foreground font-mono text-base">{pairMate.pettorale}</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
                 {memberCard && (
                   <p className="text-sm">
                     <span className="text-muted-foreground">N° Tessera:</span>{" "}
