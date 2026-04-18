@@ -427,7 +427,7 @@ const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: Pai
         customData: routeField && routeSelection ? { [routeField.key]: routeSelection } : {},
         disciplina: routeField?.key === "disciplina" ? routeSelection : undefined,
         ...(paymentMethod === "satispay" ? { satispayPayer } : {}),
-        ...(paymentMethod === "contanti" ? { adminToken: "gin" } : {}),
+        ...(adminBypass ? { adminToken: "gin" } : {}),
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
