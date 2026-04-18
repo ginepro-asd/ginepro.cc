@@ -286,7 +286,7 @@ serve(async (req) => {
           {
             price_data: {
               currency: "eur",
-              product_data: { name: `${event.nome} — Coppia ${bibNumber}` },
+              product_data: { name: `${event.nome} — Coppia ${bibNumberA}/${bibNumberB}` },
               unit_amount: totalPrice,
             },
             quantity: 1,
@@ -317,8 +317,8 @@ serve(async (req) => {
 
       if (payer === "each") {
         // Two separate payments, one per participant
-        const orderIdA = `${event.nome} Coppia ${bibNumber} - ${participantA.cognome}`;
-        const orderIdB = `${event.nome} Coppia ${bibNumber} - ${participantB.cognome}`;
+        const orderIdA = `${event.nome} Pettorale ${bibNumberA} - ${participantA.cognome}`;
+        const orderIdB = `${event.nome} Pettorale ${bibNumberB} - ${participantB.cognome}`;
         const halfPrice = unitPrice;
 
         const phoneA = participantA.telefono || participantA.phoneNumber;
@@ -366,7 +366,7 @@ serve(async (req) => {
         // Single payer: "a" or "b"
         const payerData = payer === "b" ? participantB : participantA;
         const phoneNumber = payerData.telefono || payerData.phoneNumber;
-        const orderId = `${event.nome} Coppia ${bibNumber}`;
+        const orderId = `${event.nome} Coppia ${bibNumberA}/${bibNumberB}`;
 
         const res = await fetch(satispayUrl, {
           method: "POST",
@@ -405,7 +405,7 @@ serve(async (req) => {
           purchase_units: [
             {
               reference_id: regA.id,
-              description: `${event.nome} — Coppia ${bibNumber}`,
+              description: `${event.nome} — Coppia ${bibNumberA}/${bibNumberB}`,
               amount: { currency_code: "EUR", value: priceEur },
             },
           ],
