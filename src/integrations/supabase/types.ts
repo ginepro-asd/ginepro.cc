@@ -190,6 +190,7 @@ export type Database = {
       events: {
         Row: {
           attivo: boolean
+          chiusura_ore_prima: number
           created_at: string
           custom_fields: Json | null
           data_evento: string | null
@@ -218,6 +219,7 @@ export type Database = {
         }
         Insert: {
           attivo?: boolean
+          chiusura_ore_prima?: number
           created_at?: string
           custom_fields?: Json | null
           data_evento?: string | null
@@ -246,6 +248,7 @@ export type Database = {
         }
         Update: {
           attivo?: boolean
+          chiusura_ore_prima?: number
           created_at?: string
           custom_fields?: Json | null
           data_evento?: string | null

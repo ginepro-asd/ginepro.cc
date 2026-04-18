@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN chiusura_ore_prima integer NOT NULL DEFAULT 24;
