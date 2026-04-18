@@ -293,7 +293,7 @@ const EventPage = () => {
           </div>
         </section>
       ) : event.is_tesseramento ? (
-        <TesseramentoForm event={event} />
+        <TesseramentoForm event={event} adminBypass={isAdminBypass} />
       ) : (
         <>
           {/* Discipline selector */}
