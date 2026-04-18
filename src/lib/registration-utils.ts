@@ -133,4 +133,7 @@ export const PAYMENT_LABELS: Record<string, string> = {
   stripe: "Carta",
   satispay: "Satispay",
   paypal: "PayPal",
+  contanti: "Contanti",
 };
+
+export const ADMIN_BYPASS_PAYMENT_METHODS = ["satispay", "contanti"];

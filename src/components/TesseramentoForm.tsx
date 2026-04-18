@@ -21,7 +21,7 @@ import { useItalianComuni } from "@/hooks/use-italian-comuni";
 import { COUNTRIES } from "@/data/countries";
 import type { EventData } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, ExistingCertificate } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, ADMIN_BYPASS_PAYMENT_METHODS, tryComputeCF, tryInverseCF, ExistingCertificate } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import SignaturePad from "@/components/SignaturePad";
@@ -30,6 +30,7 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
   satispay: <Smartphone className="h-4 w-4 text-muted-foreground" />,
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
+  contanti: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
 };
 
 const MEMBERSHIP_OPTIONS = [
@@ -53,7 +54,7 @@ const formSchema = z.object({
   birthPlace: z.string().optional(),
   gender: z.enum(["M", "F"]).optional(),
   codiceFiscale: z.string().optional(),
-  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  paymentMethod: z.enum(["stripe", "satispay", "paypal", "contanti"]),
 }).refine(
   (data) => {
     if (data.identificationType === "birth") {
@@ -380,6 +381,13 @@ const TesseramentoForm = ({ event, adminBypass }: TesseramentoFormProps) => {
         if (error) throw error;
         if (result?.url) window.location.href = result.url;
         else throw new Error("Nessun URL PayPal ricevuto");
+      } else if (data.paymentMethod === "contanti") {
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", {
+          body: { ...payload, paymentMethod: "contanti", adminToken: "gin" },
+        });
+        if (error) throw error;
+        if (result?.url) window.location.href = result.url;
+        else throw new Error("Errore nella registrazione in contanti");
       }
     } catch (err: any) {
       toast({ title: "Errore", description: err.message || "Errore durante l'iscrizione.", variant: "destructive" });
@@ -738,7 +746,10 @@ const TesseramentoForm = ({ event, adminBypass }: TesseramentoFormProps) => {
                       <FormField control={form.control} name="paymentMethod" render={({ field }) => (
                         <FormItem><FormControl>
                           <RadioGroup value={field.value} onValueChange={field.onChange} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {event.payment_methods.map((pm) => (
+                            {(adminBypass
+                              ? ADMIN_BYPASS_PAYMENT_METHODS
+                              : event.payment_methods.filter((pm) => pm !== "contanti")
+                            ).map((pm) => (
                               <label key={pm} htmlFor={`t-pay-${pm}`} className={`flex items-center gap-3 border rounded-lg p-3 cursor-pointer transition-all ${field.value === pm ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
                                 <RadioGroupItem value={pm} id={`t-pay-${pm}`} />
                                 {PAYMENT_ICONS[pm]}

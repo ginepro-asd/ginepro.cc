@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   ExternalLink,
+  Banknote,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +44,7 @@ import {
   optionRequiresCertificate,
   getOptionMaxSpots,
 } from "@/lib/event-pricing";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, ADMIN_BYPASS_PAYMENT_METHODS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
@@ -52,6 +53,7 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
   satispay: <Smartphone className="h-4 w-4 text-muted-foreground" />,
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
+  contanti: <Banknote className="h-4 w-4 text-muted-foreground" />,
 };
 
 const formSchemaBase = z.object({
@@ -64,7 +66,7 @@ const formSchemaBase = z.object({
   birthPlace: z.string().optional(),
   gender: z.enum(["M", "F"]).optional(),
   codiceFiscale: z.string().optional(),
-  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  paymentMethod: z.enum(["stripe", "satispay", "paypal", "contanti"]),
   isReturning: z.boolean().optional(),
 });
 
@@ -150,7 +152,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
   const displayPriceLabel =
     hasEventVariablePricing && !selectedPricingOption ? `da ${formatPrice(displayPrice)}` : formatPrice(displayPrice);
 
-  const defaultPayment = event.payment_methods[0] || "stripe";
+  const defaultPayment = adminBypass ? "satispay" : event.payment_methods[0] || "stripe";
 
   // Determine if current discipline requires certificate
   const routeField = getRouteSelectionField(event.custom_fields);
@@ -170,7 +172,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       birthPlace: "",
       gender: undefined,
       codiceFiscale: "",
-      paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal",
+      paymentMethod: defaultPayment as "stripe" | "satispay" | "paypal" | "contanti",
       isReturning: false,
     },
   });
@@ -389,6 +391,13 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
         if (error) throw error;
         if (result?.url) window.location.href = result.url;
         else throw new Error("Nessun URL PayPal ricevuto");
+      } else if (data.paymentMethod === "contanti") {
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", {
+          body: { ...payload, paymentMethod: "contanti", adminToken: "gin" },
+        });
+        if (error) throw error;
+        if (result?.url) window.location.href = result.url;
+        else throw new Error("Errore nella registrazione in contanti");
       }
     } catch (err: any) {
       toast({
@@ -920,7 +929,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
                             onValueChange={field.onChange}
                             className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                           >
-                            {event.payment_methods.map((pm) => (
+                            {(adminBypass
+                              ? ADMIN_BYPASS_PAYMENT_METHODS
+                              : event.payment_methods.filter((pm) => pm !== "contanti")
+                            ).map((pm) => (
                               <label
                                 key={pm}
                                 htmlFor={`pay-${pm}`}

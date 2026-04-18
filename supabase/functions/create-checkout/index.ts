@@ -10,6 +10,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ADMIN_BYPASS_TOKEN = "gin";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,10 +26,17 @@ serve(async (req) => {
       photoUrl, photoThumbUrl, signatureUrl,
       certificatePaths, certificateAnalyses,
       isTesseramento,
+      paymentMethod,
+      adminToken,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
       throw new Error("Campi obbligatori mancanti");
+    }
+
+    const isCash = paymentMethod === "contanti";
+    if (isCash && adminToken !== ADMIN_BYPASS_TOKEN) {
+      throw new Error("Pagamento in contanti riservato agli amministratori");
     }
 
     const supabaseAdmin = createClient(
@@ -96,8 +105,8 @@ serve(async (req) => {
         birth_date: birthDate || null,
         birth_place: birthPlace || null,
         codice_fiscale: codiceFiscale || null,
-        payment_method: "stripe",
-        payment_status: "pending",
+        payment_method: isCash ? "contanti" : "stripe",
+        payment_status: isCash ? "completed" : "pending",
         event_id: eventId,
         custom_data: customData || {},
       })
@@ -121,11 +130,23 @@ serve(async (req) => {
       }
     }
 
+    const origin = req.headers.get("origin") || "https://ginepro.cc";
+
+    if (isCash) {
+      // No payment processor, mark completed and return confirmation URL
+      return new Response(
+        JSON.stringify({
+          cash: true,
+          registration_id: registration.id,
+          url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&provider=contanti&token=gin`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
+    }
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-08-27.basil",
     });
-
-    const origin = req.headers.get("origin") || "https://tredoziotrail.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer_email: email,
