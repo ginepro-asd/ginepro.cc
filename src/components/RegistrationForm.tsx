@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   ExternalLink,
+  Banknote,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +44,7 @@ import {
   optionRequiresCertificate,
   getOptionMaxSpots,
 } from "@/lib/event-pricing";
-import { COUNTRY_CODES, PAYMENT_LABELS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
+import { COUNTRY_CODES, PAYMENT_LABELS, ADMIN_BYPASS_PAYMENT_METHODS, tryComputeCF, tryInverseCF, obfuscateEmail, obfuscatePhone, obfuscateCF } from "@/lib/registration-utils";
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
@@ -52,6 +53,7 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
   satispay: <Smartphone className="h-4 w-4 text-muted-foreground" />,
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
+  contanti: <Banknote className="h-4 w-4 text-muted-foreground" />,
 };
 
 const formSchemaBase = z.object({
@@ -64,7 +66,7 @@ const formSchemaBase = z.object({
   birthPlace: z.string().optional(),
   gender: z.enum(["M", "F"]).optional(),
   codiceFiscale: z.string().optional(),
-  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  paymentMethod: z.enum(["stripe", "satispay", "paypal", "contanti"]),
   isReturning: z.boolean().optional(),
 });
 
