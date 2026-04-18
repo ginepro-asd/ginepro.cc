@@ -102,11 +102,12 @@ interface RegistrationFormProps {
   event: EventData;
   preselectedDiscipline?: string;
   spotCounts?: Record<string, number>;
+  adminBypass?: boolean;
 }
 
-const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: RegistrationFormProps) => {
+const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypass }: RegistrationFormProps) => {
   const deadline = getEffectiveDeadline(event);
-  const expired = useIsExpired(deadline);
+  const expired = useIsExpired(deadline) && !adminBypass;
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
   const [countryCode, setCountryCode] = useState("+39");

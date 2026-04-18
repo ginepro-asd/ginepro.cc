@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowDown, MapPin, Calendar, Mountain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ import { useQuery } from "@tanstack/react-query";
 
 const EventPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const isAdminBypass = searchParams.get("token") === "gin";
   const { data: event, isLoading, error } = useEvent(slug);
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
 
@@ -82,7 +84,8 @@ const EventPage = () => {
     () => (event ? getEffectiveDeadline(event) : new Date("2099-12-31")),
     [event?.scadenza_iscrizioni, event?.data_evento, event?.chiusura_ore_prima],
   );
-  const expired = useIsExpired(deadline);
+  const expiredRaw = useIsExpired(deadline);
+  const expired = expiredRaw && !isAdminBypass;
 
   if (isLoading) {
     return (
@@ -290,7 +293,7 @@ const EventPage = () => {
           </div>
         </section>
       ) : event.is_tesseramento ? (
-        <TesseramentoForm event={event} />
+        <TesseramentoForm event={event} adminBypass={isAdminBypass} />
       ) : (
         <>
           {/* Discipline selector */}
@@ -364,12 +367,14 @@ const EventPage = () => {
             <PairRegistrationForm
               event={event}
               preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
+              adminBypass={isAdminBypass}
             />
           ) : (
             <RegistrationForm
               event={event}
               preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
               spotCounts={spotCounts}
+              adminBypass={isAdminBypass}
             />
           )}
         </>

@@ -133,6 +133,7 @@ const emptyPerson = (): PersonState => ({
 interface PairRegistrationFormProps {
   event: EventData;
   preselectedDiscipline?: string;
+  adminBypass?: boolean;
 }
 
 function PersonFormFields({
@@ -350,9 +351,9 @@ function PersonFormFields({
   );
 }
 
-const PairRegistrationForm = ({ event, preselectedDiscipline }: PairRegistrationFormProps) => {
+const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: PairRegistrationFormProps) => {
   const deadline = getEffectiveDeadline(event);
-  const expired = useIsExpired(deadline);
+  const expired = useIsExpired(deadline) && !adminBypass;
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [personA, setPersonA] = useState<PersonState>(emptyPerson());
   const [personB, setPersonB] = useState<PersonState>(emptyPerson());
