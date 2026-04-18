@@ -12,7 +12,7 @@ interface RegistrationData {
   email: string;
   payment_method: string;
   participant_id?: string | null;
-  custom_data?: Record<string, any> | null;
+  custom_data?: any;
   payment_id?: string | null;
 }
 
