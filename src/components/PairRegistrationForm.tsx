@@ -13,7 +13,7 @@ import { useIsExpired } from "@/components/Countdown";
 import { getEffectiveDeadline, CLOSED_REGISTRATION_MESSAGE } from "@/lib/registration-deadline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users, UserCheck } from "lucide-react";
+import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users, UserCheck, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import SatispayWaiting from "@/components/SatispayWaiting";
@@ -74,10 +74,17 @@ const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
   satispay: <Smartphone className="h-4 w-4 text-muted-foreground" />,
   paypal: <CircleDollarSign className="h-4 w-4 text-muted-foreground" />,
+  contanti: <Banknote className="h-4 w-4 text-muted-foreground" />,
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
   stripe: "Carta",
+  satispay: "Satispay",
+  paypal: "PayPal",
+  contanti: "Contanti",
+};
+
+const ADMIN_BYPASS_PAYMENT_METHODS = ["satispay", "contanti"];
   satispay: "Satispay",
   paypal: "PayPal",
 };
