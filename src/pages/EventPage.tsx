@@ -13,6 +13,8 @@ import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
+import { useIsExpired } from "@/components/Countdown";
+import { getEffectiveDeadline } from "@/lib/registration-deadline";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getStartingPrice,
