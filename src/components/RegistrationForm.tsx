@@ -104,7 +104,7 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: RegistrationFormProps) => {
-  const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
+  const deadline = getEffectiveDeadline(event);
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
@@ -405,8 +405,8 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts }: Registra
         <div className="max-w-lg mx-auto">
           <Alert className="border-secondary bg-secondary/10">
             <Lock className="h-5 w-5 text-secondary" />
-            <AlertTitle className="font-display text-lg">Iscrizioni chiuse</AlertTitle>
-            <AlertDescription>Le iscrizioni sono terminate.</AlertDescription>
+            <AlertTitle className="font-display text-lg">Iscrizioni online chiuse</AlertTitle>
+            <AlertDescription>{CLOSED_REGISTRATION_MESSAGE}</AlertDescription>
           </Alert>
         </div>
       </section>
