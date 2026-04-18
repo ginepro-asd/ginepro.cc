@@ -53,7 +53,7 @@ const formSchema = z.object({
   birthPlace: z.string().optional(),
   gender: z.enum(["M", "F"]).optional(),
   codiceFiscale: z.string().optional(),
-  paymentMethod: z.enum(["stripe", "satispay", "paypal"]),
+  paymentMethod: z.enum(["stripe", "satispay", "paypal", "contanti"]),
 }).refine(
   (data) => {
     if (data.identificationType === "birth") {

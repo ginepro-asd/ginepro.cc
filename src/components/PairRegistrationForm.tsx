@@ -361,7 +361,7 @@ const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: Pai
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [personA, setPersonA] = useState<PersonState>(emptyPerson());
   const [personB, setPersonB] = useState<PersonState>(emptyPerson());
-  const [paymentMethod, setPaymentMethod] = useState<string>(event.payment_methods[0] || "stripe");
+  const [paymentMethod, setPaymentMethod] = useState<string>(adminBypass ? "satispay" : (event.payment_methods[0] || "stripe"));
   const [satispayPayer, setSatispayPayer] = useState<"each" | "a" | "b">("each");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [satispayState, setSatispayState] = useState<{ paymentId: string; registrationId: string; paymentIdB?: string; registrationIdB?: string } | null>(null);
@@ -427,6 +427,7 @@ const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: Pai
         customData: routeField && routeSelection ? { [routeField.key]: routeSelection } : {},
         disciplina: routeField?.key === "disciplina" ? routeSelection : undefined,
         ...(paymentMethod === "satispay" ? { satispayPayer } : {}),
+        ...(paymentMethod === "contanti" ? { adminToken: "gin" } : {}),
       };
 
       const { data: result, error } = await supabase.functions.invoke("create-pair-checkout", { body });
@@ -438,6 +439,12 @@ const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: Pai
           window.location.href = result.url;
         } else {
           throw new Error("Nessun URL di pagamento ricevuto");
+        }
+      } else if (paymentMethod === "contanti") {
+        if (result?.url) {
+          window.location.href = result.url;
+        } else {
+          throw new Error("Errore nella registrazione in contanti");
         }
       } else if (paymentMethod === "satispay") {
         if (result?.payment_id && result?.registration_id) {
@@ -558,7 +565,10 @@ const PairRegistrationForm = ({ event, preselectedDiscipline, adminBypass }: Pai
             <div className="space-y-3">
               <Label className="text-sm font-medium">Metodo di pagamento *</Label>
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {event.payment_methods.map((pm) => (
+                {(adminBypass
+                  ? ADMIN_BYPASS_PAYMENT_METHODS
+                  : event.payment_methods.filter((pm) => pm !== "contanti")
+                ).map((pm) => (
                   <label
                     key={pm}
                     htmlFor={`pay-pair-${pm}`}
