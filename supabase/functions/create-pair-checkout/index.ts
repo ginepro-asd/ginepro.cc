@@ -77,7 +77,8 @@ serve(async (req) => {
       .select("custom_data")
       .eq("event_id", eventId);
 
-    let maxBib = (event.pettorale_start || 100) - 1;
+    const startBib = event.pettorale_start || 100;
+    let maxBib = startBib - 1;
     if (existingRegs) {
       for (const r of existingRegs) {
         const cd = r.custom_data as Record<string, any> | null;
@@ -86,7 +87,8 @@ serve(async (req) => {
           typeof cd?.pettorale_num === "number" ? cd.pettorale_num : Number.parseInt(String(cd?.pettorale_num ?? ""), 10),
         ].filter((n) => Number.isFinite(n)) as number[];
         for (const n of candidates) {
-          if (n > maxBib) maxBib = n;
+          // Only consider bibs in the new range (>= startBib), so legacy bibs don't push us past the start
+          if (n >= startBib && n > maxBib) maxBib = n;
         }
       }
     }
