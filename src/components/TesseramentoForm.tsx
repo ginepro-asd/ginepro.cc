@@ -68,11 +68,12 @@ type FormData = z.infer<typeof formSchema>;
 
 interface TesseramentoFormProps {
   event: EventData;
+  adminBypass?: boolean;
 }
 
-const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
+const TesseramentoForm = ({ event, adminBypass }: TesseramentoFormProps) => {
   const deadline = getEffectiveDeadline(event);
-  const expired = useIsExpired(deadline);
+  const expired = useIsExpired(deadline) && !adminBypass;
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [step, setStep] = useState(0);
   const [identificationType, setIdentificationType] = useState<"birth" | "fiscal">("birth");
