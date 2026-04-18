@@ -49,7 +49,9 @@ serve(async (req) => {
       // Tesseramento-specific fields
       photoUrl, photoThumbUrl, signatureUrl,
       certificatePaths, certificateAnalyses,
+      adminToken,
     } = await req.json();
+    const adminTokenSuffix = adminToken === "gin" ? "&token=gin" : "";
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
       throw new Error("Campi obbligatori mancanti");
@@ -175,8 +177,8 @@ serve(async (req) => {
               brand_name: `${event.nome} by GINEPRO`,
               locale: "it-IT",
               user_action: "PAY_NOW",
-              return_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&provider=paypal`,
-              cancel_url: `${origin}/${event.slug}?cancelled=true`,
+              return_url: `${origin}/${event.slug}/conferma?registration_id=${registration.id}&provider=paypal${adminTokenSuffix}`,
+              cancel_url: `${origin}/${event.slug}?cancelled=true${adminTokenSuffix}`,
             },
           },
         },

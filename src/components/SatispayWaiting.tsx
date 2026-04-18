@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,8 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price
   const [status, setStatus] = useState<"pending" | "paid" | "cancelled" | "error">("pending");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const adminTokenSuffix = searchParams.get("token") === "gin" ? "&token=gin" : "";
 
   useEffect(() => {
     const checkPayment = async () => {
@@ -30,7 +32,7 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price
           setStatus("paid");
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTimeout(() => {
-            navigate(`/${eventSlug}/conferma?registration_id=${registrationId}&provider=satispay`);
+            navigate(`/${eventSlug}/conferma?registration_id=${registrationId}&provider=satispay${adminTokenSuffix}`);
           }, 2000);
         } else if (data.status === "cancelled") {
           setStatus("cancelled");

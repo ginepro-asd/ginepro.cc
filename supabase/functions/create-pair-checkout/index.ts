@@ -295,8 +295,8 @@ serve(async (req) => {
           },
         ],
         mode: "payment",
-        success_url: `${origin}/${event.slug}/conferma?registration_id=${regA.id}&session_id={CHECKOUT_SESSION_ID}&pair=true`,
-        cancel_url: `${origin}/${event.slug}?cancelled=true`,
+        success_url: `${origin}/${event.slug}/conferma?registration_id=${regA.id}&session_id={CHECKOUT_SESSION_ID}&pair=true${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
+        cancel_url: `${origin}/${event.slug}?cancelled=true${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
         metadata: { registration_id_a: regA.id, registration_id_b: regB.id, event_id: eventId, pair_id: pairId },
       });
 
@@ -418,8 +418,8 @@ serve(async (req) => {
                 brand_name: `${event.nome} by GINEPRO`,
                 locale: "it-IT",
                 user_action: "PAY_NOW",
-                return_url: `${origin}/${event.slug}/conferma?registration_id=${regA.id}&provider=paypal&pair=true`,
-                cancel_url: `${origin}/${event.slug}?cancelled=true`,
+                return_url: `${origin}/${event.slug}/conferma?registration_id=${regA.id}&provider=paypal&pair=true${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
+                cancel_url: `${origin}/${event.slug}?cancelled=true${adminToken === ADMIN_BYPASS_TOKEN ? "&token=gin" : ""}`,
               },
             },
           },

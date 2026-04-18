@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,8 @@ const DualSatispayWaiting = ({
   const [statusB, setStatusB] = useState<PaymentStatus>("pending");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const adminTokenSuffix = searchParams.get("token") === "gin" ? "&token=gin" : "";
 
   const bothPaid = statusA === "paid" && statusB === "paid";
   const anyFailed = statusA === "cancelled" || statusA === "error" || statusB === "cancelled" || statusB === "error";
@@ -35,10 +37,10 @@ const DualSatispayWaiting = ({
   useEffect(() => {
     if (bothPaid) {
       setTimeout(() => {
-        navigate(`/${eventSlug}/conferma?registration_id=${registrationIdA}&provider=satispay&pair=true`);
+        navigate(`/${eventSlug}/conferma?registration_id=${registrationIdA}&provider=satispay&pair=true${adminTokenSuffix}`);
       }, 2000);
     }
-  }, [bothPaid, navigate, eventSlug, registrationIdA]);
+  }, [bothPaid, navigate, eventSlug, registrationIdA, adminTokenSuffix]);
 
   useEffect(() => {
     const check = async () => {
