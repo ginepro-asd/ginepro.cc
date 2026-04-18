@@ -391,6 +391,13 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
         if (error) throw error;
         if (result?.url) window.location.href = result.url;
         else throw new Error("Nessun URL PayPal ricevuto");
+      } else if (data.paymentMethod === "contanti") {
+        const { data: result, error } = await supabase.functions.invoke("create-checkout", {
+          body: { ...payload, paymentMethod: "contanti", adminToken: "gin" },
+        });
+        if (error) throw error;
+        if (result?.url) window.location.href = result.url;
+        else throw new Error("Errore nella registrazione in contanti");
       }
     } catch (err: any) {
       toast({
