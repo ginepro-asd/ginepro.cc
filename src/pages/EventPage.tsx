@@ -367,12 +367,14 @@ const EventPage = () => {
             <PairRegistrationForm
               event={event}
               preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
+              adminBypass={isAdminBypass}
             />
           ) : (
             <RegistrationForm
               event={event}
               preselectedDiscipline={showDisciplineSelector ? selectedDiscipline : undefined}
               spotCounts={spotCounts}
+              adminBypass={isAdminBypass}
             />
           )}
         </>
