@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
+import { getEffectiveDeadline, CLOSED_REGISTRATION_MESSAGE } from "@/lib/registration-deadline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users, UserCheck } from "lucide-react";
@@ -350,7 +351,7 @@ function PersonFormFields({
 }
 
 const PairRegistrationForm = ({ event, preselectedDiscipline }: PairRegistrationFormProps) => {
-  const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
+  const deadline = getEffectiveDeadline(event);
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [personA, setPersonA] = useState<PersonState>(emptyPerson());
@@ -458,8 +459,8 @@ const PairRegistrationForm = ({ event, preselectedDiscipline }: PairRegistration
         <div className="max-w-lg mx-auto">
           <Alert className="border-secondary bg-secondary/10">
             <Lock className="h-5 w-5 text-secondary" />
-            <AlertTitle className="font-display text-lg">Iscrizioni chiuse</AlertTitle>
-            <AlertDescription>Le iscrizioni sono terminate.</AlertDescription>
+            <AlertTitle className="font-display text-lg">Iscrizioni online chiuse</AlertTitle>
+            <AlertDescription>{CLOSED_REGISTRATION_MESSAGE}</AlertDescription>
           </Alert>
         </div>
       </section>

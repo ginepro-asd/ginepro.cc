@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
+import { getEffectiveDeadline, CLOSED_REGISTRATION_MESSAGE } from "@/lib/registration-deadline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Camera, FileCheck, AlertTriangle, Check, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,7 +71,7 @@ interface TesseramentoFormProps {
 }
 
 const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
-  const deadline = event.scadenza_iscrizioni ? new Date(event.scadenza_iscrizioni) : new Date("2099-12-31");
+  const deadline = getEffectiveDeadline(event);
   const expired = useIsExpired(deadline);
   const { comuni, loading: comuniLoading } = useItalianComuni();
   const [step, setStep] = useState(0);
@@ -393,7 +394,7 @@ const TesseramentoForm = ({ event }: TesseramentoFormProps) => {
           <Alert className="border-secondary bg-secondary/10">
             <Lock className="h-5 w-5 text-secondary" />
             <AlertTitle className="font-display text-lg">Tesseramento chiuso</AlertTitle>
-            <AlertDescription>Il periodo di tesseramento è terminato.</AlertDescription>
+            <AlertDescription>{CLOSED_REGISTRATION_MESSAGE}</AlertDescription>
           </Alert>
         </div>
       </section>
