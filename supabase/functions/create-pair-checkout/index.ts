@@ -97,7 +97,7 @@ serve(async (req) => {
 
     // Helper to upsert participant and create registration
     async function createParticipantAndRegistration(
-      p: any, pettorale: string, suffix: string
+      p: any, pettorale: string, suffix: string, bibNum: number
     ) {
       let participantId: string | null = p.participantId ?? null;
 
@@ -165,7 +165,7 @@ serve(async (req) => {
         ...selectedOptions,
         pair_id: pairId,
         pettorale: pettorale,
-        pettorale_num: bibNumber,
+        pettorale_num: bibNum,
         pair_suffix: suffix,
         disciplina: disciplina || null,
       };
@@ -241,7 +241,7 @@ serve(async (req) => {
           birth_place: p.birthPlace || null,
           codice_fiscale: p.codiceFiscale || null,
           payment_method: paymentMethod,
-          payment_status: "pending",
+          payment_status: isCash ? "completed" : "pending",
           event_id: eventId,
           custom_data: regCustomData,
         })
@@ -252,10 +252,27 @@ serve(async (req) => {
       return registration;
     }
 
-    const regA = await createParticipantAndRegistration(participantA, pettoraleA, "A");
-    const regB = await createParticipantAndRegistration(participantB, pettoraleB, "B");
+    const regA = await createParticipantAndRegistration(participantA, pettoraleA, "A", bibNumberA);
+    const regB = await createParticipantAndRegistration(participantB, pettoraleB, "B", bibNumberB);
 
-    const origin = req.headers.get("origin") || "https://ginepro.lovable.app";
+    const origin = req.headers.get("origin") || "https://ginepro.cc";
+
+    if (isCash) {
+      // Generate a shared payment_id so we can fetch both via Conferma
+      const cashPaymentId = `cash_${pairId}`;
+      await supabaseAdmin.from("registrations").update({ payment_id: cashPaymentId }).eq("id", regA.id);
+      await supabaseAdmin.from("registrations").update({ payment_id: cashPaymentId }).eq("id", regB.id);
+      return new Response(
+        JSON.stringify({
+          cash: true,
+          registration_id: regA.id,
+          registration_id_b: regB.id,
+          pair: true,
+          url: `${origin}/${event.slug}/conferma?registration_id=${regA.id}&provider=contanti&pair=true&token=gin`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
+    }
 
     // Handle payment methods
     if (paymentMethod === "stripe") {
