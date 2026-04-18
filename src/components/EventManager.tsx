@@ -157,6 +157,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         luogo: ev.luogo || "",
         prezzo: ev.prezzo,
         scadenza_iscrizioni: ev.scadenza_iscrizioni ? ev.scadenza_iscrizioni.slice(0, 16) : "",
+        chiusura_ore_prima: (ev as any).chiusura_ore_prima ?? 24,
         attivo: ev.attivo,
         hero_image: ev.hero_image || "",
         payment_methods: ev.payment_methods || ["stripe", "satispay", "paypal"],
@@ -185,6 +186,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         luogo: "",
         prezzo: 500,
         scadenza_iscrizioni: "",
+        chiusura_ore_prima: 24,
         attivo: true,
         hero_image: "",
         payment_methods: ["stripe", "satispay", "paypal"],
@@ -228,6 +230,7 @@ const EventManager = ({ password }: EventManagerProps) => {
         luogo: editFields.location_address || editFields.luogo || null,
         prezzo: parseInt(editFields.prezzo) || 0,
         scadenza_iscrizioni: editFields.scadenza_iscrizioni ? new Date(editFields.scadenza_iscrizioni).toISOString() : null,
+        chiusura_ore_prima: editFields.chiusura_ore_prima !== "" && editFields.chiusura_ore_prima != null ? parseInt(editFields.chiusura_ore_prima) : 24,
         attivo: editFields.attivo,
         hero_image: editFields.hero_image || null,
         payment_methods: editFields.payment_methods || ["stripe", "satispay", "paypal"],
@@ -417,6 +420,19 @@ const EventManager = ({ password }: EventManagerProps) => {
                 <Input type="datetime-local" value={editFields.scadenza_iscrizioni || ""}
                   onChange={(e) => setEditFields(prev => ({ ...prev, scadenza_iscrizioni: e.target.value }))} />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Chiusura iscrizioni online (ore prima dell'evento)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={editFields.chiusura_ore_prima ?? 24}
+                onChange={(e) => setEditFields(prev => ({ ...prev, chiusura_ore_prima: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Le iscrizioni online si chiuderanno automaticamente questo numero di ore prima della data dell'evento (default: 24).
+              </p>
             </div>
 
             {/* Hero image upload */}
