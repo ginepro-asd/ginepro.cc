@@ -922,7 +922,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
                             onValueChange={field.onChange}
                             className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                           >
-                            {event.payment_methods.map((pm) => (
+                            {(adminBypass
+                              ? ADMIN_BYPASS_PAYMENT_METHODS
+                              : event.payment_methods.filter((pm) => pm !== "contanti")
+                            ).map((pm) => (
                               <label
                                 key={pm}
                                 htmlFor={`pay-${pm}`}
