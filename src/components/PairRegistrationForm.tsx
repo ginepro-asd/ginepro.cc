@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsExpired } from "@/components/Countdown";
+import { getEffectiveDeadline, CLOSED_REGISTRATION_MESSAGE } from "@/lib/registration-deadline";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CreditCard, Smartphone, CircleDollarSign, Lock, Loader2, Calculator, Users, UserCheck } from "lucide-react";
