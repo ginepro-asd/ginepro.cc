@@ -21,26 +21,11 @@ const SocietaRequestActions = ({ participant }: Props) => {
   const [text, setText] = useState(defaultText(participant.nome));
   const [sending, setSending] = useState(false);
 
-  const sendEmail = async () => {
-    setSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "societa-request",
-          recipientEmail: participant.email,
-          idempotencyKey: `societa-req-${participant.id}-${Date.now()}`,
-          templateData: { name: participant.nome, message: text },
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Email inviata" });
-      setEmailOpen(false);
-    } catch (err: any) {
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
+  const sendEmail = () => {
+    const subject = "Società di appartenenza";
+    const url = `mailto:${participant.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    window.location.href = url;
+    setEmailOpen(false);
   };
 
   const openWhatsApp = () => {
@@ -75,9 +60,7 @@ const SocietaRequestActions = ({ participant }: Props) => {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEmailOpen(false)}>Annulla</Button>
-            <Button onClick={sendEmail} disabled={sending}>
-              {sending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Invia
-            </Button>
+            <Button onClick={sendEmail}>Apri client email</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
