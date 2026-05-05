@@ -140,6 +140,9 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
   const [certificateAnalyzing, setCertificateAnalyzing] = useState(false);
   const certInputRef = useRef<HTMLInputElement>(null);
 
+  // Società state
+  const [societa, setSocieta] = useState<{ id: string | null; nome: string | null }>({ id: null, nome: null });
+
   const { toast } = useToast();
   const pricingField = getPricingField(event.custom_fields);
   const hasEventVariablePricing = hasVariablePricing(event.custom_fields);
@@ -359,7 +362,15 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       codiceFiscale: realCF,
       eventId: event.id,
       customData,
+      societaId: societa.id,
+      societaNome: societa.nome,
     };
+
+    if (event.richiedi_societa && !societa.id) {
+      toast({ title: "Errore", description: "Seleziona la società", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
 
     if (certificatePath) {
       payload.certificatePaths = [certificatePath];
