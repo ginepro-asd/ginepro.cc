@@ -134,6 +134,42 @@ const AdminEventParticipants = () => {
                     <Link to={`/admin/users/${r.participant_id}`}><Pencil className="h-4 w-4" /></Link>
                   </Button>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="icon" variant="ghost" className="text-destructive" title="Elimina iscrizione">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Eliminare l'iscrizione?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Verrà rimossa l'iscrizione di <strong>{r.nome} {r.cognome}</strong> a questo evento.
+                        Il profilo del partecipante non verrà eliminato.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annulla</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.functions.invoke("delete-entity", {
+                              body: { password: adminPassword, type: "registration", id: r.id },
+                            });
+                            if (error) throw error;
+                            if (data?.error) throw new Error(data.error);
+                            toast({ title: "Iscrizione eliminata" });
+                            setReloadKey((k) => k + 1);
+                          } catch (err: any) {
+                            toast({ title: "Errore", description: err.message, variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Elimina
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
           ))}
