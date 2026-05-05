@@ -90,6 +90,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         external_url: event.external_url || "",
         regulation_url: event.regulation_url || "",
         satispay_account_id: event.satispay_account_id || "",
+        richiedi_societa: event.richiedi_societa ?? false,
       }
     : {
         nome: "", slug: "", descrizione: "", data_evento: "", luogo: "",
@@ -99,6 +100,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         pettorale_start: "", location_lat: null, location_lng: null,
         location_label: "", location_address: "", custom_fields: [],
         external_url: "", regulation_url: "", satispay_account_id: "",
+        richiedi_societa: false,
       };
 
   const [editFields, setEditFields] = useState<Record<string, any>>(initialFields);
@@ -146,6 +148,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         external_url: editFields.external_url || null,
         regulation_url: editFields.regulation_url || null,
         satispay_account_id: editFields.satispay_account_id || null,
+        richiedi_societa: !!editFields.richiedi_societa,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
       const action = creating ? "create" : "update";
@@ -306,6 +309,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
           { key: "is_coppia", label: "Coppia" },
           { key: "is_tesseramento", label: "Tesseramento" },
           { key: "visibile_in_landing", label: "Visibile nella landing" },
+          { key: "richiedi_societa", label: "Richiedi società" },
         ].map((t) => (
           <div key={t.key} className="flex items-center gap-2">
             <Switch checked={editFields[t.key] ?? false}

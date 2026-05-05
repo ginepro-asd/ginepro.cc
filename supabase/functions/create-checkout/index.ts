@@ -28,6 +28,7 @@ serve(async (req) => {
       isTesseramento,
       paymentMethod,
       adminToken,
+      societaId, societaNome,
     } = await req.json();
 
     if (!nome || !cognome || !email || !telefono || !identificationType || !eventId) {
@@ -79,6 +80,7 @@ serve(async (req) => {
     if (photoUrl) participantData.photo_url = photoUrl;
     if (photoThumbUrl) participantData.photo_thumb_url = photoThumbUrl;
     if (signatureUrl) participantData.signature_url = signatureUrl;
+    if (societaId) participantData.societa_id = societaId;
 
     const { data: participant, error: partError } = await supabaseAdmin
       .from("participants")
@@ -109,6 +111,8 @@ serve(async (req) => {
         payment_status: isCash ? "completed" : "pending",
         event_id: eventId,
         custom_data: customData || {},
+        societa_id: societaId || null,
+        societa_nome: societaNome || null,
       })
       .select("id")
       .single();

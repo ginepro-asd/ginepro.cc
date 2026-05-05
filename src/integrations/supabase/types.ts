@@ -209,6 +209,7 @@ export type Database = {
           pettorale_start: number | null
           prezzo: number
           regulation_url: string | null
+          richiedi_societa: boolean
           satispay_account_id: string | null
           satispay_api_token: string | null
           satispay_api_url: string | null
@@ -239,6 +240,7 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          richiedi_societa?: boolean
           satispay_account_id?: string | null
           satispay_api_token?: string | null
           satispay_api_url?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          richiedi_societa?: boolean
           satispay_account_id?: string | null
           satispay_api_token?: string | null
           satispay_api_url?: string | null
@@ -536,6 +539,7 @@ export type Database = {
           photo_thumb_url: string | null
           photo_url: string | null
           signature_url: string | null
+          societa_id: string | null
           telefono: string
           updated_at: string
         }
@@ -555,6 +559,7 @@ export type Database = {
           photo_thumb_url?: string | null
           photo_url?: string | null
           signature_url?: string | null
+          societa_id?: string | null
           telefono: string
           updated_at?: string
         }
@@ -574,6 +579,7 @@ export type Database = {
           photo_thumb_url?: string | null
           photo_url?: string | null
           signature_url?: string | null
+          societa_id?: string | null
           telefono?: string
           updated_at?: string
         }
@@ -596,6 +602,8 @@ export type Database = {
           payment_id: string | null
           payment_method: string
           payment_status: string
+          societa_id: string | null
+          societa_nome: string | null
           telefono: string
           updated_at: string
         }
@@ -615,6 +623,8 @@ export type Database = {
           payment_id?: string | null
           payment_method: string
           payment_status?: string
+          societa_id?: string | null
+          societa_nome?: string | null
           telefono: string
           updated_at?: string
         }
@@ -634,6 +644,8 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string
           payment_status?: string
+          societa_id?: string | null
+          societa_nome?: string | null
           telefono?: string
           updated_at?: string
         }
@@ -681,6 +693,30 @@ export type Database = {
           created_at?: string
           id?: string
           is_default?: boolean
+          nome?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      societa: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
           nome?: string
           note?: string | null
           updated_at?: string

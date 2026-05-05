@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation, Link, NavLink } from "react-router-dom";
-import { Loader2, LogOut, CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, MessageSquare, LayoutDashboard } from "lucide-react";
+import { Loader2, LogOut, CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, MessageSquare, LayoutDashboard, Building2 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/events", label: "Eventi", icon: CalendarDays },
   { to: "/admin/users", label: "Utenti", icon: Users },
+  { to: "/admin/societa", label: "Società", icon: Building2 },
   { to: "/admin/satispay", label: "Satispay", icon: Smartphone },
   { to: "/admin/certificates", label: "Certificati", icon: FileCheck },
   { to: "/admin/newsletters", label: "Newsletter", icon: Mail },

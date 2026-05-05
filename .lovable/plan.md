@@ -1,167 +1,121 @@
-# Piano di refactoring strutturale
+## Obiettivo
 
-Obiettivi: ridurre debito tecnico, introdurre autenticazione reale per il backoffice, riorganizzare la navigazione admin per entità, unificare footer e theme selector.
+Introdurre l'entità **Società** (es. società sportiva di appartenenza dell'atleta) con:
 
----
-
-## 1. Pulizia Edge Functions
-
-### Da eliminare (mai invocate)
-
-- `explore-firestore` — sostituita da `import-firestore`
-- `generate-thumbnails` — nessun riferimento nel codice (le miniature ora si fanno client-side via canvas, vedi memory)
-
-### Da verificare prima di eliminare
-
-- `process-email-queue` — `verify_jwt = true`, probabilmente eseguita da cron pgmq. Confermare presenza di trigger/cron schedule prima di toccarla; se nessun cron è attivo, eliminare anche tutto il sistema pgmq inutilizzato.
-- `send-newsletter` — verificare se invocata solo da `NewsletterManager`; mantenere.
-
-### Refactor consolidamento
-
-Ci sono molte funzioni che fanno operazioni admin con la stessa password check:
-
-- `manage-event` (già super-funzione: list/update/create/delete events, partecipanti, registrazioni, satispay, email)
-- `delete-entity`, `merge-participants`, `update-participant`, `import-firestore`, `export-registrations`, `setup-account`, `resolve-login`, `admin-chat`
-
-Proposta: dopo l'introduzione dell'auth reale (vedi §2), spostare tutte le admin function dietro **JWT verify_jwt=true + check ruolo `admin**` invece del controllo password ripetuto in ogni funzione. Estrarre helper condiviso `_shared/admin-auth.ts`.
-
-Funzioni di pagamento (`create-checkout`, `create-pair-checkout`, `create-paypal-order`, `capture-paypal-order`, `verify-payment`, `create-satispay-payment`, `check-satispay-payment`) restano `verify_jwt=false` perché chiamate da utenti anonimi — invariate.
-
-`send-confirmation-email` resta come servizio interno (chiamata server-to-server).
+1. Anagrafica gestita in BO
+2. Selezione/creazione durante l'iscrizione (se l'evento la richiede)
+3. Aggiunta a utenti esistenti dal dettaglio utente, con possibilità di richiederla via email o WhatsApp
 
 ---
 
-## 2. Autenticazione reale del backoffice con Permessi
+## 1. Database
 
-Sostituire il pattern `password` campo + invio in body ad ogni edge function con autenticazione Google, usare @ginepro.cc per identificare gli utenti admin.
+### Nuova tabella `societa`
 
-### Database
+- `id` uuid PK
+- `nome` text NOT NULL UNIQUE (case-insensitive via index)
+- `note` text nullable
+- `created_at`, `updated_at`
+- RLS: lettura pubblica (necessaria per autocomplete in iscrizione), scrittura/update/delete solo admin (`is_admin()`)
 
-Migrazione:
+### Modifiche tabelle esistenti
 
-- enum `app_role` (`admin`, `user`)
-- tabella `user_roles (id, user_id, role)` con RLS
-- function `has_role(_user_id, _role)` SECURITY DEFINER
-- seed iniziale: assegnare ruolo `admin` all'attuale account che conosce `ADMIN_PASSWORD` (manuale o via setup form one-shot protetto da `ADMIN_PASSWORD` come bootstrap)
-
-### Frontend
-
-- Nuova pagina `/admin/login` (email + password Supabase Auth, no Google per ora)
-- Hook `useAdminAuth()` che carica session + verifica `has_role(uid, 'admin')`
-- Tutte le rotte `/admin/*` protette: redirect a `/admin/login` se non admin
-- Logout button nel layout admin
-
-### Edge functions
-
-- Helper `_shared/require-admin.ts`: legge JWT, verifica ruolo admin via `has_role`
-- Tutte le admin functions: `verify_jwt = true` + check ruolo
-- Rimuovere il param `password` dai body
-- Creare utente admin [domenico.diiorio@ginepro.cc](mailto:domenico.diiorio@ginepro.cc)
+- `participants`: aggiungere colonna `societa_id uuid` nullable (riferimento logico, no FK come da pattern progetto)
+- `registrations`: aggiungere `societa_id uuid` nullable + `societa_nome text` nullable (snapshot al momento iscrizione)
+- `events`: aggiungere flag `richiedi_societa boolean NOT NULL DEFAULT false`
 
 ---
 
-## 3. Riorganizzazione routing admin
+## 2. Backend / Edge Functions
 
-### Nuove rotte
+- `**manage-event**`: includere `richiedi_societa` in create/update payload
+- `**update-participant**`: accettare `societa_id` per aggiornare un partecipante esistente
+- Nessuna nuova edge function: la gestione società (CRUD) avviene direttamente dal client tramite SDK Supabase, protetta da RLS `is_admin()` (admin loggato con ruolo). Per la creazione "on-the-fly" durante iscrizione (utente anonimo), aggiungere policy INSERT pubblica oppure (preferito) creare edge function `create-societa` con `verify_jwt=false` che valida nome (zod, trim, dedup case-insensitive) e usa service role.
 
-```text
-/admin                              → AdminHome (landing smistamento)
-/admin/login                        → Login
-
-/admin/events                       → Lista eventi
-/admin/events/new                   → Creazione evento
-/admin/events/:eventId              → Dettaglio + form modifica (ex modale EventManager)
-/admin/events/:eventId/participants → Iscritti all'evento (ex tab iscrizioni filtrato)
-/admin/events/:eventId/emails       → Email transazionali evento (ex TransactionalEmailManager)
-
-/admin/users                        → Lista partecipanti globale (ex flat registrations)
-/admin/users/:userId                → Dettaglio partecipante (ex modale, + form modifica)
-
-/admin/satispay                     → Gestione account Satispay (URL + token muvat per evento)
-/admin/certificates                 → Gestione certificati medici caricati
-/admin/newsletters                  → NewsletterManager
-/admin/imports                      → Firestore import + CSV import
-/admin/chat                         → Admin chat (Gemini)
-```
-
-### Layout
-
-Nuovo `AdminLayout.tsx` con:
-
-- `SidebarProvider` shadcn collassabile (mini-icon mode)
-- Voci sidebar: Eventi, Utenti, Satispay, Certificati, Newsletter, Import, Chat
-- Header: breadcrumb + ThemeSelector + user menu (logout)
-- `<Outlet />` per le sotto-rotte
-
-### Componenti riutilizzati
-
-- `EventManager` → split in `EventList` + `EventDetailForm` (no più dialog)
-- Modali partecipante in `Admin.tsx` → pagina `UserDetail.tsx`
-- `AdminAddRegistration`, `AdminCsvImport` → pagine dedicate
-- `AdminChatSidebar` → pagina `/admin/chat` (può comunque essere drawer da ogni pagina)
-
-### Migrazione legacy
-
-- `/:slug/admin` → redirect a `/admin/events/:eventId/participants` (lookup slug→id)
-- Vecchia `/admin` con password form → redirect a `/admin/login`
+**Scelta consigliata**: edge function `create-societa` per evitare di esporre INSERT pubblico sulla tabella.
 
 ---
 
-## 4. Nuove sezioni dedicate
+## 3. Frontend — BO Anagrafica Società
 
-### `/admin/satispay`
+Nuova pagina `**/admin/organizations**` (`src/pages/admin/AdminSocieta.tsx`):
 
-Tabella account Satispay/Muvat. Oggi i campi `satispay_api_url` e `satispay_api_token` stanno per evento in `events`. Nuova tabella `satispay_accounts (id, label, api_url, api_token)` + FK `events.satispay_account_id`, gestione CRUD con riassegnazione
-
-Raccomando B per evitare duplicazione token tra eventi della stessa stagione.
-
-### `/admin/certificates`
-
-Lista `medical_certificates` con filtri (in scadenza, scaduti, warning AI), link al partecipante, preview file, riassegnazione, eliminazione.
+- Tabella con ricerca per nome
+- Bottone "Nuova società" → dialog con campi `nome`, `note`
+- Edit/Delete inline
+- Voce in `AdminLayout` sidebar
 
 ---
 
-## 5. Footer condiviso e theme selector
+## 4. Frontend — Form Iscrizione
 
-### Componente `<SiteFooter />`
+In `RegistrationForm.tsx` e `PairRegistrationForm.tsx`:
 
-- Link: Linee guida (`/guidelines`), Area riservata (`/area-riservata`), Contattaci (`mailto:info@ginepro.cc`)
-- Anno dinamico: `new Date().getFullYear()`
-- Logo ginepro + claim
-- Stesso stile del footer attuale presente su EventPage
-
-### Pagine end-user che lo devono mostrare
-
-- `EventsList` (landing principale) — oggi NON ha footer
-- `EventPage` — già lo ha (sostituire con componente)
-- `Conferma`
-- `Guidelines`
-- `MemberCard`
-- `AreaRiservataLogin`, `AreaRiservataSetup`, `AreaRiservataDashboard`
-- `NewsletterLanding`
-
-### `<ThemeSelector />`
-
-Spostarlo in un layout end-user condiviso (`SiteLayout`) così appare ovunque (oggi è solo su alcune pagine). Stesso per backoffice nel header dell'`AdminLayout`.
+- Se `event.richiedi_societa === true`, mostrare campo **Società**
+- Componente `SocietaCombobox` (basato su `SearchableSelect` esistente):
+  - Carica lista da `societa` (lettura pubblica)
+  - Ricerca testuale
+  - Se nessun risultato → mostra opzione "Aggiungi nuova società: ..." che invoca `create-societa` e seleziona il nuovo id
+- Salvataggio: `societa_id` + `societa_nome` (snapshot) in `registrations`; aggiorna anche `participants.societa_id` se non già impostato
 
 ---
 
-## 6. Ordine di esecuzione
+## 5. Frontend — Dettaglio Utente (BO)
 
-Suddivisione in step incrementali per non rompere produzione:
+In `src/pages/admin/AdminUserDetail.tsx`, nuova card **"Società"**:
 
-1. **Cleanup edge functions inutilizzate** (`explore-firestore`, `generate-thumbnails`, eventualmente `process-email-queue`) — basso rischio.
-2. **Footer + ThemeSelector unificati** in `SiteLayout` end-user — zero rischio, miglioramento UX immediato.
-3. **DB: tabella `user_roles` + has_role** + bootstrap admin via password attuale.
-4. **Routing admin nuovo** in parallelo al vecchio: nuove rotte `/admin/*` con auth Supabase, vecchio `/admin` (password) come fallback.
-5. **Migrare componenti** (EventManager → pagine, modali partecipante → `UserDetail`, ecc.).
-6. **Rimuovere param `password**` dalle edge function admin → check JWT+ruolo.
-7. **Pagine nuove**: `/admin/satispay`, `/admin/certificates`, `/admin/imports`.
-8. **Eliminare** vecchio `Admin.tsx` monolitico (oggi 1597 righe) e `/:slug/admin` redirect.
+- Mostra società attuale del partecipante (join con `societa` via `societa_id`)
+- Bottone "Modifica" → combobox per selezionare/creare
+- Bottoni di richiesta:
+  - **"Richiedi via Email"**: apre dialog con `Textarea` precompilato (testo modificabile) e invia tramite edge function transazionale esistente (`send-event-email`-like — riusare pattern Lovable transactional con `unsubscribe_token`)
+  - **"Richiedi via WhatsApp"**: apre dialog con `Textarea` precompilato; al submit apre `https://web.whatsapp.com/send?phone=<telefono_normalizzato>&text=<encodeURIComponent(testo)>` in nuova tab
+- Testo default: "Ciao {nome}, scrivo da Ginepro. Per completare la tua iscrizione potresti indicarci la società sportiva di appartenenza? Grazie!"
+
+Per la mail: nuova edge function leggera `send-societa-request` (oppure riutilizzo del sistema transactional esistente con template inline).
 
 ---
 
-## 7. Domande aperte
+## 6. Frontend — EventForm BO
 
-1. `process-email-queue`: devo verificare se è schedulata via pg_cron prima di proporne la rimozione — la mantengo per ora salvo conferma. Risposta: teniamola
-2. **Bootstrap primo admin**: [domenico.diiorio@ginepro.cc](mailto:domenico.diiorio@ginepro.cc) è il super admin in futuro gestiremo permessi diversi per altri utenti
+In `src/components/admin/EventForm.tsx`: aggiungere `Switch` "Richiedi società in iscrizione" mappato su `richiedi_societa`.
+
+---
+
+## 7. Tipi & Hooks
+
+- `useEvent`: includere `richiedi_societa` in `EventData`
+- Nuovo hook `useSocieta()` per lista società (cached con react-query)
+
+---
+
+## File coinvolti
+
+**Nuovi**
+
+- `supabase/migrations/<timestamp>_societa.sql`
+- `supabase/functions/create-societa/index.ts`
+- `supabase/functions/send-societa-request/index.ts` (email)
+- `src/pages/admin/AdminSocieta.tsx`
+- `src/components/SocietaCombobox.tsx`
+- `src/hooks/use-societa.ts`
+
+**Modificati**
+
+- `src/App.tsx` (route `/admin/societa`)
+- `src/components/AdminLayout.tsx` (voce menu)
+- `src/components/admin/EventForm.tsx`
+- `src/components/RegistrationForm.tsx`
+- `src/components/PairRegistrationForm.tsx`
+- `src/pages/admin/AdminUserDetail.tsx`
+- `src/hooks/use-event.ts`
+- `supabase/functions/manage-event/index.ts`
+- `supabase/functions/update-participant/index.ts`
+
+---
+
+## Domande aperte
+
+1. La società è **una sola per partecipante** (campo singolo) o storicizzata per evento (può cambiare nel tempo)? → propongo: una corrente su `participants` + snapshot per registration, così resta lo storico. Proposta accettata
+2. Per la creazione on-the-fly durante iscrizione: ok edge function dedicata (più sicura) o policy INSERT pubblica con rate-limit/validation lato DB? ok edge function dedicata  
+  
+Tra le società esistiamo anche noi, GINEPRO, se un utente è iscritto a tesseramento-<anno-corrente> il campo società glielo popoliamo già in fase di migrazione

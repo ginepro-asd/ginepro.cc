@@ -28,6 +28,7 @@ import AdminNewsletters from "./pages/admin/AdminNewsletters";
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminImports from "./pages/admin/AdminImports";
 import AdminChat from "./pages/admin/AdminChat";
+import AdminSocieta from "./pages/admin/AdminSocieta";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
               <Route path="emails" element={<AdminEmails />} />
               <Route path="imports" element={<AdminImports />} />
               <Route path="chat" element={<AdminChat />} />
+              <Route path="societa" element={<AdminSocieta />} />
             </Route>
 
             <Route path="/:slug" element={<EventPage />} />

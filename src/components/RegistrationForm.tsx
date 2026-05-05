@@ -48,6 +48,7 @@ import { COUNTRY_CODES, PAYMENT_LABELS, ADMIN_BYPASS_PAYMENT_METHODS, tryCompute
 import { useReturningUser } from "@/hooks/use-returning-user";
 import ReturningUserDialog from "@/components/ReturningUserDialog";
 import { Link } from "react-router-dom";
+import SocietaCombobox from "@/components/SocietaCombobox";
 
 const PAYMENT_ICONS: Record<string, React.ReactNode> = {
   stripe: <CreditCard className="h-4 w-4 text-muted-foreground" />,
@@ -139,6 +140,9 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
   const [certificateUploading, setCertificateUploading] = useState(false);
   const [certificateAnalyzing, setCertificateAnalyzing] = useState(false);
   const certInputRef = useRef<HTMLInputElement>(null);
+
+  // Società state
+  const [societa, setSocieta] = useState<{ id: string | null; nome: string | null }>({ id: null, nome: null });
 
   const { toast } = useToast();
   const pricingField = getPricingField(event.custom_fields);
@@ -336,6 +340,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       toast({ title: "Errore", description: "Email non valida", variant: "destructive" });
       return;
     }
+    if (event.richiedi_societa && !societa.id) {
+      toast({ title: "Errore", description: "Seleziona la società di appartenenza", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
     const realEmail = returningUserData ? returningUserData.email : data.email;
     const realPhone = returningUserData
@@ -359,6 +367,8 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       codiceFiscale: realCF,
       eventId: event.id,
       customData,
+      societaId: societa.id,
+      societaNome: societa.nome,
     };
 
     if (certificatePath) {
@@ -913,6 +923,16 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
                       Scopri il tesseramento
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
+                  </div>
+                )}
+
+                {event.richiedi_societa && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Società di appartenenza *</Label>
+                    <SocietaCombobox value={societa} onChange={setSocieta} />
+                    <p className="text-xs text-muted-foreground">
+                      Cerca la tua società. Se non la trovi, scrivila per aggiungerla.
+                    </p>
                   </div>
                 )}
 
