@@ -30,11 +30,19 @@ const AdminUsers = () => {
         .select("id, nome, cognome, email, telefono, codice_fiscale")
         .order("created_at", { ascending: false })
         .limit(1000);
-      const ids = (parts || []).map((p) => p.id);
-      const { data: regs } = await supabase
-        .from("registrations")
-        .select("participant_id")
-        .in("participant_id", ids);
+      // Fetch all registration participant_ids (paginated to bypass 1000 row default limit)
+      const regs: { participant_id: string | null }[] = [];
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("registrations")
+          .select("participant_id")
+          .not("participant_id", "is", null)
+          .range(from, from + pageSize - 1);
+        if (error || !data || data.length === 0) break;
+        regs.push(...data);
+        if (data.length < pageSize) break;
+      }
       const counts: Record<string, number> = {};
       (regs || []).forEach((r) => {
         if (r.participant_id) counts[r.participant_id] = (counts[r.participant_id] || 0) + 1;
