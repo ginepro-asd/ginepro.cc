@@ -67,5 +67,8 @@ verify_jwt = false
 [functions.send-event-email]
 verify_jwt = false
 
+[functions.admin-token]
+verify_jwt = true
+
 [functions.process-email-queue]
 verify_jwt = true
