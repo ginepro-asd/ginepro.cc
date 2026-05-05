@@ -24,9 +24,6 @@ verify_jwt = false
 [functions.send-confirmation-email]
 verify_jwt = false
 
-[functions.explore-firestore]
-verify_jwt = false
-
 [functions.import-firestore]
 verify_jwt = false
 
@@ -37,9 +34,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-chat]
-verify_jwt = false
-
-[functions.generate-thumbnails]
 verify_jwt = false
 
 [functions.proxy-photo]
@@ -72,6 +66,9 @@ verify_jwt = false
 
 [functions.send-event-email]
 verify_jwt = false
+
+[functions.admin-token]
+verify_jwt = true
 
 [functions.process-email-queue]
 verify_jwt = true

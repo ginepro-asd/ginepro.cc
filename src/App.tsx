@@ -14,6 +14,18 @@ import AreaRiservataLogin from "./pages/AreaRiservataLogin";
 import AreaRiservataSetup from "./pages/AreaRiservataSetup";
 import AreaRiservataDashboard from "./pages/AreaRiservataDashboard";
 import NewsletterLanding from "./pages/NewsletterLanding";
+import AdminLayout from "./components/AdminLayout";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminHome from "./pages/admin/AdminHome";
+import AdminEvents from "./pages/admin/AdminEvents";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
+import AdminSatispay from "./pages/admin/AdminSatispay";
+import AdminCertificates from "./pages/admin/AdminCertificates";
+import AdminNewsletters from "./pages/admin/AdminNewsletters";
+import AdminEmails from "./pages/admin/AdminEmails";
+import AdminImports from "./pages/admin/AdminImports";
+import AdminChat from "./pages/admin/AdminChat";
 import { ThemeProvider } from "./components/theme-provider";
 
 const queryClient = new QueryClient();
@@ -33,12 +45,30 @@ const App = () => (
             <Route path="/area-riservata/setup" element={<AreaRiservataSetup />} />
             <Route path="/area-riservata/dashboard" element={<AreaRiservataDashboard />} />
             <Route path="/newsletter/:slug" element={<NewsletterLanding />} />
+
+            {/* New admin (Google auth + role) */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminHome />} />
+              <Route path="events" element={<AdminEvents />} />
+              <Route path="events/:eventId/emails" element={<AdminEmails />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="users/:userId" element={<AdminUserDetail />} />
+              <Route path="satispay" element={<AdminSatispay />} />
+              <Route path="certificates" element={<AdminCertificates />} />
+              <Route path="newsletters" element={<AdminNewsletters />} />
+              <Route path="emails" element={<AdminEmails />} />
+              <Route path="imports" element={<AdminImports />} />
+              <Route path="chat" element={<AdminChat />} />
+            </Route>
+
+            {/* Legacy admin route still available for per-event ops */}
+            <Route path="/:slug/admin" element={<Admin />} />
+
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
-            <Route path="/:slug/admin" element={<Admin />} />
-            {/* Legacy routes for backward compatibility */}
             <Route path="/conferma" element={<Conferma />} />
-            <Route path="/admin" element={<Admin />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

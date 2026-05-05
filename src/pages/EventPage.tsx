@@ -11,6 +11,7 @@ import RegistrationForm from "@/components/RegistrationForm";
 import PairRegistrationForm from "@/components/PairRegistrationForm";
 import TesseramentoForm from "@/components/TesseramentoForm";
 import TopographicPattern from "@/components/TopographicPattern";
+import SiteFooter from "@/components/SiteFooter";
 import logoDark from "@/assets/icon-mountain.png";
 import { useEvent, formatPrice } from "@/hooks/use-event";
 import { useIsExpired } from "@/components/Countdown";
@@ -380,27 +381,8 @@ const EventPage = () => {
         </>
       )}
 
-      {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border/50 text-center">
-        <p className="text-sm text-muted-foreground">
-          © 2025{" "}
-          <a
-            href="https://ginepro.cc"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            GINEPRO
-          </a>{" "}
-          — {event.nome} ·{" "}
-          <Link
-            to={`/${slug}/admin`}
-            className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-          >
-            ⚙
-          </Link>
-        </p>
-      </footer>
+      <SiteFooter context={event.nome} adminPath={`/${slug}/admin`} />
+
     </div>
   );
 };

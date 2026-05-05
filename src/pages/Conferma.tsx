@@ -5,6 +5,7 @@ import { CheckCircle, Loader2, XCircle, CreditCard, ShieldCheck } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoDark from "@/assets/icon-mountain.png";
+import SiteFooter from "@/components/SiteFooter";
 
 interface RegistrationData {
   nome: string;
@@ -144,7 +145,8 @@ const Conferma = () => {
   const myPettorale = registration?.custom_data?.pettorale ?? null;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4 py-16">
       <Card className="max-w-md w-full border-border/50 shadow-xl bg-card/80 backdrop-blur-sm">
         <CardContent className="pt-8 pb-8 text-center space-y-6">
           <img src={logoDark} alt="GINEPRO" className="h-12 mx-auto object-contain" />
@@ -246,6 +248,8 @@ const Conferma = () => {
           </Button>
         </CardContent>
       </Card>
+      </div>
+      <SiteFooter adminPath={slug ? `/${slug}/admin` : "/admin"} />
     </div>
   );
 };
