@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, LogIn } from "lucide-react";
@@ -26,11 +27,10 @@ const AdminLogin = () => {
   const signInGoogle = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/admin` },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/admin`,
       });
-      if (error) throw error;
+      if (result.error) throw result.error;
     } catch (err: any) {
       toast({ title: "Errore", description: err.message, variant: "destructive" });
       setLoading(false);
