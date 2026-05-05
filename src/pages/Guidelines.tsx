@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
+import SiteFooter from "@/components/SiteFooter";
 
 const LOGOS = [
   {
@@ -239,6 +240,7 @@ const Guidelines = () => {
           </p>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 };
