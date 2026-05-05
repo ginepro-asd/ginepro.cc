@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveSatispayCreds } from "../_shared/satispay-account.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
         "scadenza_iscrizioni", "attivo", "hero_image", "payment_methods",
         "is_tesseramento", "is_coppia", "pettorale_start", "custom_fields",
         "location_lat", "location_lng", "location_label", "visibile_in_landing",
-        "external_url", "regulation_url", "satispay_api_url", "satispay_api_token",
+        "external_url", "regulation_url", "satispay_account_id",
         "service_fee", "chiusura_ore_prima",
       ];
       const sanitized: Record<string, any> = {};
@@ -300,12 +301,15 @@ Deno.serve(async (req) => {
         .single();
       if (regErr) throw regErr;
 
-      // Call xpay
-      const XPAY_BASE = "https://xpay.ginepro.cc";
+      const { apiUrl: satispayUrl, apiToken: satispayToken } =
+        await resolveSatispayCreds(supabase, event_id);
       const orderId = `${evt.nome} ${part.cognome} ${part.nome}`;
-      const xpayRes = await fetch(`${XPAY_BASE}/payment`, {
+      const xpayRes = await fetch(satispayUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(satispayToken ? { "Authorization": `Bearer ${satispayToken}` } : {}),
+        },
         body: JSON.stringify({
           orderId,
           phoneNumber: part.telefono,
@@ -358,11 +362,15 @@ Deno.serve(async (req) => {
       const { resolveEventPrice } = await import("../_shared/event-pricing.ts");
       const price = resolveEventPrice(evt.prezzo, evt.custom_fields, reg.custom_data || {});
 
-      const XPAY_BASE = "https://xpay.ginepro.cc";
+      const { apiUrl: satispayUrl, apiToken: satispayToken } =
+        await resolveSatispayCreds(supabase, evt.id);
       const orderId = `${evt.nome} ${part.cognome} ${part.nome}`;
-      const xpayRes = await fetch(`${XPAY_BASE}/payment`, {
+      const xpayRes = await fetch(satispayUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(satispayToken ? { "Authorization": `Bearer ${satispayToken}` } : {}),
+        },
         body: JSON.stringify({
           orderId,
           phoneNumber: part.telefono,
