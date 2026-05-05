@@ -7,9 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus } from "lucide-react";
+import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus, Trash2 } from "lucide-react";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
 import type { CustomField } from "@/hooks/use-event";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AdminEventParticipants = () => {
   const { eventId } = useParams<{ eventId: string }>();
