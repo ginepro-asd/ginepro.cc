@@ -134,6 +134,17 @@ const AdminEventParticipants = () => {
           ))}
         </div>
       )}
+
+      {eventId && (
+        <AdminAddRegistration
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          eventId={eventId}
+          eventCustomFields={eventCustomFields}
+          password={adminPassword || ""}
+          onSuccess={() => setReloadKey((k) => k + 1)}
+        />
+      )}
     </div>
   );
 };
