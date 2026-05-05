@@ -7,6 +7,7 @@ import {
   Loader2, LogOut, CreditCard, CalendarDays, User, FileCheck, ExternalLink,
 } from "lucide-react";
 import logoDark from "@/assets/icon-mountain.png";
+import SiteFooter from "@/components/SiteFooter";
 
 interface ParticipantData {
   id: string;
@@ -311,6 +312,7 @@ const AreaRiservataDashboard = () => {
           )}
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 };
