@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import EventsList from "./pages/EventsList";
 import EventPage from "./pages/EventPage";
 import Conferma from "./pages/Conferma";
@@ -66,9 +66,6 @@ const App = () => (
               <Route path="imports" element={<AdminImports />} />
               <Route path="chat" element={<AdminChat />} />
             </Route>
-
-            {/* Legacy admin route → redirect to new backoffice */}
-            <Route path="/:slug/admin" element={<Navigate to="/admin/events" replace />} />
 
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
