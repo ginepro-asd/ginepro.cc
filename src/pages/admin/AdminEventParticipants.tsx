@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Download, Search, Pencil } from "lucide-react";
+import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus } from "lucide-react";
+import AdminAddRegistration from "@/components/AdminAddRegistration";
+import type { CustomField } from "@/hooks/use-event";
 
 const AdminEventParticipants = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -16,25 +18,32 @@ const AdminEventParticipants = () => {
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [eventName, setEventName] = useState("");
+  const [eventCustomFields, setEventCustomFields] = useState<CustomField[]>([]);
   const [query, setQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!adminPassword || !eventId) return;
     (async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("export-registrations", {
-          body: { password: adminPassword, format: "json", event_id: eventId },
-        });
+        const [{ data, error }, evRes] = await Promise.all([
+          supabase.functions.invoke("export-registrations", {
+            body: { password: adminPassword, format: "json", event_id: eventId },
+          }),
+          supabase.from("events").select("nome, custom_fields").eq("id", eventId).maybeSingle(),
+        ]);
         if (error) throw error;
         if (data.error) throw new Error(data.error);
         setRegistrations(data.registrations || []);
-        setEventName(data.registrations?.[0]?.event_nome || "");
+        setEventName(evRes.data?.nome || data.registrations?.[0]?.event_nome || "");
+        setEventCustomFields(((evRes.data?.custom_fields as unknown) as CustomField[]) || []);
       } catch (err: any) {
         toast({ title: "Errore", description: err.message, variant: "destructive" });
       } finally { setLoading(false); }
     })();
-  }, [adminPassword, eventId]);
+  }, [adminPassword, eventId, reloadKey]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -75,10 +84,16 @@ const AdminEventParticipants = () => {
             <p className="text-xs text-muted-foreground">{registrations.length} iscrizioni totali</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || registrations.length === 0}>
-          <Download className="h-4 w-4 mr-2" /> Esporta CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" /> Aggiungi iscritto
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || registrations.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> Esporta CSV
+          </Button>
+        </div>
       </div>
+
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -118,6 +133,17 @@ const AdminEventParticipants = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {eventId && (
+        <AdminAddRegistration
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          eventId={eventId}
+          eventCustomFields={eventCustomFields}
+          password={adminPassword || ""}
+          onSuccess={() => setReloadKey((k) => k + 1)}
+        />
       )}
     </div>
   );
