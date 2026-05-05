@@ -118,7 +118,10 @@ const AdminEventParticipants = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">{r.nome} {r.cognome}</span>
-                    <Badge variant={r.payment_status === "paid" ? "default" : r.payment_status === "pending" ? "secondary" : "destructive"} className="text-xs">
+                    <Badge
+                      variant={r.payment_status === "cancelled" ? "destructive" : r.payment_status === "pending" ? "secondary" : "default"}
+                      className={`text-xs ${r.payment_status === "completed" || r.payment_status === "paid" ? "bg-green-600 hover:bg-green-600 text-white" : ""}`}
+                    >
                       {r.payment_status}
                     </Badge>
                     {r.payment_method && <Badge variant="outline" className="text-xs">{r.payment_method}</Badge>}
