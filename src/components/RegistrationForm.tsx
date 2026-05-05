@@ -339,6 +339,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       toast({ title: "Errore", description: "Email non valida", variant: "destructive" });
       return;
     }
+    if (event.richiedi_societa && !societa.id) {
+      toast({ title: "Errore", description: "Seleziona la società di appartenenza", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
     const realEmail = returningUserData ? returningUserData.email : data.email;
     const realPhone = returningUserData
@@ -365,12 +369,6 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
       societaId: societa.id,
       societaNome: societa.nome,
     };
-
-    if (event.richiedi_societa && !societa.id) {
-      toast({ title: "Errore", description: "Seleziona la società", variant: "destructive" });
-      setIsSubmitting(false);
-      return;
-    }
 
     if (certificatePath) {
       payload.certificatePaths = [certificatePath];
