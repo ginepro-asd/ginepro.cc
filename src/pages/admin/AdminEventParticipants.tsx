@@ -84,10 +84,14 @@ const AdminEventParticipants = () => {
             <p className="text-xs text-muted-foreground">{registrations.length} iscrizioni totali</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || registrations.length === 0}>
-          <Download className="h-4 w-4 mr-2" /> Esporta CSV
-        </Button>
-      </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" /> Aggiungi iscritto
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading || registrations.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> Esporta CSV
+          </Button>
+        </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
