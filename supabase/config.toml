@@ -24,9 +24,6 @@ verify_jwt = false
 [functions.send-confirmation-email]
 verify_jwt = false
 
-[functions.explore-firestore]
-verify_jwt = false
-
 [functions.import-firestore]
 verify_jwt = false
 
