@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import EventsList from "./pages/EventsList";
 import EventPage from "./pages/EventPage";
 import Conferma from "./pages/Conferma";
-import Admin from "./pages/Admin";
+
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
 import MemberCard from "./pages/MemberCard";
