@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import type { CustomField } from "@/hooks/use-event";
 import { formatPrice } from "@/hooks/use-event";
 import { Loader2, Check, Upload, Image, FileText, Link as LinkIcon, MapPin, Smartphone } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const normalizeCustomFields = (cf: unknown): CustomField[] =>
   Array.isArray(cf) ? (cf as CustomField[]) : [];
@@ -88,8 +89,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         custom_fields: normalizeCustomFields(event.custom_fields),
         external_url: event.external_url || "",
         regulation_url: event.regulation_url || "",
-        satispay_api_url: event.satispay_api_url || "",
-        satispay_api_token: event.satispay_api_token || "",
+        satispay_account_id: event.satispay_account_id || "",
       }
     : {
         nome: "", slug: "", descrizione: "", data_evento: "", luogo: "",
@@ -98,10 +98,20 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         is_tesseramento: false, visibile_in_landing: true, is_coppia: false,
         pettorale_start: "", location_lat: null, location_lng: null,
         location_label: "", location_address: "", custom_fields: [],
-        external_url: "", regulation_url: "", satispay_api_url: "", satispay_api_token: "",
+        external_url: "", regulation_url: "", satispay_account_id: "",
       };
 
   const [editFields, setEditFields] = useState<Record<string, any>>(initialFields);
+  const [satispayAccounts, setSatispayAccounts] = useState<Array<{ id: string; nome: string; is_default: boolean }>>([]);
+
+  useEffect(() => {
+    if (!password) return;
+    supabase.functions.invoke("manage-event", {
+      body: { password, action: "list_satispay_accounts" },
+    }).then(({ data }) => {
+      if (data?.accounts) setSatispayAccounts(data.accounts);
+    });
+  }, [password]);
 
   const autoSlug = (nome: string) =>
     nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -135,8 +145,7 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
         location_label: editFields.location_label || null,
         external_url: editFields.external_url || null,
         regulation_url: editFields.regulation_url || null,
-        satispay_api_url: editFields.satispay_api_url || null,
-        satispay_api_token: editFields.satispay_api_token || null,
+        satispay_account_id: editFields.satispay_account_id || null,
         custom_fields: sanitizeCustomFields(normalizeCustomFields(editFields.custom_fields)),
       };
       const action = creating ? "create" : "update";
@@ -335,25 +344,27 @@ const EventForm = ({ password, event, creating = false }: EventFormProps) => {
       </div>
 
       {(editFields.payment_methods || []).includes("satispay") && (
-        <div className="space-y-3 border border-border/50 rounded-lg p-3 bg-muted/10">
+        <div className="space-y-2 border border-border/50 rounded-lg p-3 bg-muted/10">
           <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Smartphone className="h-4 w-4 text-primary" /> Endpoint Satispay personalizzato
+            <Smartphone className="h-4 w-4 text-primary" /> Account Satispay
           </Label>
-          <p className="text-xs text-muted-foreground">Se vuoto, verrà usato l'endpoint predefinito.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">API URL</Label>
-              <Input value={editFields.satispay_api_url || ""} placeholder="https://..." className="h-8 text-sm"
-                autoComplete="off" data-1p-ignore data-lpignore="true"
-                onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_url: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Bearer Token</Label>
-              <Input type="password" value={editFields.satispay_api_token || ""} placeholder="Token..."
-                className="h-8 text-sm" autoComplete="off" data-1p-ignore data-lpignore="true"
-                onChange={(e) => setEditFields(prev => ({ ...prev, satispay_api_token: e.target.value }))} />
-            </div>
-          </div>
+          <Select
+            value={editFields.satispay_account_id || "__default__"}
+            onValueChange={(v) => setEditFields(prev => ({ ...prev, satispay_account_id: v === "__default__" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__default__">
+                Account predefinito{satispayAccounts.find(a => a.is_default) ? ` (${satispayAccounts.find(a => a.is_default)!.nome})` : ""}
+              </SelectItem>
+              {satispayAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.nome}{a.is_default ? " ★" : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Gestisci gli account da <a href="/admin/satispay" className="text-primary hover:underline">Satispay</a>.
+          </p>
         </div>
       )}
 

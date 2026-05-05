@@ -3,6 +3,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { resolveEventPrice } from "../_shared/event-pricing.ts";
+import { resolveSatispayCreds } from "../_shared/satispay-account.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,7 @@ serve(async (req) => {
     // Fetch event
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, is_coppia, pettorale_start, custom_fields, satispay_api_url, satispay_api_token")
+      .select("id, nome, prezzo, slug, is_coppia, pettorale_start, custom_fields")
       .eq("id", eventId)
       .single();
 
@@ -312,8 +313,8 @@ serve(async (req) => {
 
     if (paymentMethod === "satispay") {
       const payer = satispayPayer || "a"; // default: first participant pays all
-      const satispayUrl = event.satispay_api_url || XPAY_BASE;
-      const satispayToken = event.satispay_api_token || "";
+      const { apiUrl: satispayUrl, apiToken: satispayToken } =
+        await resolveSatispayCreds(supabaseAdmin, eventId);
       const satispayHeaders: Record<string, string> = { "Content-Type": "application/json" };
       if (satispayToken) satispayHeaders["Authorization"] = `Bearer ${satispayToken}`;
 

@@ -2,15 +2,13 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveEventPrice } from "../_shared/event-pricing.ts";
 import { validateSpotsAndCertificate } from "../_shared/spot-validation.ts";
+import { resolveSatispayCreds } from "../_shared/satispay-account.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const SATISPAY_BASE_DEFAULT = "https://muvat-api-304633219729.europe-west1.run.app/payment/77jc79juc3ftimn93si6irl7k32f1n4sarj58oaugdn882rrqjn909m103nrc4ni634q61996p2cd6kilnor1qekraul4go906nlsfn6rse5thlf72oid48rki1fdqvm3qdkp6kjild2jgasolb2o0088op20a11od4kjtmtr4eu9hbfdtlj3poornpt7m9cvgmcqrd8";
-const SATISPAY_TOKEN_DEFAULT = Deno.env.get("SATISPAY_MUVAT_TOKEN") || "";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -39,7 +37,7 @@ serve(async (req) => {
     // Fetch event for pricing
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, nome, prezzo, slug, custom_fields, service_fee, satispay_api_url, satispay_api_token")
+      .select("id, nome, prezzo, slug, custom_fields, service_fee")
       .eq("id", eventId)
       .single();
 
@@ -123,8 +121,8 @@ serve(async (req) => {
     }
 
     const orderId = `${event.nome} ${cognome} ${nome}`;
-    const satispayBaseUrl = event.satispay_api_url || SATISPAY_BASE_DEFAULT;
-    const satispayToken = event.satispay_api_token || SATISPAY_TOKEN_DEFAULT;
+    const { apiUrl: satispayBaseUrl, apiToken: satispayToken } =
+      await resolveSatispayCreds(supabaseAdmin, eventId);
     const satispayHeaders: Record<string, string> = { "Content-Type": "application/json" };
     satispayHeaders["Authorization"] = `Bearer ${satispayToken}`;
     const res = await fetch(satispayBaseUrl, {
