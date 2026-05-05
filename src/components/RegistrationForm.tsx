@@ -926,6 +926,16 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
                   </div>
                 )}
 
+                {event.richiedi_societa && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Società di appartenenza *</Label>
+                    <SocietaCombobox value={societa} onChange={setSocieta} />
+                    <p className="text-xs text-muted-foreground">
+                      Cerca la tua società. Se non la trovi, scrivila per aggiungerla.
+                    </p>
+                  </div>
+                )}
+
                 {/* Payment method */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">Metodo di pagamento *</Label>
