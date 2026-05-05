@@ -65,8 +65,8 @@ const AdminImports = () => {
           <AdminCsvImport
             password={adminPassword}
             open={csvOpen}
-            onClose={() => setCsvOpen(false)}
-            onComplete={() => setCsvOpen(false)}
+            onOpenChange={setCsvOpen}
+            onSuccess={() => setCsvOpen(false)}
           />
         </CardContent>
       </Card>
