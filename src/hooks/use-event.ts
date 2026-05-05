@@ -25,6 +25,7 @@ export interface EventData {
   regulation_url: string | null;
   service_fee: number;
   chiusura_ore_prima: number;
+  richiedi_societa: boolean;
 }
 
 export interface CustomField {
@@ -68,6 +69,7 @@ export function useEvent(slug: string | undefined) {
         regulation_url: (data as any).regulation_url ?? null,
         service_fee: (data as any).service_fee ?? 0,
         chiusura_ore_prima: (data as any).chiusura_ore_prima ?? 24,
+        richiedi_societa: (data as any).richiedi_societa ?? false,
       };
     },
     enabled: !!slug,
@@ -111,6 +113,7 @@ export function useEvents() {
         regulation_url: (e as any).regulation_url ?? null,
         service_fee: (e as any).service_fee ?? 0,
         chiusura_ore_prima: (e as any).chiusura_ore_prima ?? 24,
+        richiedi_societa: (e as any).richiedi_societa ?? false,
       }));
     },
     staleTime: 5 * 60 * 1000,
