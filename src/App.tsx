@@ -2,11 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import EventsList from "./pages/EventsList";
 import EventPage from "./pages/EventPage";
 import Conferma from "./pages/Conferma";
-import Admin from "./pages/Admin";
+
 import NotFound from "./pages/NotFound";
 import Guidelines from "./pages/Guidelines";
 import MemberCard from "./pages/MemberCard";
@@ -67,8 +67,8 @@ const App = () => (
               <Route path="chat" element={<AdminChat />} />
             </Route>
 
-            {/* Legacy admin route still available for per-event ops */}
-            <Route path="/:slug/admin" element={<Admin />} />
+            {/* Legacy admin route → redirect to new backoffice */}
+            <Route path="/:slug/admin" element={<Navigate to="/admin/events" replace />} />
 
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
