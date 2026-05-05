@@ -38,7 +38,7 @@ const AdminEventParticipants = () => {
         if (data.error) throw new Error(data.error);
         setRegistrations(data.registrations || []);
         setEventName(evRes.data?.nome || data.registrations?.[0]?.event_nome || "");
-        setEventCustomFields((evRes.data?.custom_fields as CustomField[]) || []);
+        setEventCustomFields(((evRes.data?.custom_fields as unknown) as CustomField[]) || []);
       } catch (err: any) {
         toast({ title: "Errore", description: err.message, variant: "destructive" });
       } finally { setLoading(false); }
