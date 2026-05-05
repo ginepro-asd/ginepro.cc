@@ -67,8 +67,8 @@ const App = () => (
               <Route path="chat" element={<AdminChat />} />
             </Route>
 
-            {/* Legacy admin route still available for per-event ops */}
-            <Route path="/:slug/admin" element={<Admin />} />
+            {/* Legacy admin route → redirect to new backoffice */}
+            <Route path="/:slug/admin" element={<Navigate to="/admin/events" replace />} />
 
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
