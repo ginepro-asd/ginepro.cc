@@ -1,4 +1,5 @@
 import ThemeSelector from "@/components/ThemeSelector";
+import SiteFooter from "@/components/SiteFooter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -523,6 +524,8 @@ const EventsList = () => {
           </div>
         </section>
       )}
+
+      <SiteFooter />
     </div>
   );
 };
