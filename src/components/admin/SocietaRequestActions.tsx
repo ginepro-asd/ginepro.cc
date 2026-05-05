@@ -4,8 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, MessageCircle, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Mail, MessageCircle } from "lucide-react";
 
 interface Props {
   participant: { id: string; nome: string; cognome: string; email: string; telefono: string };
@@ -19,7 +18,6 @@ const SocietaRequestActions = ({ participant }: Props) => {
   const [emailOpen, setEmailOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
   const [text, setText] = useState(defaultText(participant.nome));
-  const [sending, setSending] = useState(false);
 
   const sendEmail = () => {
     const subject = "Società di appartenenza";
