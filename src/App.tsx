@@ -18,6 +18,8 @@ import AdminLayout from "./components/AdminLayout";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminHome from "./pages/admin/AdminHome";
 import AdminEvents from "./pages/admin/AdminEvents";
+import AdminEventDetail from "./pages/admin/AdminEventDetail";
+import AdminEventParticipants from "./pages/admin/AdminEventParticipants";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminSatispay from "./pages/admin/AdminSatispay";
@@ -51,6 +53,9 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminHome />} />
               <Route path="events" element={<AdminEvents />} />
+              <Route path="events/new" element={<AdminEventDetail />} />
+              <Route path="events/:eventId" element={<AdminEventDetail />} />
+              <Route path="events/:eventId/participants" element={<AdminEventParticipants />} />
               <Route path="events/:eventId/emails" element={<AdminEmails />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="users/:userId" element={<AdminUserDetail />} />
