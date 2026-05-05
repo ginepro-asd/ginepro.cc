@@ -67,9 +67,6 @@ const App = () => (
               <Route path="chat" element={<AdminChat />} />
             </Route>
 
-            {/* Legacy admin route → redirect to new backoffice */}
-            <Route path="/:slug/admin" element={<Navigate to="/admin/events" replace />} />
-
             <Route path="/:slug" element={<EventPage />} />
             <Route path="/:slug/conferma" element={<Conferma />} />
             <Route path="/conferma" element={<Conferma />} />
