@@ -209,6 +209,7 @@ export type Database = {
           pettorale_start: number | null
           prezzo: number
           regulation_url: string | null
+          satispay_account_id: string | null
           satispay_api_token: string | null
           satispay_api_url: string | null
           scadenza_iscrizioni: string | null
@@ -238,6 +239,7 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          satispay_account_id?: string | null
           satispay_api_token?: string | null
           satispay_api_url?: string | null
           scadenza_iscrizioni?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           pettorale_start?: number | null
           prezzo?: number
           regulation_url?: string | null
+          satispay_account_id?: string | null
           satispay_api_token?: string | null
           satispay_api_url?: string | null
           scadenza_iscrizioni?: string | null
@@ -275,7 +278,15 @@ export type Database = {
           updated_at?: string
           visibile_in_landing?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_satispay_account_id_fkey"
+            columns: ["satispay_account_id"]
+            isOneToOne: false
+            referencedRelation: "satispay_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       medical_certificates: {
         Row: {
@@ -642,6 +653,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      satispay_accounts: {
+        Row: {
+          api_token: string
+          api_url: string
+          created_at: string
+          id: string
+          is_default: boolean
+          nome: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_token: string
+          api_url: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          nome: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_token?: string
+          api_url?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          nome?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       suppressed_emails: {
         Row: {
