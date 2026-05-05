@@ -521,6 +521,62 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "list_satispay_accounts") {
+      const { data, error } = await supabase
+        .from("satispay_accounts")
+        .select("*")
+        .order("is_default", { ascending: false })
+        .order("nome");
+      if (error) throw error;
+      return new Response(JSON.stringify({ accounts: data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "upsert_satispay_account") {
+      const { account } = body;
+      if (!account?.nome || !account?.api_url || !account?.api_token) {
+        return new Response(JSON.stringify({ error: "nome, api_url e api_token sono obbligatori" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // If marking as default, clear current default first
+      if (account.is_default) {
+        await supabase.from("satispay_accounts").update({ is_default: false }).eq("is_default", true);
+      }
+      const payload = {
+        nome: account.nome,
+        api_url: account.api_url,
+        api_token: account.api_token,
+        is_default: !!account.is_default,
+        note: account.note || null,
+      };
+      let result;
+      if (account.id) {
+        result = await supabase.from("satispay_accounts").update(payload).eq("id", account.id).select().single();
+      } else {
+        result = await supabase.from("satispay_accounts").insert(payload).select().single();
+      }
+      if (result.error) throw result.error;
+      return new Response(JSON.stringify({ success: true, account: result.data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "delete_satispay_account") {
+      const { account_id } = body;
+      if (!account_id) {
+        return new Response(JSON.stringify({ error: "account_id è obbligatorio" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error } = await supabase.from("satispay_accounts").delete().eq("id", account_id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Azione non valida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
