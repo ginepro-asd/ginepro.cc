@@ -407,11 +407,9 @@ const AdminAddRegistration = ({ open, onOpenChange, eventId, eventCustomFields, 
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
+                <option value="satispay">Satispay</option>
                 <option value="contanti">Contanti</option>
                 <option value="admin">Admin (gratuito)</option>
-                <option value="stripe">Stripe</option>
-                <option value="satispay">Satispay</option>
-                <option value="paypal">PayPal</option>
               </select>
             </div>
 
