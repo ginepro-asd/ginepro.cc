@@ -136,7 +136,7 @@ const AdminEventParticipants = () => {
                 </div>
                 {r.participant_id && (
                   <Button size="icon" variant="ghost" asChild title="Apri utente">
-                    <Link to={`/admin/users/${r.participant_id}`}><Pencil className="h-4 w-4" /></Link>
+                    <Link to={`/admin/users/${r.participant_id}`} state={{ from: `/admin/events/${eventId}/participants`, label: `Torna agli iscritti${eventName ? ` — ${eventName}` : ""}` }}><Pencil className="h-4 w-4" /></Link>
                   </Button>
                 )}
                 {r.payment_status !== "completed" && r.payment_status !== "paid" && (
