@@ -106,9 +106,10 @@ interface RegistrationFormProps {
   preselectedDiscipline?: string;
   spotCounts?: Record<string, number>;
   adminBypass?: boolean;
+  onCompleted?: () => void;
 }
 
-const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypass }: RegistrationFormProps) => {
+const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypass, onCompleted }: RegistrationFormProps) => {
   const deadline = getEffectiveDeadline(event);
   const expired = useIsExpired(deadline) && !adminBypass;
   const { comuni, loading: comuniLoading } = useItalianComuni();
