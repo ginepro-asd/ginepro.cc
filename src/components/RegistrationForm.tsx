@@ -408,7 +408,10 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
           body: { ...payload, paymentMethod: "contanti", adminToken: "gin" },
         });
         if (error) throw error;
-        if (result?.url) window.location.href = result.url;
+        if (onCompleted) {
+          toast({ title: "Iscrizione registrata", description: "Pagamento in contanti registrato." });
+          onCompleted();
+        } else if (result?.url) window.location.href = result.url;
         else throw new Error("Errore nella registrazione in contanti");
       }
     } catch (err: any) {
