@@ -23,6 +23,7 @@ const AdminEventParticipants = () => {
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [eventName, setEventName] = useState("");
+  const [eventSlug, setEventSlug] = useState<string>("");
   const [eventCustomFields, setEventCustomFields] = useState<CustomField[]>([]);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
