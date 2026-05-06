@@ -23,6 +23,7 @@ const AdminEventParticipants = () => {
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [eventName, setEventName] = useState("");
+  const [eventSlug, setEventSlug] = useState<string>("");
   const [eventCustomFields, setEventCustomFields] = useState<CustomField[]>([]);
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -37,12 +38,13 @@ const AdminEventParticipants = () => {
           supabase.functions.invoke("export-registrations", {
             body: { password: adminPassword, format: "json", event_id: eventId },
           }),
-          supabase.from("events").select("nome, custom_fields").eq("id", eventId).maybeSingle(),
+          supabase.from("events").select("nome, slug, custom_fields").eq("id", eventId).maybeSingle(),
         ]);
         if (error) throw error;
         if (data.error) throw new Error(data.error);
         setRegistrations(data.registrations || []);
         setEventName(evRes.data?.nome || data.registrations?.[0]?.event_nome || "");
+        setEventSlug(evRes.data?.slug || "");
         setEventCustomFields(((evRes.data?.custom_fields as unknown) as CustomField[]) || []);
       } catch (err: any) {
         toast({ title: "Errore", description: err.message, variant: "destructive" });
@@ -179,13 +181,11 @@ const AdminEventParticipants = () => {
         </div>
       )}
 
-      {eventId && (
+      {eventSlug && (
         <AdminAddRegistration
           open={addOpen}
           onOpenChange={setAddOpen}
-          eventId={eventId}
-          eventCustomFields={eventCustomFields}
-          password={adminPassword || ""}
+          eventSlug={eventSlug}
           onSuccess={() => setReloadKey((k) => k + 1)}
         />
       )}

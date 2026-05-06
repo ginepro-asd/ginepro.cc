@@ -12,9 +12,10 @@ interface SatispayWaitingProps {
   onCancel: () => void;
   eventSlug: string;
   price: number;
+  onPaid?: () => void;
 }
 
-const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price }: SatispayWaitingProps) => {
+const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price, onPaid }: SatispayWaitingProps) => {
   const [status, setStatus] = useState<"pending" | "paid" | "cancelled" | "error">("pending");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
@@ -32,7 +33,8 @@ const SatispayWaiting = ({ paymentId, registrationId, onCancel, eventSlug, price
           setStatus("paid");
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTimeout(() => {
-            navigate(`/${eventSlug}/conferma?registration_id=${registrationId}&provider=satispay${adminTokenSuffix}`);
+            if (onPaid) onPaid();
+            else navigate(`/${eventSlug}/conferma?registration_id=${registrationId}&provider=satispay${adminTokenSuffix}`);
           }, 2000);
         } else if (data.status === "cancelled") {
           setStatus("cancelled");
