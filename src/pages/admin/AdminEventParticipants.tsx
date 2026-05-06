@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus, Trash2, Banknote, Smartphone } from "lucide-react";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
 import type { CustomField } from "@/hooks/use-event";
 import {
