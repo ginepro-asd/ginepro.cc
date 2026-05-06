@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,10 @@ import SocietaRequestActions from "@/components/admin/SocietaRequestActions";
 
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
+  const location = useLocation();
+  const backState = location.state as { from?: string; label?: string } | null;
+  const backHref = backState?.from || "/admin/users";
+  const backLabel = backState?.label || "Torna agli utenti";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [participant, setParticipant] = useState<any>(null);
@@ -66,7 +70,7 @@ const AdminUserDetail = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <Button asChild variant="ghost" size="sm">
-        <Link to="/admin/users"><ArrowLeft className="h-4 w-4 mr-1" />Torna agli utenti</Link>
+        <Link to={backHref}><ArrowLeft className="h-4 w-4 mr-1" />{backLabel}</Link>
       </Button>
       <div>
         <h1 className="font-display text-3xl font-bold">{participant.nome} {participant.cognome}</h1>
