@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Download, Search, Pencil, UserPlus, Trash2, Banknote, Smartphone } from "lucide-react";
 import AdminAddRegistration from "@/components/AdminAddRegistration";
 import type { CustomField } from "@/hooks/use-event";
 import {
@@ -138,6 +138,89 @@ const AdminEventParticipants = () => {
                   <Button size="icon" variant="ghost" asChild title="Apri utente">
                     <Link to={`/admin/users/${r.participant_id}`}><Pencil className="h-4 w-4" /></Link>
                   </Button>
+                )}
+                {r.payment_status !== "completed" && r.payment_status !== "paid" && (
+                  <>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" title="Segna pagato in contanti">
+                          <Banknote className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confermi pagamento in contanti?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            L'iscrizione di <strong>{r.nome} {r.cognome}</strong> verrà marcata come <strong>completata</strong> con metodo <strong>contanti</strong>.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              try {
+                                const { data, error } = await supabase.functions.invoke("manage-event", {
+                                  body: {
+                                    password: adminPassword,
+                                    action: "update_registration",
+                                    registration_id: r.id,
+                                    fields: { payment_status: "completed", payment_method: "contanti" },
+                                  },
+                                });
+                                if (error) throw error;
+                                if (data?.error) throw new Error(data.error);
+                                toast({ title: "Pagamento contanti registrato" });
+                                setReloadKey((k) => k + 1);
+                              } catch (err: any) {
+                                toast({ title: "Errore", description: err.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Conferma
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" title="Invia richiesta Satispay">
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Invio richiesta Satispay</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Verrà inviata una notifica push Satispay a <strong>{r.telefono}</strong> per <strong>{r.nome} {r.cognome}</strong>.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              try {
+                                const { data, error } = await supabase.functions.invoke("manage-event", {
+                                  body: {
+                                    password: adminPassword,
+                                    action: "resend_satispay",
+                                    registration_id: r.id,
+                                  },
+                                });
+                                if (error) throw error;
+                                if (data?.error) throw new Error(data.error);
+                                toast({ title: "Richiesta Satispay inviata", description: "Il partecipante riceverà una notifica push." });
+                                setReloadKey((k) => k + 1);
+                              } catch (err: any) {
+                                toast({ title: "Errore", description: err.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Invia
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
