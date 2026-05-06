@@ -145,12 +145,12 @@ const AdminEvents = () => {
         return (
           <>
             <div className="grid gap-3">{ordered.map(renderCard)}</div>
-            {past.length > 0 && (
+            {pastAll.length > 0 && (
               <div className="space-y-3 pt-6">
                 <h3 className="font-display text-sm font-bold text-muted-foreground uppercase tracking-wide">
                   Eventi passati
                 </h3>
-                <div className="grid gap-3 opacity-70">{past.map(renderCard)}</div>
+                <div className="grid gap-3 opacity-70">{pastAll.map(renderCard)}</div>
               </div>
             )}
           </>
