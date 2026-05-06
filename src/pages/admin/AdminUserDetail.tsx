@@ -70,7 +70,7 @@ const AdminUserDetail = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <Button asChild variant="ghost" size="sm">
-        <Link to="/admin/users"><ArrowLeft className="h-4 w-4 mr-1" />Torna agli utenti</Link>
+        <Link to={backHref}><ArrowLeft className="h-4 w-4 mr-1" />{backLabel}</Link>
       </Button>
       <div>
         <h1 className="font-display text-3xl font-bold">{participant.nome} {participant.cognome}</h1>
