@@ -74,8 +74,18 @@ const AdminEvents = () => {
         </Button>
       </div>
 
-      <div className="grid gap-3">
-        {events.map((ev) => (
+      {(() => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const upcoming = events
+          .filter((e) => e.data_evento && new Date(e.data_evento) >= today)
+          .sort((a, b) => +new Date(a.data_evento) - +new Date(b.data_evento));
+        const past = events
+          .filter((e) => e.data_evento && new Date(e.data_evento) < today)
+          .sort((a, b) => +new Date(b.data_evento) - +new Date(a.data_evento));
+        const undated = events.filter((e) => !e.data_evento);
+        const ordered = [...upcoming, ...undated];
+
+        const renderCard = (ev: any) => (
           <Card key={ev.id} className="border-border/50 bg-card/80">
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <Link to={`/admin/events/${ev.id}`} className="flex-1 min-w-0">
@@ -129,8 +139,22 @@ const AdminEvents = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        );
+
+        return (
+          <>
+            <div className="grid gap-3">{ordered.map(renderCard)}</div>
+            {past.length > 0 && (
+              <div className="space-y-3 pt-6">
+                <h3 className="font-display text-sm font-bold text-muted-foreground uppercase tracking-wide">
+                  Eventi passati
+                </h3>
+                <div className="grid gap-3 opacity-70">{past.map(renderCard)}</div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <AlertDialog open={!!deleteEvent} onOpenChange={(open) => { if (!open) setDeleteEvent(null); }}>
         <AlertDialogContent>
