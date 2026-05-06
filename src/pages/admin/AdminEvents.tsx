@@ -83,7 +83,8 @@ const AdminEvents = () => {
           .filter((e) => e.data_evento && new Date(e.data_evento) < today)
           .sort((a, b) => +new Date(b.data_evento) - +new Date(a.data_evento));
         const undated = events.filter((e) => !e.data_evento);
-        const ordered = [...upcoming, ...undated];
+        const ordered = upcoming;
+        const pastAll = [...past, ...undated];
 
         const renderCard = (ev: any) => (
           <Card key={ev.id} className="border-border/50 bg-card/80">
