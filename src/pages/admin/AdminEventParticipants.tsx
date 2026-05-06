@@ -181,13 +181,11 @@ const AdminEventParticipants = () => {
         </div>
       )}
 
-      {eventId && (
+      {eventSlug && (
         <AdminAddRegistration
           open={addOpen}
           onOpenChange={setAddOpen}
-          eventId={eventId}
-          eventCustomFields={eventCustomFields}
-          password={adminPassword || ""}
+          eventSlug={eventSlug}
           onSuccess={() => setReloadKey((k) => k + 1)}
         />
       )}
