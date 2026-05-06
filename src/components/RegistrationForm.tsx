@@ -449,6 +449,7 @@ const RegistrationForm = ({ event, preselectedDiscipline, spotCounts, adminBypas
             onCancel={() => setSatispayState(null)}
             eventSlug={event.slug}
             price={selectedPrice + serviceFee}
+            onPaid={onCompleted}
           />
         </div>
       </section>
