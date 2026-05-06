@@ -11,6 +11,10 @@ import SocietaRequestActions from "@/components/admin/SocietaRequestActions";
 
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
+  const location = useLocation();
+  const backState = location.state as { from?: string; label?: string } | null;
+  const backHref = backState?.from || "/admin/users";
+  const backLabel = backState?.label || "Torna agli utenti";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [participant, setParticipant] = useState<any>(null);
