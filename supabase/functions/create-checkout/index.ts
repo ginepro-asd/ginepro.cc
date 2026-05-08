@@ -118,6 +118,19 @@ serve(async (req) => {
       .eq("event_id", eventId)
       .neq("payment_status", "completed");
 
+    // Check if there's already a completed registration for this participant+event
+    const { data: existingCompleted } = await supabaseAdmin
+      .from("registrations")
+      .select("id, payment_status")
+      .eq("participant_id", participant.id)
+      .eq("event_id", eventId)
+      .eq("payment_status", "completed")
+      .maybeSingle();
+
+    if (existingCompleted?.id) {
+      throw new Error("Esiste già un'iscrizione completata per questo partecipante a questo evento.");
+    }
+
     const { data: registration, error: dbError } = await supabaseAdmin
       .from("registrations")
       .insert({
