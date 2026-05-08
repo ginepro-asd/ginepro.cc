@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import SocietaCombobox from "@/components/SocietaCombobox";
 import SocietaRequestActions from "@/components/admin/SocietaRequestActions";
+import { Input } from "@/components/ui/input";
 
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
