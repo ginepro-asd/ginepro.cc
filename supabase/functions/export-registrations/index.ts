@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveEventPrice } from "../_shared/event-pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +32,7 @@ serve(async (req) => {
     // Query registrations with linked event + participant metadata in one request
     let registrationsQuery = supabaseAdmin
       .from("registrations")
-      .select("*, events(nome, slug), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data, photo_thumb_url, photo_url)")
+      .select("*, events(nome, slug, prezzo, custom_fields, service_fee), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data, photo_thumb_url, photo_url, societa:societa_id(nome)), societa:societa_id(nome)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
@@ -42,14 +43,26 @@ serve(async (req) => {
     if (error) throw new Error(error.message);
 
     // Flatten event info and keep canonical participant payload from relationship
-    const enriched = (registrations || []).map((r: any) => ({
-      ...r,
-      event_nome: r.events?.nome || "—",
-      event_slug: r.events?.slug || "",
-      canonical_participant: r.participants || null,
-      photo_thumb_url: r.participants?.photo_thumb_url || null,
-      photo_url: r.participants?.photo_url || null,
-    }));
+    const enriched = (registrations || []).map((r: any) => {
+      const ev = r.events;
+      const basePrice = ev?.prezzo ?? 0;
+      const fee = ev?.service_fee ?? 0;
+      const computed = ev
+        ? resolveEventPrice(basePrice, ev.custom_fields, r.custom_data || {}) + fee
+        : 0;
+      const societa_nome =
+        r.societa_nome || r.societa?.nome || r.participants?.societa?.nome || "";
+      return {
+        ...r,
+        event_nome: ev?.nome || "—",
+        event_slug: ev?.slug || "",
+        canonical_participant: r.participants || null,
+        photo_thumb_url: r.participants?.photo_thumb_url || null,
+        photo_url: r.participants?.photo_url || null,
+        societa: societa_nome,
+        quota_pagata: ev ? (computed / 100).toFixed(2) : "",
+      };
+    });
 
     // Group by participant_id (fallback to normalized email) for the admin view
     const participantMap: Record<string, any> = {};
@@ -95,7 +108,7 @@ serve(async (req) => {
       const headers = [
         "id", "nome", "cognome", "email", "telefono",
         "identification_type", "codice_fiscale", "birth_date", "birth_place",
-        "payment_method", "payment_status", "payment_id", "event_nome", "custom_data", "created_at",
+        "payment_method", "payment_status", "payment_id", "quota_pagata", "societa", "event_nome", "custom_data", "created_at",
       ];
 
       const escapeCSV = (val: any) => {
