@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import SocietaCombobox from "@/components/SocietaCombobox";
 import SocietaRequestActions from "@/components/admin/SocietaRequestActions";
+import { Input } from "@/components/ui/input";
 
 const AdminUserDetail = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -23,6 +24,9 @@ const AdminUserDetail = () => {
   const [editingSocieta, setEditingSocieta] = useState(false);
   const [societaDraft, setSocietaDraft] = useState<{ id: string | null; nome: string | null }>({ id: null, nome: null });
   const [savingSocieta, setSavingSocieta] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const load = async () => {
     if (!userId) return;
@@ -64,6 +68,34 @@ const AdminUserDetail = () => {
     }
   };
 
+  const saveEmail = async () => {
+    if (!userId) return;
+    const newEmail = emailDraft.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      toast({ title: "Email non valida", variant: "destructive" });
+      return;
+    }
+    setSavingEmail(true);
+    try {
+      const { error } = await supabase.from("participants").update({ email: newEmail }).eq("id", userId);
+      if (error) {
+        if ((error as any).code === "23505") {
+          toast({ title: "Email già in uso", description: "Questa email è associata a un altro partecipante.", variant: "destructive" });
+        } else {
+          throw error;
+        }
+        return;
+      }
+      setParticipant({ ...participant, email: newEmail });
+      setEditingEmail(false);
+      toast({ title: "Email aggiornata" });
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   if (loading) return <div className="p-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (!participant) return <p>Utente non trovato.</p>;
 
@@ -72,9 +104,24 @@ const AdminUserDetail = () => {
       <Button asChild variant="ghost" size="sm">
         <Link to={backHref}><ArrowLeft className="h-4 w-4 mr-1" />{backLabel}</Link>
       </Button>
-      <div>
+      <div className="space-y-2">
         <h1 className="font-display text-3xl font-bold">{participant.nome} {participant.cognome}</h1>
-        <p className="text-muted-foreground">{participant.email} · {participant.telefono}</p>
+        {!editingEmail ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-muted-foreground">{participant.email} · {participant.telefono}</p>
+            <Button variant="ghost" size="sm" onClick={() => { setEmailDraft(participant.email || ""); setEditingEmail(true); }}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Modifica email
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap max-w-md">
+            <Input type="email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} className="flex-1 min-w-[220px]" />
+            <Button size="sm" onClick={saveEmail} disabled={savingEmail}>
+              {savingEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salva
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingEmail(false)}>Annulla</Button>
+          </div>
+        )}
       </div>
 
       <Card>
