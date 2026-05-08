@@ -43,6 +43,16 @@ serve(async (req) => {
     if (error) throw new Error(error.message);
 
     // Flatten event info and keep canonical participant payload from relationship
+    // Lookup società names
+    const societaIds = Array.from(new Set(
+      (registrations || []).flatMap((r: any) => [r.societa_id, r.participants?.societa_id]).filter(Boolean)
+    ));
+    const societaMap: Record<string, string> = {};
+    if (societaIds.length > 0) {
+      const { data: socs } = await supabaseAdmin.from("societa").select("id, nome").in("id", societaIds);
+      for (const s of socs || []) societaMap[s.id] = s.nome;
+    }
+
     const enriched = (registrations || []).map((r: any) => {
       const ev = r.events;
       const basePrice = ev?.prezzo ?? 0;
@@ -51,7 +61,10 @@ serve(async (req) => {
         ? resolveEventPrice(basePrice, ev.custom_fields, r.custom_data || {}) + fee
         : 0;
       const societa_nome =
-        r.societa_nome || r.societa?.nome || r.participants?.societa?.nome || "";
+        r.societa_nome ||
+        (r.societa_id && societaMap[r.societa_id]) ||
+        (r.participants?.societa_id && societaMap[r.participants.societa_id]) ||
+        "";
       return {
         ...r,
         event_nome: ev?.nome || "—",
