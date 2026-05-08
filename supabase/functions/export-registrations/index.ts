@@ -108,7 +108,7 @@ serve(async (req) => {
       const headers = [
         "id", "nome", "cognome", "email", "telefono",
         "identification_type", "codice_fiscale", "birth_date", "birth_place",
-        "payment_method", "payment_status", "payment_id", "event_nome", "custom_data", "created_at",
+        "payment_method", "payment_status", "payment_id", "quota_pagata", "societa", "event_nome", "custom_data", "created_at",
       ];
 
       const escapeCSV = (val: any) => {
