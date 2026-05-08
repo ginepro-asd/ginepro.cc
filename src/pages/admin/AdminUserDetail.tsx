@@ -24,6 +24,9 @@ const AdminUserDetail = () => {
   const [editingSocieta, setEditingSocieta] = useState(false);
   const [societaDraft, setSocietaDraft] = useState<{ id: string | null; nome: string | null }>({ id: null, nome: null });
   const [savingSocieta, setSavingSocieta] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const load = async () => {
     if (!userId) return;
