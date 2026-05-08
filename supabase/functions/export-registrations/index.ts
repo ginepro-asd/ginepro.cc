@@ -32,7 +32,7 @@ serve(async (req) => {
     // Query registrations with linked event + participant metadata in one request
     let registrationsQuery = supabaseAdmin
       .from("registrations")
-      .select("*, events(nome, slug, prezzo, custom_fields, service_fee), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data, photo_thumb_url, photo_url, societa:societa_id(nome)), societa:societa_id(nome)")
+      .select("*, events(nome, slug, prezzo, custom_fields, service_fee), participants(id, nome, cognome, email, telefono, codice_fiscale, birth_date, birth_place, fidal_data, photo_thumb_url, photo_url, societa_id)")
       .order("created_at", { ascending: false });
 
     if (event_id) {
