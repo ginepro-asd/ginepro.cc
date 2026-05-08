@@ -92,9 +92,19 @@ serve(async (req) => {
 
     let participant: { id: string };
     if (existingByName?.id) {
+      // If the email is already used by a DIFFERENT participant, don't overwrite it
+      const { data: emailOwner } = await supabaseAdmin
+        .from("participants")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      const updatePayload = { ...participantData };
+      if (emailOwner?.id && emailOwner.id !== existingByName.id) {
+        delete updatePayload.email;
+      }
       const { data: updated, error: updErr } = await supabaseAdmin
         .from("participants")
-        .update(participantData)
+        .update(updatePayload)
         .eq("id", existingByName.id)
         .select("id")
         .single();
