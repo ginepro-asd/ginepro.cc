@@ -82,13 +82,33 @@ serve(async (req) => {
     if (signatureUrl) participantData.signature_url = signatureUrl;
     if (societaId) participantData.societa_id = societaId;
 
-    const { data: participant, error: partError } = await supabaseAdmin
+    // Lookup existing participant by (nome, cognome) — unique constraint
+    const { data: existingByName } = await supabaseAdmin
       .from("participants")
-      .upsert(participantData, { onConflict: "email" })
       .select("id")
-      .single();
+      .eq("nome", nome)
+      .eq("cognome", cognome)
+      .maybeSingle();
 
-    if (partError) throw new Error(`Participant error: ${partError.message}`);
+    let participant: { id: string };
+    if (existingByName?.id) {
+      const { data: updated, error: updErr } = await supabaseAdmin
+        .from("participants")
+        .update(participantData)
+        .eq("id", existingByName.id)
+        .select("id")
+        .single();
+      if (updErr) throw new Error(`Participant error: ${updErr.message}`);
+      participant = updated;
+    } else {
+      const { data: upserted, error: partError } = await supabaseAdmin
+        .from("participants")
+        .upsert(participantData, { onConflict: "email" })
+        .select("id")
+        .single();
+      if (partError) throw new Error(`Participant error: ${partError.message}`);
+      participant = upserted;
+    }
 
     // Remove any existing non-completed registration for this participant+event
     await supabaseAdmin
