@@ -11,7 +11,7 @@ interface AdminAddRegistrationProps {
 }
 
 const AdminAddRegistration = ({ open, onOpenChange, eventSlug, onSuccess }: AdminAddRegistrationProps) => {
-  const { data: event, isLoading } = useEvent(open ? eventSlug : undefined);
+  const { data: event, isLoading } = useEvent(open ? eventSlug : undefined, { includeInactive: true });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
