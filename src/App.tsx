@@ -54,7 +54,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminHome />} />
               <Route path="events" element={<AdminEvents />} />
-              <Route path="events/new" element={<AdminEventDetail />} />
+              
               <Route path="events/:eventId" element={<AdminEventDetail />} />
               <Route path="events/:eventId/participants" element={<AdminEventParticipants />} />
               <Route path="events/:eventId/emails" element={<AdminEmails />} />
