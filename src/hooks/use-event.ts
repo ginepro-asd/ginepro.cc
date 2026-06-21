@@ -42,18 +42,17 @@ export interface CustomField {
   placeholder?: string;
 }
 
-export function useEvent(slug: string | undefined) {
+export function useEvent(slug: string | undefined, opts?: { includeInactive?: boolean }) {
+  const includeInactive = opts?.includeInactive ?? false;
   return useQuery({
-    queryKey: ["event", slug],
+    queryKey: ["event", slug, includeInactive],
     queryFn: async (): Promise<EventData> => {
       if (!slug) throw new Error("No slug provided");
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .eq("slug", slug)
-        .eq("attivo", true)
-        .single();
+      let query = supabase.from("events").select("*").eq("slug", slug);
+      if (!includeInactive) query = query.eq("attivo", true);
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Evento non trovato");
       return {
         ...data,
         custom_fields: (data.custom_fields as unknown as CustomField[]) || [],
