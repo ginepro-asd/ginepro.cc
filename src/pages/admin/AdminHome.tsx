@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, MessageSquare, ExternalLink } from "lucide-react";
+import { CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, ExternalLink } from "lucide-react";
 
 const SECTIONS = [
   { to: "/admin/events", label: "Eventi", icon: CalendarDays, desc: "Gestisci eventi, iscrizioni e dettagli per evento." },
@@ -9,7 +9,6 @@ const SECTIONS = [
   { to: "/admin/certificates", label: "Certificati medici", icon: FileCheck, desc: "Tutti i certificati caricati con stato e scadenza." },
   { to: "/admin/newsletters", label: "Newsletter", icon: Mail, desc: "Crea e invia newsletter mass-email." },
   { to: "/admin/imports", label: "Import", icon: Upload, desc: "Import da Firestore e da CSV." },
-  { to: "/admin/chat", label: "Chat AI", icon: MessageSquare, desc: "Interroga il database con linguaggio naturale." },
 ];
 
 const AdminHome = () => (

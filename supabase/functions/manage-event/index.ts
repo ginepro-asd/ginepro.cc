@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveSatispayCreds } from "../_shared/satispay-account.ts";
+import { isValidAdminPassword } from "../_shared/admin-password.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,8 +17,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { password, action } = body;
 
-    const adminPassword = Deno.env.get("ADMIN_PASSWORD");
-    if (!password || password !== adminPassword) {
+    if (!isValidAdminPassword(password)) {
       return new Response(JSON.stringify({ error: "Password non valida" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -27,7 +27,6 @@ import AdminCertificates from "./pages/admin/AdminCertificates";
 import AdminNewsletters from "./pages/admin/AdminNewsletters";
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminImports from "./pages/admin/AdminImports";
-import AdminChat from "./pages/admin/AdminChat";
 import AdminSocieta from "./pages/admin/AdminSocieta";
 import { ThemeProvider } from "./components/theme-provider";
 
@@ -65,7 +64,6 @@ const App = () => (
               <Route path="newsletters" element={<AdminNewsletters />} />
               <Route path="emails" element={<AdminEmails />} />
               <Route path="imports" element={<AdminImports />} />
-              <Route path="chat" element={<AdminChat />} />
               <Route path="societa" element={<AdminSocieta />} />
             </Route>
 

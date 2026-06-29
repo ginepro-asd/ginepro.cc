@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { isValidAdminPassword } from "../_shared/admin-password.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,8 +38,7 @@ serve(async (req) => {
 
     // Verify admin password for bulk/test sends
     if (mode === "bulk" || mode === "test") {
-      const adminPassword = Deno.env.get("ADMIN_PASSWORD");
-      if (!password || password !== adminPassword) {
+      if (!isValidAdminPassword(password)) {
         throw new Error("Unauthorized");
       }
     }

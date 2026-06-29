@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation, Link, NavLink } from "react-router-dom";
-import { Loader2, LogOut, CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, MessageSquare, LayoutDashboard, Building2 } from "lucide-react";
+import { Loader2, LogOut, CalendarDays, Users, Smartphone, FileCheck, Mail, Upload, LayoutDashboard, Building2 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { to: "/admin/certificates", label: "Certificati", icon: FileCheck },
   { to: "/admin/newsletters", label: "Newsletter", icon: Mail },
   { to: "/admin/imports", label: "Import", icon: Upload },
-  { to: "/admin/chat", label: "Chat AI", icon: MessageSquare },
 ];
 
 const AdminSidebar = () => {

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "supabase/functions/*/index.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "supabase/functions/**/*.ts",
+    "*.config.{js,ts}",
+    "tailwind.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "ignoreDependencies": [
+    "npm"
+  ],
+  "ignoreBinaries": [
+    "supabase"
+  ],
+  "rules": {
+    "exports": "off",
+    "types": "off"
+  }
+}

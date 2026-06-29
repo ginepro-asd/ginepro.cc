@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { isValidAdminPassword } from "../_shared/admin-password.ts";
 import { resolveEventPrice } from "../_shared/event-pricing.ts";
 
 const corsHeaders = {
@@ -16,8 +17,7 @@ serve(async (req) => {
   try {
     const { password, format, event_id } = await req.json();
 
-    const adminPassword = Deno.env.get("ADMIN_PASSWORD");
-    if (!password || password !== adminPassword) {
+    if (!isValidAdminPassword(password)) {
       return new Response(JSON.stringify({ error: "Password non valida" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,

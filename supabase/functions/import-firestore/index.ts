@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isValidAdminPassword } from "../_shared/admin-password.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -453,8 +454,7 @@ serve(async (req) => {
     const body = await req.json();
     const { password, action, firestore_event_id } = body;
 
-    const adminPw = Deno.env.get("ADMIN_PASSWORD");
-    if (!adminPw || password !== adminPw) {
+    if (!isValidAdminPassword(password)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,

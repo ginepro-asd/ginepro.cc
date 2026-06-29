@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAdminPassword } from "../_shared/admin-password.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const password = Deno.env.get("ADMIN_PASSWORD") || "";
+    const password = getAdminPassword();
     return new Response(
       JSON.stringify({ isAdmin: true, password, email: user.email }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

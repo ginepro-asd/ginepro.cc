@@ -119,13 +119,13 @@ serve(async (req) => {
       if (updErr) throw new Error(`Participant error: ${updErr.message}`);
       participant = updated;
     } else {
-      const { data: upserted, error: partError } = await supabaseAdmin
+      const { data: inserted, error: partError } = await supabaseAdmin
         .from("participants")
-        .upsert(participantData, { onConflict: "email" })
+        .insert(participantData)
         .select("id")
         .single();
       if (partError) throw new Error(`Participant error: ${partError.message}`);
-      participant = upserted;
+      participant = inserted;
     }
 
     // Remove any existing non-completed registration for this participant+event
