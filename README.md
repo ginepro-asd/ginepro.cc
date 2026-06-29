@@ -1,75 +1,114 @@
-# Welcome to your Lovable project
+# GINEPRO
 
-## Project info
+Web app per gestire eventi, tesseramento e iscrizioni GINEPRO.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Cosa fa
 
-## How can I edit this code?
+- Landing pubblica con eventi attivi, archivio eventi passati e tesseramento.
+- Pagina evento con iscrizione singola, iscrizione di coppia, quote variabili, limiti posti e scadenze.
+- Pagamenti tramite Stripe, Satispay, PayPal e bypass admin per contanti.
+- Area riservata per recupero account, tessere e certificati.
+- Backoffice admin per eventi, partecipanti, societa, pagamenti Satispay, certificati, newsletter, import e email transazionali.
+- Edge Functions Supabase per checkout, pagamenti, import Firestore, export CSV, email, tessere e gestione admin.
 
-There are several ways of editing your application.
+## Stack
 
-**Use Lovable**
+- Vite, React, TypeScript
+- Tailwind CSS e componenti shadcn/ui locali
+- Supabase database, auth, storage ed Edge Functions
+- pnpm come package manager
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Sviluppo locale
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+pnpm install
+pnpm supabase:start
+pnpm dev
 ```
 
-**Edit a file directly in GitHub**
+Il dev server parte sulla porta `8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Configura le variabili Vite partendo da `.env.example`.
 
-**Use GitHub Codespaces**
+Se usi Colima invece di Docker Desktop, `pnpm supabase:start` esclude `vector`, il collector dei log, per evitare il problema di bind mount del Docker socket. I servizi necessari all'app restano attivi.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+URL locali principali:
 
-## What technologies are used for this project?
+- App: `http://localhost:8080`
+- Supabase API: `http://127.0.0.1:54321`
+- Supabase Studio: `http://127.0.0.1:54323`
+- Mailpit: `http://127.0.0.1:54324`
 
-This project is built with:
+Il database locale viene popolato da `supabase/seed.sql` con eventi demo.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Accesso admin locale:
 
-## How can I deploy this project?
+- URL: `http://localhost:8080/admin/login`
+- Email: `domenico.diiorio@ginepro.cc`
+- Password: `admin-local-123`
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+In locale la pagina admin usa email/password Supabase. In staging e produzione il login admin Google avviene tramite Lovable Cloud Auth.
 
-## Can I connect a custom domain to my Lovable project?
+## Script utili
 
-Yes, you can!
+```sh
+pnpm build
+pnpm test
+pnpm lint
+pnpm analyze:unused
+pnpm supabase:reset
+pnpm supabase:stop
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Nota: al momento `pnpm lint` evidenzia ancora debito tecnico storico, soprattutto `any` espliciti e dipendenze mancanti negli hook. Build e test sono i controlli principali per questa base.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Ambienti
 
-Test
+| Ambiente | Branch Git | Supabase | Frontend |
+|---|---|---|---|
+| Locale | qualsiasi (working copy) | Stack Docker locale (`supabase start`) | `localhost:8080` |
+| Staging | `staging` | `qqngsecqtqibbywmdqte` (ginepro-staging) | Vercel — branch staging |
+| Prod | `main` | `yastxhhxfzaqfizahdib` (ginepro.cc) | Vercel — produzione |
+
+Il branch `develop` usa Supabase locale; solo `staging` e `main` triggherano il deploy cloud.
+
+### Flusso di promozione
+
+```
+feature/* → PR in develop → PR in staging → PR in main
+```
+
+Ogni PR verso `develop`, `staging` o `main` esegue CI (lint + test + build).
+Il merge su `staging` o `main` deploya automaticamente migration e Edge Functions sull'ambiente corrispondente.
+
+### GitHub Actions secrets richiesti
+
+| Secret | Valore |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Token CLI da supabase.com/dashboard/account/tokens |
+| `SUPABASE_PROD_REF` | `yastxhhxfzaqfizahdib` |
+| `SUPABASE_STAGING_REF` | `qqngsecqtqibbywmdqte` |
+
+### Credenziali Edge Functions per ambiente
+
+I secrets delle Edge Functions (Stripe, PayPal, Satispay, Resend, ecc.) si configurano separatamente per ogni progetto Supabase:
+
+- Prod: usare chiavi live (Stripe live mode, PayPal prod, ecc.)
+- Staging: usare chiavi sandbox/test (Stripe test mode `sk_test_*`, PayPal sandbox, ecc.)
+
+Per impostarli: `supabase secrets set NOME=valore --project-ref <ref>` oppure dal pannello *Project Settings → Edge Functions → Secrets* su supabase.com.
+
+### Hosting (Vercel)
+
+Il frontend è deployato su Vercel, collegato al repo `ginepro-asd/ginepro.cc`. Le variabili d'ambiente Vite (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`) si configurano in *Project Settings → Environment Variables* per ogni ambiente (Production / Preview branch `staging`).
+
+**Nota:** ogni nuovo dominio aggiunto su Vercel (staging, prod) va registrato come redirect URI consentito nell'auth di Lovable affinché il login Google admin funzioni.
+
+## Struttura
+
+- `src/pages`: rotte pubbliche, area riservata e backoffice admin.
+- `src/components`: form iscrizione, componenti admin e UI condivisa.
+- `src/hooks`: query Supabase e logiche riusabili.
+- `src/lib`: pricing, scadenze e utility.
+- `supabase/functions`: Edge Functions deployate su Supabase.
+- `supabase/migrations`: schema e migrazioni database.

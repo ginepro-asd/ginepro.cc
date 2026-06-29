@@ -1,4 +1,4 @@
-project_id = "tkrlqndprgmgpebjirot"
+project_id = "yastxhhxfzaqfizahdib"
 
 [functions.create-checkout]
 verify_jwt = false
@@ -31,19 +31,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.update-participant]
-verify_jwt = false
-
-[functions.admin-chat]
-verify_jwt = false
-
-[functions.proxy-photo]
-verify_jwt = false
-
-[functions.submit-to-fidal]
-verify_jwt = false
-
-
-[functions.fidal-form-proxy]
 verify_jwt = false
 
 [functions.manage-event]

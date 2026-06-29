@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  push:
+    branches: [staging, main]
+
+jobs:
+  supabase:
+    name: Deploy Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Seleziona project ref
+        id: ref
+        env:
+          REF_MAIN: ${{ secrets.SUPABASE_PROD_REF }}
+          REF_STAGING: ${{ secrets.SUPABASE_STAGING_REF }}
+        run: |
+          case "${{ github.ref_name }}" in
+            main)    echo "project_ref=${REF_MAIN}"    >> "$GITHUB_OUTPUT" ;;
+            staging) echo "project_ref=${REF_STAGING}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Link al progetto Supabase
+        run: supabase link --project-ref "${{ steps.ref.outputs.project_ref }}" --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Applica migration
+        run: supabase db push --linked --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --project-ref "${{ steps.ref.outputs.project_ref }}" --use-api --prune
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
